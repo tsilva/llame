@@ -65,6 +65,7 @@ export function ChatMessage({
             thinking={message.thinking || ""}
             isGenerating={isGenerating || false}
             isComplete={isComplete || false}
+            isStreaming={isStreaming}
           />
         )}
 

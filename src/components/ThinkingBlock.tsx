@@ -2,11 +2,13 @@
 
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface ThinkingBlockProps {
   thinking: string;
   isGenerating: boolean;
   isComplete: boolean;
+  isStreaming?: boolean;
 }
 
 function Spinner() {
@@ -15,7 +17,7 @@ function Spinner() {
   );
 }
 
-export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBlockProps) {
+export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming }: ThinkingBlockProps) {
   const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [finalSeconds, setFinalSeconds] = useState<number | null>(null);
@@ -96,12 +98,14 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBl
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className={`mt-2 whitespace-pre-wrap border-l-2 border-white/[0.08] pl-3 sm:pl-4 text-sm leading-relaxed text-[#8e8e8e] ${
+          className={`mt-2 border-l-2 border-white/[0.08] pl-3 sm:pl-4 ${
             isThinkingInProgress ? "max-h-[150px] sm:max-h-[200px] overflow-y-auto" : ""
           }`}
           style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}
         >
-          {thinking}
+          <div className="text-sm text-[#8e8e8e]">
+            <MarkdownRenderer content={thinking} isStreaming={isStreaming} />
+          </div>
         </div>
       )}
     </div>

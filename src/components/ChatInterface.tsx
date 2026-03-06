@@ -44,7 +44,7 @@ interface Suggestion {
   image?: string;
 }
 
-const SUGGESTIONS: Suggestion[] = [
+const STATIC_SUGGESTIONS: Suggestion[] = [
   { text: "Explain quantum computing in simple terms" },
   { text: "Code bubble sort in Python" },
   { text: "What is the meaning of life?" },
@@ -70,6 +70,7 @@ export function ChatInterface({
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>(STATIC_SUGGESTIONS);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +106,29 @@ export function ChatInterface({
       setPendingImages([]);
     }
   }, [messages]);
+
+  // Load book_page.png as data URL for Web Worker compatibility
+  useEffect(() => {
+    const loadBookPageImage = async () => {
+      try {
+        const response = await fetch(bookPageImage.src);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          setSuggestions((prev) =>
+            prev.map((s) =>
+              s.text === "Transcribe this book page" ? { ...s, image: dataUrl } : s
+            )
+          );
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        // Keep the original src if fetch fails
+      }
+    };
+    loadBookPageImage();
+  }, []);
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -213,7 +237,7 @@ export function ChatInterface({
               </p>
             )}
             <div className="grid max-w-[500px] grid-cols-1 sm:grid-cols-2 gap-2">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s: Suggestion) => (
                 <button
                   key={s.text}
                   onClick={() => onSend(s.text, s.image ? [s.image] : undefined)}

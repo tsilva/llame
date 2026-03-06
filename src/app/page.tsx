@@ -54,14 +54,17 @@ export default function Home() {
   // Always start with a new chat on page load, unless an empty one exists
   useEffect(() => {
     if (!storage.activeConversationId) {
-      // Check if there's already an empty "New chat" we can reuse
-      const emptyChat = storage.index.find(
-        (c) => c.title === "New chat" && c.messageCount === 0
-      );
-      if (emptyChat) {
-        storage.setActiveConversation(emptyChat.id);
+      // Get most recent conversation to check if it's empty
+      const sortedConvs = [...storage.index].sort((a, b) => b.updatedAt - a.updatedAt);
+      const lastConv = sortedConvs[0];
+      
+      // Reuse last chat if it has no messages
+      if (lastConv && lastConv.messageCount === 0) {
+        storage.setActiveConversation(lastConv.id);
       } else {
-        createNewConversation();
+        // Create new conversation directly without callback
+        storage.createConversation();
+        if (isMobile) setSidebarOpen(false);
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

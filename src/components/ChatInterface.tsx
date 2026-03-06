@@ -28,6 +28,7 @@ interface ChatInterfaceProps {
   numTokens: number;
   device: string | null;
   isMobile: boolean;
+  thinkingComplete: boolean;
 }
 
 interface PendingImage {
@@ -64,6 +65,7 @@ export function ChatInterface({
   numTokens,
   device,
   isMobile,
+  thinkingComplete,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
@@ -236,7 +238,7 @@ export function ChatInterface({
                   isStreaming={isGenerating && isLastAssistant}
                   isGenerating={isGenerating && i === messages.length - 1}
                   isComplete={
-                    !isGenerating && isLastAssistant
+                    isLastAssistant && (!isGenerating || thinkingComplete)
                   }
                   tps={isLastAssistant ? tps : undefined}
                   numTokens={isLastAssistant ? numTokens : undefined}

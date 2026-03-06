@@ -30,6 +30,7 @@ export default function Home() {
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
   const isCompleteRef = useRef(false);
+  const [thinkingComplete, setThinkingComplete] = useState(false);
   const activeConversationIdRef = useRef<string | null>(null);
 
   // Sync ref with state
@@ -37,10 +38,18 @@ export default function Home() {
     activeConversationIdRef.current = storage.activeConversationId;
   }, [storage.activeConversationId]);
 
-  // Always start with a new chat on page load
+  // Always start with a new chat on page load, unless an empty one exists
   useEffect(() => {
     if (!storage.activeConversationId) {
-      createNewConversation();
+      // Check if there's already an empty "New chat" we can reuse
+      const emptyChat = storage.index.find(
+        (c) => c.title === "New chat" && c.messageCount === 0
+      );
+      if (emptyChat) {
+        storage.setActiveConversation(emptyChat.id);
+      } else {
+        createNewConversation();
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -82,6 +91,7 @@ export default function Home() {
       streamingContentRef.current = "";
       streamingThinkingRef.current = "";
       isCompleteRef.current = false;
+      setThinkingComplete(false);
 
       if (storage.activeConversation) {
         const newMessages = [...storage.activeConversation.messages, assistantMsg];
@@ -131,6 +141,7 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
     streamingThinkingRef.current = thinking;
+    setThinkingComplete(true);
 
     const conv = storage.activeConversation;
     if (!conv) return;
@@ -214,6 +225,7 @@ export default function Home() {
         streamingContentRef.current = "";
         streamingThinkingRef.current = "";
         isCompleteRef.current = false;
+        setThinkingComplete(false);
 
         const newMessages = [...updatedMessages, assistantMsg];
         storage.updateConversation({ ...updatedConv, messages: newMessages, updatedAt: Date.now() });
@@ -325,6 +337,7 @@ export default function Home() {
           numTokens={worker.numTokens}
           device={worker.loadedDevice}
           isMobile={isMobile}
+          thinkingComplete={thinkingComplete}
         />
       </div>
 

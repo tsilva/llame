@@ -45,17 +45,19 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBl
     };
   }, [isGenerating, isComplete]);
 
-  const isExpanded = isGenerating || userExpanded === true;
+  // Auto-expand while thinking is in progress, collapse once thinking completes
+  const isThinkingInProgress = isGenerating && !isComplete;
+  const isExpanded = isThinkingInProgress || userExpanded === true;
 
-  if (isGenerating && userExpanded !== null) {
+  if (isThinkingInProgress && userExpanded !== null) {
     setUserExpanded(null);
   }
 
   useLayoutEffect(() => {
-    if (isGenerating && shouldAutoScroll.current && scrollRef.current) {
+    if (isThinkingInProgress && shouldAutoScroll.current && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [thinking, isGenerating]);
+  }, [thinking, isThinkingInProgress]);
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -66,7 +68,7 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBl
   };
 
   const displaySeconds = finalSeconds ?? seconds;
-  const label = isGenerating
+  const label = isThinkingInProgress
     ? seconds > 0
       ? `Thinking for ${seconds}s...`
       : "Thinking..."
@@ -75,14 +77,14 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBl
   return (
     <div className="mb-3">
       <button
-        onClick={() => !isGenerating && setUserExpanded(isExpanded ? false : true)}
+        onClick={() => !isThinkingInProgress && setUserExpanded(isExpanded ? false : true)}
         className={`flex items-center gap-2 py-1 text-sm transition-colors ${
-          isGenerating ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
-        } ${isGenerating ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}
+          isThinkingInProgress ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
+        } ${isThinkingInProgress ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}
       >
-        {isGenerating ? <Spinner /> : null}
+        {isThinkingInProgress ? <Spinner /> : null}
         <span>{label}</span>
-        {!isGenerating && (
+        {!isThinkingInProgress && (
           <ChevronDown
             size={14}
             className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -95,7 +97,7 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete }: ThinkingBl
           ref={scrollRef}
           onScroll={handleScroll}
           className={`mt-2 whitespace-pre-wrap border-l-2 border-white/[0.08] pl-3 sm:pl-4 text-sm leading-relaxed text-[#8e8e8e] ${
-            isGenerating ? "max-h-[150px] sm:max-h-[200px] overflow-y-auto" : ""
+            isThinkingInProgress ? "max-h-[150px] sm:max-h-[200px] overflow-y-auto" : ""
           }`}
           style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}
         >

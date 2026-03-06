@@ -3,7 +3,8 @@
     "allow": [
       "Read(//private/tmp/**)",
       "Bash(npm pack @huggingface/transformers@4.0.0-next.6)",
-      "Bash(tar -xzf huggingface-transformers-4.0.0-next.6.tgz)"
+      "Bash(tar -xzf huggingface-transformers-4.0.0-next.6.tgz)",
+      "Bash(curl:*)"
     ]
   }
 }

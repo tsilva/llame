@@ -176,6 +176,12 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
 
   const interrupt = useCallback(() => {
     postMessage({ type: "interrupt" });
+    setState((s) => {
+      if (s.status === "generating") {
+        return { ...s, status: "loaded" };
+      }
+      return s;
+    });
   }, [postMessage]);
 
   const reset = useCallback(() => {

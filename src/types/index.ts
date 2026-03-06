@@ -15,6 +15,22 @@ export interface Conversation {
   modelId: string;
 }
 
+export interface ConversationMeta {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  modelId: string;
+  messageCount: number;
+  sizeBytes: number;
+}
+
+export interface StorageStats {
+  usedBytes: number;
+  quotaBytes: number;
+  conversationCount: number;
+}
+
 export interface GenerationParams {
   max_new_tokens: number;
   temperature: number;

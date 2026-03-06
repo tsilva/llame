@@ -22,6 +22,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "llame",
   description: "Run AI models directly in the browser with WebGPU",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

@@ -11,6 +11,7 @@ import {
 import { ChatMessage as ChatMessageType, ProgressInfo } from "@/types";
 import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
+import { compressImage } from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X } from "lucide-react";
 
 interface ChatInterfaceProps {
@@ -131,10 +132,12 @@ export function ChatInterface({
     if (!file.type.startsWith("image/")) return null;
     return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
+        const rawDataUrl = e.target?.result as string;
+        const dataUrl = await compressImage(rawDataUrl);
         resolve({
           id: Math.random().toString(36).substring(7),
-          dataUrl: e.target?.result as string,
+          dataUrl,
           file,
         });
       };

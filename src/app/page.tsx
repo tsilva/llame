@@ -5,6 +5,7 @@ import { ChatMessage as ChatMessageType, Conversation, GenerationParams } from "
 import { DEFAULT_PARAMS, DEFAULT_MODEL } from "@/lib/constants";
 import { useWebGPU } from "@/hooks/useWebGPU";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
+import { useStorage } from "@/hooks/useStorage";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -12,19 +13,11 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
 import { PanelLeft } from "lucide-react";
 
-const STORAGE_KEYS = {
-  CONVERSATIONS: "llame-conversations",
-  SELECTED_MODEL: "llame-selected-model",
-};
-
 export default function Home() {
   const webgpu = useWebGPU();
   const worker = useInferenceWorker();
+  const storage = useStorage();
 
-  // Conversations state
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  
   // Model selection (separate from loaded model)
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [pendingGeneration, setPendingGeneration] = useState<{ content: string; images?: string[] } | null>(null);
@@ -43,33 +36,31 @@ export default function Home() {
 
   // Sync ref with state
   useEffect(() => {
-    activeConversationIdRef.current = activeConversationId;
-  }, [activeConversationId]);
+    activeConversationIdRef.current = storage.activeConversationId;
+  }, [storage.activeConversationId]);
 
-  // Load from localStorage on mount
+  // Set model from active conversation on mount
+  useEffect(() => {
+    if (storage.activeConversation) {
+      setSelectedModel(storage.activeConversation.modelId);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save selected model to localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
     try {
-      const savedConversations = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
-      if (savedConversations) {
-        const parsed = JSON.parse(savedConversations);
-        setConversations(parsed);
-        // Set most recent as active if exists
-        if (parsed.length > 0) {
-          const sorted = [...parsed].sort((a: Conversation, b: Conversation) => b.updatedAt - a.updatedAt);
-          setActiveConversationId(sorted[0].id);
-          setSelectedModel(sorted[0].modelId);
-        }
-      }
-      
-      const savedModel = localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL);
-      if (savedModel) {
-        setSelectedModel(savedModel);
-      }
+      localStorage.setItem("llame-selected-model", selectedModel);
     } catch {
-      // Ignore localStorage errors
+      // Ignore
     }
+  }, [selectedModel]);
+
+  // Load saved model on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedModel = localStorage.getItem("llame-selected-model");
+    if (savedModel) setSelectedModel(savedModel);
   }, []);
 
   // Track mobile breakpoint
@@ -83,28 +74,6 @@ export default function Home() {
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
   }, []);
-
-  // Save to localStorage on conversations change
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    try {
-      localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(conversations));
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [conversations]);
-
-  // Save selected model to localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    try {
-      localStorage.setItem(STORAGE_KEYS.SELECTED_MODEL, selectedModel);
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [selectedModel]);
 
   useEffect(() => {
     if (webgpu.supported === false) {
@@ -121,10 +90,8 @@ export default function Home() {
   // Handle pending generation after model loads
   useEffect(() => {
     if (pendingGeneration && worker.status === "loaded") {
-      const { content, images } = pendingGeneration;
       setPendingGeneration(null);
-      
-      // Now generate the response
+
       const assistantMsg: ChatMessageType = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -135,10 +102,10 @@ export default function Home() {
       streamingThinkingRef.current = "";
       isCompleteRef.current = false;
 
-      const activeConv = getActiveConversation();
-      if (activeConv) {
-        const newMessages = [...activeConv.messages, assistantMsg];
-        updateActiveConversation(newMessages);
+      if (storage.activeConversation) {
+        const newMessages = [...storage.activeConversation.messages, assistantMsg];
+        const updatedConv = { ...storage.activeConversation, messages: newMessages, updatedAt: Date.now() };
+        storage.updateConversation(updatedConv);
 
         worker.generate(
           newMessages.filter(
@@ -148,7 +115,7 @@ export default function Home() {
         );
       }
     }
-  }, [pendingGeneration, worker.status, params, worker]);
+  }, [pendingGeneration, worker.status, params, worker, storage]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onTokenRef.current = useCallback(
@@ -156,136 +123,73 @@ export default function Home() {
       if (isThinking) {
         streamingThinkingRef.current += token;
         const thinking = streamingThinkingRef.current;
-        setConversations((prev) => {
-          const currentId = activeConversationIdRef.current;
-          const convIndex = prev.findIndex(c => c.id === currentId);
-          if (convIndex === -1) return prev;
-          
-          const conv = prev[convIndex];
-          const last = conv.messages[conv.messages.length - 1];
-          if (last?.role === "assistant") {
-            const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
-            const updatedConv = { ...conv, messages: updatedMessages, updatedAt: Date.now() };
-            return [...prev.slice(0, convIndex), updatedConv, ...prev.slice(convIndex + 1)];
-          }
-          return prev;
-        });
+
+        const conv = storage.activeConversation;
+        if (!conv) return;
+        const last = conv.messages[conv.messages.length - 1];
+        if (last?.role === "assistant") {
+          const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
+          storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
+        }
       } else {
         streamingContentRef.current += token;
         const content = streamingContentRef.current;
-        setConversations((prev) => {
-          const currentId = activeConversationIdRef.current;
-          const convIndex = prev.findIndex(c => c.id === currentId);
-          if (convIndex === -1) return prev;
-          
-          const conv = prev[convIndex];
-          const last = conv.messages[conv.messages.length - 1];
-          if (last?.role === "assistant") {
-            const updatedMessages = [...conv.messages.slice(0, -1), { ...last, content }];
-            const updatedConv = { ...conv, messages: updatedMessages, updatedAt: Date.now() };
-            return [...prev.slice(0, convIndex), updatedConv, ...prev.slice(convIndex + 1)];
-          }
-          return prev;
-        });
+
+        const conv = storage.activeConversation;
+        if (!conv) return;
+        const last = conv.messages[conv.messages.length - 1];
+        if (last?.role === "assistant") {
+          const updatedMessages = [...conv.messages.slice(0, -1), { ...last, content }];
+          storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
+        }
       }
     },
-    []
+    [storage]
   );
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
     streamingThinkingRef.current = thinking;
-    setConversations((prev) => {
-      const currentId = activeConversationIdRef.current;
-      const convIndex = prev.findIndex(c => c.id === currentId);
-      if (convIndex === -1) return prev;
-      
-      const conv = prev[convIndex];
-      const last = conv.messages[conv.messages.length - 1];
-      if (last?.role === "assistant") {
-        const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
-        const updatedConv = { ...conv, messages: updatedMessages, updatedAt: Date.now() };
-        return [...prev.slice(0, convIndex), updatedConv, ...prev.slice(convIndex + 1)];
-      }
-      return prev;
-    });
-  }, []);
+
+    const conv = storage.activeConversation;
+    if (!conv) return;
+    const last = conv.messages[conv.messages.length - 1];
+    if (last?.role === "assistant") {
+      const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
+      storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
+    }
+  }, [storage]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onCompleteRef.current = useCallback(() => {
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
     isCompleteRef.current = true;
-  }, []);
-
-  const getActiveConversation = (): Conversation | null => {
-    if (!activeConversationId) return null;
-    return conversations.find(c => c.id === activeConversationId) || null;
-  };
+    storage.flushPendingSave();
+  }, [storage]);
 
   const createNewConversation = useCallback(() => {
-    const newConv: Conversation = {
-      id: crypto.randomUUID(),
-      title: "New chat",
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      modelId: selectedModel,
-    };
-    setConversations(prev => [newConv, ...prev]);
-    setActiveConversationId(newConv.id);
+    if (worker.status === "generating") {
+      worker.interrupt();
+      streamingContentRef.current = "";
+      streamingThinkingRef.current = "";
+      isCompleteRef.current = true;
+    }
+    const newConv = storage.createConversation(selectedModel);
     if (isMobile) setSidebarOpen(false);
     return newConv;
-  }, [selectedModel, isMobile]);
-
-  const updateActiveConversation = (messages: ChatMessageType[]) => {
-    if (!activeConversationId) return;
-    
-    setConversations(prev => {
-      const convIndex = prev.findIndex(c => c.id === activeConversationId);
-      if (convIndex === -1) return prev;
-      
-      const conv = prev[convIndex];
-      // Update title from first user message if it's still "New chat"
-      let title = conv.title;
-      if (title === "New chat") {
-        const firstUserMessage = messages.find(m => m.role === "user");
-        if (firstUserMessage) {
-          title = firstUserMessage.content.slice(0, 50) || "New chat";
-          if (firstUserMessage.content.length > 50) title += "...";
-        }
-      }
-      
-      const updatedConv = { 
-        ...conv, 
-        messages, 
-        title,
-        updatedAt: Date.now(),
-        modelId: selectedModel // Track which model was used
-      };
-      return [...prev.slice(0, convIndex), updatedConv, ...prev.slice(convIndex + 1)];
-    });
-  };
+  }, [selectedModel, isMobile, worker, storage]);
 
   const deleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
-    if (activeConversationId === id) {
-      // Switch to next available or null
-      const remaining = conversations.filter(c => c.id !== id);
-      if (remaining.length > 0) {
-        const sorted = [...remaining].sort((a, b) => b.updatedAt - a.updatedAt);
-        setActiveConversationId(sorted[0].id);
-        setSelectedModel(sorted[0].modelId);
-      } else {
-        setActiveConversationId(null);
-      }
+    const switchedModelId = storage.deleteConversation(id);
+    if (switchedModelId) {
+      setSelectedModel(switchedModelId);
     }
   };
 
   const handleSend = useCallback(
     (content: string, images?: string[]) => {
-      // Get or create active conversation
-      let activeConv = getActiveConversation();
+      let activeConv = storage.activeConversation;
       if (!activeConv) {
         activeConv = createNewConversation();
       }
@@ -297,22 +201,32 @@ export default function Home() {
         images,
       };
 
-      // Add user message immediately
       const updatedMessages = [...activeConv.messages, userMsg];
-      updateActiveConversation(updatedMessages);
 
-      // Check if model needs to be loaded or switched
+      // Update title from first user message
+      let title = activeConv.title;
+      if (title === "New chat") {
+        title = content.slice(0, 50) || "New chat";
+        if (content.length > 50) title += "...";
+      }
+
+      const updatedConv: Conversation = {
+        ...activeConv,
+        messages: updatedMessages,
+        title,
+        updatedAt: Date.now(),
+        modelId: selectedModel,
+      };
+      storage.updateConversation(updatedConv);
+
       const needsLoad = worker.status === "idle" || worker.status === "error";
       const needsSwitch = worker.loadedModel && worker.loadedModel !== selectedModel;
 
       if (needsLoad || needsSwitch) {
-        // Queue the generation for after model loads
         setPendingGeneration({ content, images });
-        // Load the model
         setError(null);
         worker.loadModel(selectedModel, device);
       } else if (worker.status === "loaded") {
-        // Model is ready, generate immediately
         const assistantMsg: ChatMessageType = {
           id: crypto.randomUUID(),
           role: "assistant",
@@ -324,7 +238,7 @@ export default function Home() {
         isCompleteRef.current = false;
 
         const newMessages = [...updatedMessages, assistantMsg];
-        updateActiveConversation(newMessages);
+        storage.updateConversation({ ...updatedConv, messages: newMessages, updatedAt: Date.now() });
 
         worker.generate(
           newMessages.filter(
@@ -333,20 +247,20 @@ export default function Home() {
           params
         );
       }
-      // If status is "loading", the useEffect will handle pendingGeneration when it becomes "loaded"
     },
-    [conversations, activeConversationId, selectedModel, worker, device, params, createNewConversation]
+    [storage, selectedModel, worker, device, params, createNewConversation]
   );
 
   const handleStop = useCallback(() => {
     worker.interrupt();
+    streamingContentRef.current = "";
+    streamingThinkingRef.current = "";
+    isCompleteRef.current = true;
   }, [worker]);
 
   const handleLoadModel = useCallback(
     (modelId: string) => {
       setSelectedModel(modelId);
-      // Only actually load if explicitly requested (not on select)
-      // The model will auto-load on first message instead
     },
     []
   );
@@ -367,10 +281,16 @@ export default function Home() {
   );
 
   const handleSwitchConversation = (id: string) => {
-    setActiveConversationId(id);
-    const conv = conversations.find(c => c.id === id);
-    if (conv) {
-      setSelectedModel(conv.modelId);
+    if (worker.status === "generating") {
+      worker.interrupt();
+      streamingContentRef.current = "";
+      streamingThinkingRef.current = "";
+      isCompleteRef.current = true;
+    }
+    storage.setActiveConversation(id);
+    const meta = storage.index.find(m => m.id === id);
+    if (meta) {
+      setSelectedModel(meta.modelId);
     }
     if (isMobile) setSidebarOpen(false);
   };
@@ -379,8 +299,7 @@ export default function Home() {
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
 
-  const activeConversation = getActiveConversation();
-  const currentMessages = activeConversation?.messages || [];
+  const currentMessages = storage.activeConversation?.messages || [];
 
   return (
     <div className="flex h-dvh overflow-hidden bg-[#212121]">
@@ -391,14 +310,23 @@ export default function Home() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         onNewChat={createNewConversation}
         onOpenSettings={() => setSettingsOpen(true)}
-        conversations={conversations}
-        activeConversationId={activeConversationId}
+        conversations={storage.index}
+        activeConversationId={storage.activeConversationId}
         onSwitchConversation={handleSwitchConversation}
         onDeleteConversation={deleteConversation}
         isLoading={isLoading}
         isGenerating={isGenerating}
         device={device}
         webgpuSupported={webgpu.supported}
+        storageStats={storage.storageStats}
+        storageWarning={storage.storageWarning}
+        onClearOldChats={storage.clearOldChats}
+        onClearAllChats={() => {
+          const newId = storage.clearAllChats(selectedModel);
+          if (newId) {
+            setSelectedModel(selectedModel);
+          }
+        }}
       />
 
       {/* Main area */}

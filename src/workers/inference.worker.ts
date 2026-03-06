@@ -148,6 +148,13 @@ async function dispose() {
   currentModelId = null;
 }
 
+function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
+  if (device !== "webgpu") return "q4";
+  const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
+  if (match && parseFloat(match[1]) >= 1.0) return "q4";
+  return "fp16";
+}
+
 async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   if (currentModelId === modelId) {
     post({ status: "loaded", modelId, device });
@@ -205,7 +212,7 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {
         device,
-        dtype: device === "webgpu" ? "fp16" : "q4",
+        dtype: pickDtype(modelId, device),
         progress_callback: progressCallback,
       } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
     }

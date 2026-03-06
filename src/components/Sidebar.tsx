@@ -1,7 +1,9 @@
 "use client";
 
-import { Conversation } from "@/types";
-import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare } from "lucide-react";
+import { ConversationMeta, StorageStats } from "@/types";
+import { StorageWarning } from "@/hooks/useStorage";
+import { StorageIndicator } from "./StorageIndicator";
+import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare, Trash } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,7 +11,7 @@ interface SidebarProps {
   onToggle: () => void;
   onNewChat: () => void;
   onOpenSettings: () => void;
-  conversations: Conversation[];
+  conversations: ConversationMeta[];
   activeConversationId: string | null;
   onSwitchConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
@@ -17,6 +19,10 @@ interface SidebarProps {
   isGenerating: boolean;
   device: "webgpu" | "wasm";
   webgpuSupported: boolean | null;
+  storageStats: StorageStats;
+  storageWarning: StorageWarning;
+  onClearOldChats: () => void;
+  onClearAllChats: () => void;
 }
 
 export function Sidebar({
@@ -33,6 +39,10 @@ export function Sidebar({
   isGenerating,
   device,
   webgpuSupported,
+  storageStats,
+  storageWarning,
+  onClearOldChats,
+  onClearAllChats,
 }: SidebarProps) {
   // Sort conversations by updatedAt (most recent first)
   const sortedConversations = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -74,7 +84,7 @@ export function Sidebar({
       </div>
 
       {/* Conversations list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2">
         <span className="px-2 text-[11px] font-semibold uppercase tracking-wider text-[#8e8e8e]">
           History
         </span>
@@ -142,6 +152,23 @@ export function Sidebar({
                 : "WASM"}
           </span>
         </div>
+
+        <StorageIndicator
+          stats={storageStats}
+          warning={storageWarning}
+          onClearOldChats={onClearOldChats}
+        />
+
+        {/* Clear all history button */}
+        {conversations.length > 0 && (
+          <button
+            onClick={onClearAllChats}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] hover:text-red-400 transition-colors"
+          >
+            <Trash size={16} />
+            Clear all history
+          </button>
+        )}
 
         <button
           onClick={onOpenSettings}

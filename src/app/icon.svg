@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Llama silhouette (side profile, facing right) -->
+  <path fill="#000" d="
+    M18 4 L16 14 L20 10 L22 4 L26 14
+    L26 18
+    L30 24
+    L46 26
+    Q54 28 52 36
+    L50 58 L46 58 L46 40
+    L42 40 L42 58 L38 58 L38 40
+    L26 42
+    L26 58 L22 58 L22 40
+    L18 40 L18 58 L14 58 L14 38
+    L12 28
+    L14 18
+    L12 14
+    Z
+  "/>
+</svg>

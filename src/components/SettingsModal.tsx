@@ -1,6 +1,6 @@
 "use client";
 
-import { GenerationParams } from "@/types";
+import { GenerationParams, StorageStats } from "@/types";
 import { DEFAULT_PARAMS, PARAM_RANGES } from "@/lib/constants";
 import { X, Trash } from "lucide-react";
 
@@ -12,8 +12,7 @@ interface SettingsModalProps {
   device: "webgpu" | "wasm";
   onDeviceChange: (device: "webgpu" | "wasm") => void;
   webgpuAvailable: boolean;
-  contextFullness: number;
-  isModelLoaded: boolean;
+  storageStats: StorageStats;
   conversationsCount: number;
   onClearAllChats: () => void;
 }
@@ -26,8 +25,7 @@ export function SettingsModal({
   device,
   onDeviceChange,
   webgpuAvailable,
-  contextFullness,
-  isModelLoaded,
+  storageStats,
   conversationsCount,
   onClearAllChats,
 }: SettingsModalProps) {
@@ -145,39 +143,45 @@ export function SettingsModal({
               Status & Data
             </h3>
             
-            {/* Context fullness bar */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#b4b4b4]">Context window</span>
-                <span className={`font-mono text-[#8e8e8e] ${
-                  !isModelLoaded || contextFullness === 0
-                    ? ""
-                    : contextFullness >= 80
-                      ? "text-[#dc3545]"
-                      : contextFullness >= 50
-                        ? "text-[#f0ad4e]"
-                        : "text-[#10a37f]"
-                }`}>
-                  {isModelLoaded ? `${contextFullness}%` : "Not loaded"}
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-[#212121] overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    !isModelLoaded || contextFullness === 0
-                      ? "w-0"
-                      : contextFullness >= 80
-                        ? "bg-[#dc3545]"
-                        : contextFullness >= 50
-                          ? "bg-[#f0ad4e]"
-                          : "bg-[#10a37f]"
-                  }`}
-                  style={{
-                    width: isModelLoaded ? `${contextFullness}%` : "0%",
-                  }}
-                />
-              </div>
-            </div>
+            {/* Storage usage bar */}
+            {(() => {
+              const storagePercent = Math.min(
+                100,
+                Math.round((storageStats.usedBytes / storageStats.quotaBytes) * 100)
+              );
+              const usedMB = (storageStats.usedBytes / 1024 / 1024).toFixed(1);
+              const quotaMB = (storageStats.quotaBytes / 1024 / 1024).toFixed(0);
+              return (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#b4b4b4]">Storage</span>
+                    <span className={`font-mono text-[#8e8e8e] ${
+                      storagePercent >= 80
+                        ? "text-[#dc3545]"
+                        : storagePercent >= 50
+                          ? "text-[#f0ad4e]"
+                          : "text-[#10a37f]"
+                    }`}>
+                      {usedMB} / {quotaMB} MB
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-[#212121] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        storagePercent >= 80
+                          ? "bg-[#dc3545]"
+                          : storagePercent >= 50
+                            ? "bg-[#f0ad4e]"
+                            : "bg-[#10a37f]"
+                      }`}
+                      style={{
+                        width: `${storagePercent}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Clear all history button */}
             {conversationsCount > 0 && (

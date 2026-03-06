@@ -299,8 +299,11 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
 
     const streamer = new TextStreamer(tokenizer, {
       skip_prompt: true,
-      skip_special_tokens: true,
-      callback_function: (token: string) => {
+      skip_special_tokens: false,
+      callback_function: (rawToken: string) => {
+        // Filter out special tokens except thinking tags (which we need to parse)
+        const token = rawToken.replace(/<\|[^>]*\|>/g, "");
+        if (!token) return;
         numTokens++;
         const elapsed = (performance.now() - startTime) / 1000;
         const tps = numTokens / elapsed;

@@ -340,8 +340,7 @@ export default function Home() {
         device={device}
         onDeviceChange={handleDeviceChange}
         webgpuAvailable={webgpu.supported ?? false}
-        contextFullness={worker.contextFullness}
-        isModelLoaded={isModelLoaded}
+        storageStats={storage.storageStats}
         conversationsCount={storage.index.length}
         onClearAllChats={() => {
           storage.clearAllChats();

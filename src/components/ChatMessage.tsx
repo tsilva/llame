@@ -13,6 +13,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, isStreaming, isGenerating, isComplete }: ChatMessageProps) {
   const isUser = message.role === "user";
   const hasThinking = message.thinking !== undefined && message.thinking !== null;
+  const hasImages = message.images && message.images.length > 0;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -23,6 +24,20 @@ export function ChatMessage({ message, isStreaming, isGenerating, isComplete }: 
             : "bg-[#1e1e1e] text-zinc-200 border border-white/5"
         }`}
       >
+        {/* Image previews for user messages */}
+        {hasImages && (
+          <div className="flex gap-2 mb-2 flex-wrap">
+            {message.images!.map((img, idx) => (
+              <img
+                key={idx}
+                src={img}
+                alt={`Attachment ${idx + 1}`}
+                className="max-w-[200px] max-h-[150px] object-cover rounded-lg border border-white/20"
+              />
+            ))}
+          </div>
+        )}
+
         {/* Thinking block for assistant messages */}
         {!isUser && hasThinking && (
           <ThinkingBlock

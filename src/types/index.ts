@@ -3,6 +3,7 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   thinking?: string;
+  images?: string[]; // Base64-encoded images for VLM support
 }
 
 export interface GenerationParams {

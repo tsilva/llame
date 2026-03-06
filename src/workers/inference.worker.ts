@@ -226,12 +226,31 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
   const parser = new ThinkingParser();
 
   try {
-    const chatMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Check if this is a Qwen3.5 VLM model
+    const isQwen35 = currentModelId?.includes("Qwen3.5") ?? false;
 
-    const inputText = tokenizer.apply_chat_template(chatMessages, {
+    // Format messages for the model
+    // For VLM models with images, we need to use the multimodal format
+    const chatMessages = messages.map((m) => {
+      // If message has images and this is a VLM model, format as multimodal
+      if (m.images && m.images.length > 0 && isQwen35) {
+        const content = [
+          ...m.images.map((img) => ({ type: "image" as const, image: img })),
+          { type: "text" as const, text: m.content },
+        ];
+        return {
+          role: m.role,
+          content,
+        };
+      }
+      // Standard text-only format
+      return {
+        role: m.role,
+        content: m.content,
+      };
+    });
+
+    const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
       tokenize: false,
       add_generation_prompt: true,
     }) as string;

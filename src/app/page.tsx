@@ -89,11 +89,12 @@ export default function Home() {
   }, []);
 
   const handleSend = useCallback(
-    (content: string) => {
+    (content: string, images?: string[]) => {
       const userMsg: ChatMessageType = {
         id: crypto.randomUUID(),
         role: "user",
         content,
+        images,
       };
       const assistantMsg: ChatMessageType = {
         id: crypto.randomUUID(),
@@ -110,7 +111,7 @@ export default function Home() {
 
       // Send all messages except the empty assistant placeholder
       worker.generate(
-        newMessages.filter((m) => m.content.length > 0),
+        newMessages.filter((m) => m.content.length > 0 || (m.images && m.images.length > 0)),
         params
       );
     },

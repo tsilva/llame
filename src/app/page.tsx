@@ -32,21 +32,6 @@ export default function Home() {
     }
   }, [webgpu.supported]);
 
-  // Auto-load default model when worker is ready
-  const hasAutoLoaded = useRef(false);
-  useEffect(() => {
-    if (
-      worker.status === "idle" &&
-      !hasAutoLoaded.current &&
-      webgpu.checking === false
-    ) {
-      hasAutoLoaded.current = true;
-      const d = webgpu.supported ? "webgpu" : "wasm";
-      setDevice(d);
-      worker.loadModel(DEFAULT_MODEL, d);
-    }
-  }, [worker.status, webgpu.checking, webgpu.supported, worker]);
-
   // Sync worker errors
   useEffect(() => {
     if (worker.error) {

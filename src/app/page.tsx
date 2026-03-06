@@ -39,6 +39,12 @@ export default function Home() {
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
   const isCompleteRef = useRef(false);
+  const activeConversationIdRef = useRef<string | null>(null);
+
+  // Sync ref with state
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -151,7 +157,8 @@ export default function Home() {
         streamingThinkingRef.current += token;
         const thinking = streamingThinkingRef.current;
         setConversations((prev) => {
-          const convIndex = prev.findIndex(c => c.id === activeConversationId);
+          const currentId = activeConversationIdRef.current;
+          const convIndex = prev.findIndex(c => c.id === currentId);
           if (convIndex === -1) return prev;
           
           const conv = prev[convIndex];
@@ -167,7 +174,8 @@ export default function Home() {
         streamingContentRef.current += token;
         const content = streamingContentRef.current;
         setConversations((prev) => {
-          const convIndex = prev.findIndex(c => c.id === activeConversationId);
+          const currentId = activeConversationIdRef.current;
+          const convIndex = prev.findIndex(c => c.id === currentId);
           if (convIndex === -1) return prev;
           
           const conv = prev[convIndex];
@@ -181,14 +189,15 @@ export default function Home() {
         });
       }
     },
-    [activeConversationId]
+    []
   );
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
     streamingThinkingRef.current = thinking;
     setConversations((prev) => {
-      const convIndex = prev.findIndex(c => c.id === activeConversationId);
+      const currentId = activeConversationIdRef.current;
+      const convIndex = prev.findIndex(c => c.id === currentId);
       if (convIndex === -1) return prev;
       
       const conv = prev[convIndex];
@@ -200,7 +209,7 @@ export default function Home() {
       }
       return prev;
     });
-  }, [activeConversationId]);
+  }, []);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onCompleteRef.current = useCallback(() => {

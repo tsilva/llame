@@ -318,7 +318,8 @@ export default function Home() {
           {(!sidebarOpen || isMobile) && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+              disabled={isGenerating}
+              className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <PanelLeft size={20} />
             </button>
@@ -330,20 +331,20 @@ export default function Home() {
             device={device}
             webgpuSupported={webgpu.supported}
           />
-          {isGenerating && worker.tps > 0 && (
-            <span className="ml-auto text-xs font-mono text-[#8e8e8e]">
-              {worker.tps.toFixed(1)} t/s
-            </span>
-          )}
           <a
             href="https://github.com/tsilva/llame"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+            className="ml-auto rounded-full p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
             aria-label="GitHub repository"
           >
             <Github size={20} />
           </a>
+          {isGenerating && worker.tps > 0 && (
+            <span className="text-xs font-mono text-[#8e8e8e]">
+              {worker.tps.toFixed(1)} t/s
+            </span>
+          )}
         </div>
 
         {error && (
@@ -386,6 +387,7 @@ export default function Home() {
         onClearAllChats={() => {
           storage.clearAllChats();
         }}
+        isGenerating={isGenerating}
       />
     </div>
   );

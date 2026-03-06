@@ -15,6 +15,7 @@ interface SettingsModalProps {
   storageStats: StorageStats;
   conversationsCount: number;
   onClearAllChats: () => void;
+  isGenerating: boolean;
 }
 
 function SectionHeader({
@@ -42,6 +43,7 @@ function Slider({
   max,
   step,
   onChange,
+  disabled,
 }: {
   label: string;
   value: number;
@@ -49,12 +51,13 @@ function Slider({
   max: number;
   step: number;
   onChange: (v: number) => void;
+  disabled?: boolean;
 }) {
   const fill = ((value - min) / (max - min)) * 100;
   return (
-    <div className="group space-y-2">
+    <div className={`group space-y-2 ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex justify-between text-sm">
-        <span className="text-[#8e8e8e] transition-colors duration-150 group-hover:text-[#b4b4b4]">
+        <span className={`text-[#8e8e8e] transition-colors duration-150 ${disabled ? '' : 'group-hover:text-[#b4b4b4]'}`}>
           {label}
         </span>
         <span className="font-mono text-[#10a37f] tabular-nums">
@@ -68,7 +71,8 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="slider-industrial"
+        disabled={disabled}
+        className="slider-industrial disabled:cursor-not-allowed"
         style={{ "--slider-fill": `${fill}%` } as React.CSSProperties}
       />
     </div>
@@ -86,6 +90,7 @@ export function SettingsModal({
   storageStats,
   conversationsCount,
   onClearAllChats,
+  isGenerating,
 }: SettingsModalProps) {
   if (!isOpen) return null;
 
@@ -134,7 +139,7 @@ export function SettingsModal({
                 />
                 <button
                   onClick={() => onDeviceChange("webgpu")}
-                  disabled={!webgpuAvailable}
+                  disabled={!webgpuAvailable || isGenerating}
                   className={`relative z-10 flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                     device === "webgpu"
                       ? "text-[#10a37f]"
@@ -145,11 +150,12 @@ export function SettingsModal({
                 </button>
                 <button
                   onClick={() => onDeviceChange("wasm")}
+                  disabled={isGenerating}
                   className={`relative z-10 flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                     device === "wasm"
                       ? "text-amber-400"
                       : "text-[#8e8e8e] hover:text-[#b4b4b4]"
-                  }`}
+                  } ${isGenerating ? 'disabled:opacity-30' : ''}`}
                 >
                   WASM
                 </button>
@@ -168,7 +174,8 @@ export function SettingsModal({
               </div>
               <button
                 onClick={() => update("do_sample", !params.do_sample)}
-                className={`relative h-6 w-11 rounded-full transition-colors duration-200 ${
+                disabled={isGenerating}
+                className={`relative h-6 w-11 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   params.do_sample ? "bg-[#10a37f]" : "bg-[#424242]"
                 }`}
               >
@@ -190,6 +197,7 @@ export function SettingsModal({
               value={params.max_new_tokens}
               {...PARAM_RANGES.max_new_tokens}
               onChange={(v) => update("max_new_tokens", v)}
+              disabled={isGenerating}
             />
 
             {params.do_sample && (
@@ -199,24 +207,28 @@ export function SettingsModal({
                   value={params.temperature}
                   {...PARAM_RANGES.temperature}
                   onChange={(v) => update("temperature", v)}
+                  disabled={isGenerating}
                 />
                 <Slider
                   label="Top P"
                   value={params.top_p}
                   {...PARAM_RANGES.top_p}
                   onChange={(v) => update("top_p", v)}
+                  disabled={isGenerating}
                 />
                 <Slider
                   label="Top K"
                   value={params.top_k}
                   {...PARAM_RANGES.top_k}
                   onChange={(v) => update("top_k", v)}
+                  disabled={isGenerating}
                 />
                 <Slider
                   label="Repetition penalty"
                   value={params.repetition_penalty}
                   {...PARAM_RANGES.repetition_penalty}
                   onChange={(v) => update("repetition_penalty", v)}
+                  disabled={isGenerating}
                 />
               </>
             )}
@@ -278,7 +290,8 @@ export function SettingsModal({
                 onClick={() => {
                   onClearAllChats();
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors duration-150"
+                disabled={isGenerating}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash size={14} />
                 Clear all history ({conversationsCount})
@@ -290,7 +303,8 @@ export function SettingsModal({
           <div className="space-y-3 pt-1">
             <button
               onClick={() => onChange(DEFAULT_PARAMS)}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#8e8e8e] hover:text-[#b4b4b4] hover:border-white/[0.15] transition-colors duration-150"
+              disabled={isGenerating}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#8e8e8e] hover:text-[#b4b4b4] hover:border-white/[0.15] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RotateCcw size={13} />
               Reset defaults

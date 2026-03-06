@@ -55,15 +55,17 @@ export function Sidebar({
       <div className="flex items-center justify-between p-3">
         <button
           onClick={onToggle}
-          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Close sidebar"
+          disabled={isGenerating}
         >
           <PanelLeft size={20} />
         </button>
         <button
           onClick={onNewChat}
-          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="New chat"
+          disabled={isGenerating}
         >
           <SquarePen size={20} />
         </button>
@@ -91,7 +93,8 @@ export function Sidebar({
               >
                 <button
                   onClick={() => onSwitchConversation(conv.id)}
-                  className="flex flex-1 items-center gap-2 text-left min-w-0"
+                  disabled={isGenerating}
+                  className="flex flex-1 items-center gap-2 text-left min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <MessageSquare size={16} className="flex-shrink-0 text-[#8e8e8e]" />
                   <span className="flex-1 truncate text-sm">
@@ -106,7 +109,8 @@ export function Sidebar({
                     e.stopPropagation();
                     onDeleteConversation(conv.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-[#8e8e8e] hover:text-red-400 transition-all"
+                  disabled={isGenerating}
+                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-[#8e8e8e] hover:text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Delete conversation"
                 >
                   <Trash2 size={14} />
@@ -121,7 +125,8 @@ export function Sidebar({
       <div className="border-t border-white/[0.08] p-3 space-y-1">
         <button
           onClick={onOpenSettings}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+          disabled={isGenerating}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Settings size={16} />
           Settings

@@ -246,13 +246,14 @@ export function ChatInterface({
             )}
             <div className="grid max-w-[500px] grid-cols-1 sm:grid-cols-2 gap-2">
               {suggestions.map((s: Suggestion) => (
-                <button
-                  key={s.text}
-                  onClick={() => onSend(s.text, s.image ? [s.image] : undefined)}
-                  className="rounded-xl border border-white/[0.08] px-4 py-3 text-left text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
-                >
-                  {s.text}
-                </button>
+            <button
+              key={s.text}
+              onClick={() => onSend(s.text, s.image ? [s.image] : undefined)}
+              disabled={isGenerating || needsLoad}
+              className="rounded-xl border border-white/[0.08] px-4 py-3 text-left text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {s.text}
+            </button>
               ))}
             </div>
           </div>
@@ -339,7 +340,7 @@ export function ChatInterface({
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={needsLoad || pendingImages.length >= 5}
+              disabled={needsLoad || pendingImages.length >= 5 || isGenerating}
               className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
               title={needsLoad ? "Load model first to use images" : "Upload images"}
             >
@@ -348,7 +349,8 @@ export function ChatInterface({
 
             <button
               onClick={onToggleThinking}
-              className={`mb-0.5 rounded-lg p-1.5 transition-colors ${
+              disabled={isGenerating}
+              className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
               }`}
               title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}

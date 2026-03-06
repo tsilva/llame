@@ -11,7 +11,6 @@ import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
-import { ContextIndicator } from "@/components/ContextIndicator";
 import { PanelLeft } from "lucide-react";
 
 export default function Home() {
@@ -285,9 +284,6 @@ export default function Home() {
         storageStats={storage.storageStats}
         storageWarning={storage.storageWarning}
         onClearOldChats={storage.clearOldChats}
-        onClearAllChats={() => {
-          storage.clearAllChats();
-        }}
       />
 
       {/* Main area */}
@@ -312,10 +308,6 @@ export default function Home() {
               {worker.tps.toFixed(1)} t/s
             </span>
           )}
-          <ContextIndicator
-            fullness={worker.contextFullness}
-            isModelLoaded={isModelLoaded}
-          />
         </div>
 
         {error && (
@@ -348,6 +340,12 @@ export default function Home() {
         device={device}
         onDeviceChange={handleDeviceChange}
         webgpuAvailable={webgpu.supported ?? false}
+        contextFullness={worker.contextFullness}
+        isModelLoaded={isModelLoaded}
+        conversationsCount={storage.index.length}
+        onClearAllChats={() => {
+          storage.clearAllChats();
+        }}
       />
     </div>
   );

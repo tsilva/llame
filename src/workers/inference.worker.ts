@@ -36,17 +36,14 @@ class ThinkingParser {
     "<thinking>",
     "<thought>",
     "<reasoning>",
-    "<|fim_prefix|>",
-    "<|fim_start|>assistant\n",
-    " ",
+    "<think>",
   ];
-  
+
   private static readonly END_PATTERNS = [
     "</thinking>",
     "</thought>",
     "</reasoning>",
-    " ",
-    "\n\n",
+    "</think>",
   ];
 
   processToken(token: string): {

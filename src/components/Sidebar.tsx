@@ -3,7 +3,7 @@
 import { ConversationMeta, StorageStats } from "@/types";
 import { StorageWarning } from "@/hooks/useStorage";
 import { StorageIndicator } from "./StorageIndicator";
-import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare, Trash } from "lucide-react";
+import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,7 +22,6 @@ interface SidebarProps {
   storageStats: StorageStats;
   storageWarning: StorageWarning;
   onClearOldChats: () => void;
-  onClearAllChats: () => void;
 }
 
 export function Sidebar({
@@ -42,7 +41,6 @@ export function Sidebar({
   storageStats,
   storageWarning,
   onClearOldChats,
-  onClearAllChats,
 }: SidebarProps) {
   // Sort conversations by updatedAt (most recent first)
   const sortedConversations = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -158,17 +156,6 @@ export function Sidebar({
           warning={storageWarning}
           onClearOldChats={onClearOldChats}
         />
-
-        {/* Clear all history button */}
-        {conversations.length > 0 && (
-          <button
-            onClick={onClearAllChats}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] hover:text-red-400 transition-colors"
-          >
-            <Trash size={16} />
-            Clear all history
-          </button>
-        )}
 
         <button
           onClick={onOpenSettings}

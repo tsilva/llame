@@ -2,7 +2,7 @@
 
 import { GenerationParams } from "@/types";
 import { DEFAULT_PARAMS, PARAM_RANGES } from "@/lib/constants";
-import { X } from "lucide-react";
+import { X, Trash } from "lucide-react";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,6 +12,10 @@ interface SettingsModalProps {
   device: "webgpu" | "wasm";
   onDeviceChange: (device: "webgpu" | "wasm") => void;
   webgpuAvailable: boolean;
+  contextFullness: number;
+  isModelLoaded: boolean;
+  conversationsCount: number;
+  onClearAllChats: () => void;
 }
 
 export function SettingsModal({
@@ -22,6 +26,10 @@ export function SettingsModal({
   device,
   onDeviceChange,
   webgpuAvailable,
+  contextFullness,
+  isModelLoaded,
+  conversationsCount,
+  onClearAllChats,
 }: SettingsModalProps) {
   if (!isOpen) return null;
 
@@ -130,6 +138,60 @@ export function SettingsModal({
               />
             </>
           )}
+
+          {/* Status & Data section */}
+          <div className="rounded-lg border border-white/[0.08] p-3 space-y-3">
+            <h3 className="text-xs font-medium text-[#8e8e8e] uppercase tracking-wider">
+              Status & Data
+            </h3>
+            
+            {/* Context fullness bar */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#b4b4b4]">Context window</span>
+                <span className={`font-mono text-[#8e8e8e] ${
+                  !isModelLoaded || contextFullness === 0
+                    ? ""
+                    : contextFullness >= 80
+                      ? "text-[#dc3545]"
+                      : contextFullness >= 50
+                        ? "text-[#f0ad4e]"
+                        : "text-[#10a37f]"
+                }`}>
+                  {isModelLoaded ? `${contextFullness}%` : "Not loaded"}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-[#212121] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    !isModelLoaded || contextFullness === 0
+                      ? "w-0"
+                      : contextFullness >= 80
+                        ? "bg-[#dc3545]"
+                        : contextFullness >= 50
+                          ? "bg-[#f0ad4e]"
+                          : "bg-[#10a37f]"
+                  }`}
+                  style={{
+                    width: isModelLoaded ? `${contextFullness}%` : "0%",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Clear all history button */}
+            {conversationsCount > 0 && (
+              <button
+                onClick={() => {
+                  onClearAllChats();
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash size={14} />
+                Clear all history ({conversationsCount})
+              </button>
+            )}
+          </div>
 
           <button
             onClick={() => onChange(DEFAULT_PARAMS)}

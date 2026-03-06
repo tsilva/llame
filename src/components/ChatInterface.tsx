@@ -12,7 +12,7 @@ import { ChatMessage as ChatMessageType, ProgressInfo } from "@/types";
 import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
 import { compressImage } from "@/lib/imageUtils";
-import { Sparkles, ArrowUp, Square, ImagePlus, X } from "lucide-react";
+import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
 
 interface ChatInterfaceProps {
   messages: ChatMessageType[];
@@ -31,6 +31,8 @@ interface ChatInterfaceProps {
   device: string | null;
   isMobile: boolean;
   thinkingComplete: boolean;
+  thinkingEnabled: boolean;
+  onToggleThinking: () => void;
 }
 
 interface PendingImage {
@@ -70,6 +72,8 @@ export function ChatInterface({
   device,
   isMobile,
   thinkingComplete,
+  thinkingEnabled,
+  onToggleThinking,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
@@ -340,6 +344,17 @@ export function ChatInterface({
               title={needsLoad ? "Load model first to use images" : "Upload images"}
             >
               <ImagePlus size={20} />
+            </button>
+
+            <button
+              onClick={onToggleThinking}
+              disabled={needsLoad}
+              className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-40 ${
+                thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
+              }`}
+              title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}
+            >
+              <Brain size={20} />
             </button>
 
             <textarea

@@ -27,6 +27,19 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Load thinking preference from localStorage
+  useEffect(() => {
+    const savedThinking = localStorage.getItem("llame-thinking-enabled");
+    if (savedThinking !== null) {
+      setParams((prev) => ({ ...prev, thinkingEnabled: savedThinking === "true" }));
+    }
+  }, []);
+
+  // Save thinking preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("llame-thinking-enabled", params.thinkingEnabled.toString());
+  }, [params.thinkingEnabled]);
+
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
   const isCompleteRef = useRef(false);
@@ -248,6 +261,10 @@ export default function Home() {
     isCompleteRef.current = true;
   }, [worker]);
 
+  const handleToggleThinking = useCallback(() => {
+    setParams((prev) => ({ ...prev, thinkingEnabled: !prev.thinkingEnabled }));
+  }, []);
+
   const handleDeviceChange = useCallback(
     (d: "webgpu" | "wasm") => {
       setDevice(d);
@@ -341,6 +358,8 @@ export default function Home() {
           device={worker.loadedDevice}
           isMobile={isMobile}
           thinkingComplete={thinkingComplete}
+          thinkingEnabled={params.thinkingEnabled}
+          onToggleThinking={handleToggleThinking}
         />
       </div>
 

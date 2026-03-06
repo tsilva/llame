@@ -38,6 +38,7 @@ export interface GenerationParams {
   top_k: number;
   repetition_penalty: number;
   do_sample: boolean;
+  thinkingEnabled: boolean;
 }
 
 export interface ProgressInfo {

@@ -17,6 +17,7 @@ export const DEFAULT_PARAMS: GenerationParams = {
   top_k: 50,
   repetition_penalty: 1.1,
   do_sample: true,
+  thinkingEnabled: false,
 };
 
 export const PARAM_RANGES = {

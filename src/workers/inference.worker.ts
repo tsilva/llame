@@ -284,7 +284,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
       tokenize: false,
       add_generation_prompt: true,
-      ...(isQwen && { enable_thinking: true }),
+      ...(isQwen && params.thinkingEnabled && { enable_thinking: true }),
     }) as string;
 
     // If the template ends with <think>, the model will start generating thinking

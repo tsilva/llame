@@ -348,8 +348,7 @@ export function ChatInterface({
 
             <button
               onClick={onToggleThinking}
-              disabled={needsLoad}
-              className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-40 ${
+              className={`mb-0.5 rounded-lg p-1.5 transition-colors ${
                 thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
               }`}
               title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}

@@ -1,16 +1,16 @@
 <div align="center">
-  <img src="logo.png" alt="model-playground" width="512"/>
+  <img src="logo.png" alt="llame" width="512"/>
 
   **🧠 Run LLMs directly in your browser — no server, no API keys, just WebGPU ⚡**
 
-  [Live Demo](https://model-playground.vercel.app)
+  [Live Demo](https://llame.vercel.app)
 </div>
 
 ## Overview
 
 **The Pain:** Testing small language models means setting up Python environments, downloading weights, and wrestling with CUDA drivers — all before generating a single token.
 
-**The Solution:** model-playground runs ONNX-optimized LLMs entirely in the browser using WebGPU acceleration (with WASM fallback), powered by [Hugging Face Transformers.js](https://huggingface.co/docs/transformers.js).
+**The Solution:** llame runs ONNX-optimized LLMs entirely in the browser using WebGPU acceleration (with WASM fallback), powered by [Hugging Face Transformers.js](https://huggingface.co/docs/transformers.js).
 
 **The Result:** Open a URL, pick a model, and start chatting — zero setup, zero dependencies, zero server costs.
 
@@ -38,8 +38,8 @@
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/tsilva/model-playground.git
-cd model-playground
+git clone https://github.com/tsilva/llame.git
+cd llame
 npm install
 npm run dev
 ```

@@ -13,8 +13,8 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { PanelLeft } from "lucide-react";
 
 const STORAGE_KEYS = {
-  CONVERSATIONS: "model-playground-conversations",
-  SELECTED_MODEL: "model-playground-selected-model",
+  CONVERSATIONS: "llame-conversations",
+  SELECTED_MODEL: "llame-selected-model",
 };
 
 export default function Home() {

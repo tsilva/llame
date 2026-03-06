@@ -104,7 +104,7 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming 
           style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}
         >
           <div className="text-sm text-[#8e8e8e]">
-            <MarkdownRenderer content={thinking} isStreaming={isStreaming} />
+            <MarkdownRenderer content={thinking} isStreaming={isStreaming} muted />
           </div>
         </div>
       )}

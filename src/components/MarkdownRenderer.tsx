@@ -16,19 +16,21 @@ import "katex/dist/katex.min.css";
 interface MarkdownRendererProps {
   content: string;
   isStreaming?: boolean;
+  muted?: boolean;
 }
 
 // Code block component with copy functionality
 const CodeBlock: React.FC<{
   inline?: boolean;
   className?: string;
-  children: React.ReactNode;
-}> = ({ inline, className, children }) => {
+  children?: React.ReactNode;
+  muted?: boolean;
+}> = ({ inline, className, children, muted }) => {
   const [copied, setCopied] = useState(false);
 
   if (inline) {
     return (
-      <code className="px-1.5 py-0.5 rounded bg-white/10 text-sm font-mono text-[#10a37f]">
+      <code className={`px-1.5 py-0.5 rounded bg-white/10 text-sm font-mono ${muted ? "text-[#5e5e5e]" : "text-[#10a37f]"}`}>
         {children}
       </code>
     );
@@ -71,42 +73,42 @@ const CodeBlock: React.FC<{
   );
 };
 
-export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, isStreaming, muted }: MarkdownRendererProps) {
   // Configure custom components for markdown rendering
   const components: Components = {
-    code: CodeBlock as Components["code"],
+    code: (props) => <CodeBlock {...props} muted={muted} />,
     h1: ({ children }) => (
-      <h1 className="text-xl font-semibold mt-6 mb-4 text-white border-b border-white/[0.08] pb-2">
+      <h1 className={`text-xl font-semibold mt-6 mb-4 border-b pb-2 ${muted ? "text-[#6e6e6e] border-white/[0.04]" : "text-white border-white/[0.08]"}`}>
         {children}
       </h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-lg font-semibold mt-5 mb-3 text-white">
+      <h2 className={`text-lg font-semibold mt-5 mb-3 ${muted ? "text-[#6e6e6e]" : "text-white"}`}>
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-base font-semibold mt-4 mb-2 text-white">
+      <h3 className={`text-base font-semibold mt-4 mb-2 ${muted ? "text-[#6e6e6e]" : "text-white"}`}>
         {children}
       </h3>
     ),
     h4: ({ children }) => (
-      <h4 className="text-sm font-semibold mt-3 mb-2 text-white">
+      <h4 className={`text-sm font-semibold mt-3 mb-2 ${muted ? "text-[#6e6e6e]" : "text-white"}`}>
         {children}
       </h4>
     ),
     p: ({ children }) => (
-      <p className="mb-4 leading-7 text-[#ececec]">
+      <p className={`mb-4 leading-7 ${muted ? "text-[#6e6e6e]" : "text-[#ececec]"}`}>
         {children}
       </p>
     ),
     ul: ({ children }) => (
-      <ul className="mb-4 ml-3 sm:ml-4 list-disc text-[#ececec]">
+      <ul className={`mb-4 ml-3 sm:ml-4 list-disc ${muted ? "text-[#6e6e6e]" : "text-[#ececec]"}`}>
         {children}
       </ul>
     ),
     ol: ({ children }) => (
-      <ol className="mb-4 ml-3 sm:ml-4 list-decimal text-[#ececec]">
+      <ol className={`mb-4 ml-3 sm:ml-4 list-decimal ${muted ? "text-[#6e6e6e]" : "text-[#ececec]"}`}>
         {children}
       </ol>
     ),
@@ -120,13 +122,13 @@ export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[#10a37f] hover:underline"
+        className={muted ? "text-[#5e5e5e] hover:underline" : "text-[#10a37f] hover:underline"}
       >
         {children}
       </a>
     ),
     blockquote: ({ children }) => (
-      <blockquote className="border-l-4 border-[#10a37f] pl-4 my-4 italic text-[#b4b4b4]">
+      <blockquote className={`border-l-4 pl-4 my-4 italic ${muted ? "border-[#4e4e4e] text-[#5e5e5e]" : "border-[#10a37f] text-[#b4b4b4]"}`}>
         {children}
       </blockquote>
     ),
@@ -138,17 +140,17 @@ export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps
       </div>
     ),
     thead: ({ children }) => (
-      <thead className="bg-[#2a2a2a]">
+      <thead className={muted ? "bg-[#1a1a1a]" : "bg-[#2a2a2a]"}>
         {children}
       </thead>
     ),
     th: ({ children }) => (
-      <th className="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-sm font-semibold text-white border border-white/[0.08]">
+      <th className={`px-2 py-1.5 sm:px-4 sm:py-2 text-left text-sm font-semibold border border-white/[0.08] ${muted ? "text-[#6e6e6e]" : "text-white"}`}>
         {children}
       </th>
     ),
     td: ({ children }) => (
-      <td className="px-2 py-1.5 sm:px-4 sm:py-2 text-sm text-[#ececec] border border-white/[0.08]">
+      <td className={`px-2 py-1.5 sm:px-4 sm:py-2 text-sm border border-white/[0.08] ${muted ? "text-[#6e6e6e]" : "text-[#ececec]"}`}>
         {children}
       </td>
     ),
@@ -156,17 +158,17 @@ export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps
       <hr className="my-6 border-white/[0.08]" />
     ),
     strong: ({ children }) => (
-      <strong className="font-semibold text-white">
+      <strong className={`font-semibold ${muted ? "text-[#7e7e7e]" : "text-white"}`}>
         {children}
       </strong>
     ),
     em: ({ children }) => (
-      <em className="italic text-[#b4b4b4]">
+      <em className={`italic ${muted ? "text-[#5e5e5e]" : "text-[#b4b4b4]"}`}>
         {children}
       </em>
     ),
     del: ({ children }) => (
-      <del className="line-through text-[#8e8e8e]">
+      <del className={`line-through ${muted ? "text-[#4e4e4e]" : "text-[#8e8e8e]"}`}>
         {children}
       </del>
     ),

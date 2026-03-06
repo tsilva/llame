@@ -304,6 +304,8 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         .map((img) => RawImage.fromURL(img));
       const resolvedImages = await Promise.all(images);
       inputs = await processor(inputText, resolvedImages.length === 1 ? resolvedImages[0] : resolvedImages);
+      // Transition back to generating state after image processing completes
+      post({ status: "generating" });
     } else {
       inputs = tokenizer(inputText, { return_tensor: true }) as Record<string, unknown>;
     }

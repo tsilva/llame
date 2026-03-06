@@ -2,6 +2,7 @@
 
 import { ChatMessage as ChatMessageType } from "@/types";
 import { ThinkingBlock } from "./ThinkingBlock";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 import { Sparkles } from "lucide-react";
 
 interface ChatMessageProps {
@@ -68,12 +69,7 @@ export function ChatMessage({
         )}
 
         {/* Content */}
-        <div className="text-sm leading-7 text-[#ececec] whitespace-pre-wrap break-words">
-          {message.content}
-          {isStreaming && (
-            <span className="inline-block w-[3px] h-[18px] ml-0.5 -mb-1 bg-white animate-pulse rounded-sm" />
-          )}
-        </div>
+        <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
 
         {/* Generation stats */}
         {isComplete && !isGenerating && numTokens && numTokens > 0 && (

@@ -55,3 +55,35 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Markdown-specific styles */
+.markdown-body {
+  font-size: 0.875rem;
+  line-height: 1.75rem;
+  color: #ececec;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Code highlighting overrides */
+.markdown-body pre {
+  background: #1a1a1a !important;
+  margin: 0;
+}
+
+.markdown-body pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.markdown-body code {
+  font-family: var(--font-mono), "SF Mono", Monaco, Inconsolata, "Fira Code", monospace;
+}

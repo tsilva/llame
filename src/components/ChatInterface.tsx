@@ -86,7 +86,7 @@ export function ChatInterface({
 
   // Auto-resize textarea
   useEffect(() => {
-    if (textareaRef.current) {
+    if (textareaRef.current && input) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height =
         Math.min(textareaRef.current.scrollHeight, 200) + "px";

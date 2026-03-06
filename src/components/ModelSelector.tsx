@@ -22,7 +22,6 @@ export function ModelSelector({
   onLoad,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [customId, setCustomId] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -88,40 +87,6 @@ export function ModelSelector({
               {preset.label}
             </button>
           ))}
-
-          <div className="mx-3 my-1 border-t border-white/[0.08]" />
-
-          <div className="px-3 py-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customId}
-                onChange={(e) => setCustomId(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && customId.trim()) {
-                    onSelect(customId.trim());
-                    setOpen(false);
-                    setCustomId("");
-                  }
-                }}
-                placeholder="Custom HF model ID..."
-                className="flex-1 rounded-lg border border-white/[0.08] bg-[#212121] px-2.5 py-1.5 text-sm text-[#ececec] placeholder-[#8e8e8e] outline-none focus:border-white/[0.2]"
-              />
-              <button
-                onClick={() => {
-                  if (customId.trim()) {
-                    onSelect(customId.trim());
-                    setOpen(false);
-                    setCustomId("");
-                  }
-                }}
-                disabled={!customId.trim() || isLoading || disabled}
-                className="rounded-lg bg-[#10a37f] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#0d8c6d] disabled:opacity-40 transition-colors"
-              >
-                Select
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

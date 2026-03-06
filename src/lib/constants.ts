@@ -1,6 +1,6 @@
 import { GenerationParams } from "@/types";
 
-export const DEFAULT_MODEL = "onnx-community/Qwen3-0.6B-ONNX";
+export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 
 export const MODEL_PRESETS = [
   { id: "onnx-community/Qwen3.5-0.8B-ONNX", label: "Qwen3.5 0.8B (~850MB)" },

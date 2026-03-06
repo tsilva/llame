@@ -32,13 +32,15 @@ interface UseInferenceWorkerReturn extends InferenceState {
   generate: (messages: ChatMessage[], params: GenerationParams) => void;
   interrupt: () => void;
   reset: () => void;
-  onToken: React.MutableRefObject<((token: string) => void) | null>;
-  onComplete: React.MutableRefObject<(() => void) | null>;
+  onTokenRef: React.MutableRefObject<((token: string, isThinking?: boolean) => void) | null>;
+  onThinkingCompleteRef: React.MutableRefObject<((thinking: string) => void) | null>;
+  onCompleteRef: React.MutableRefObject<(() => void) | null>;
 }
 
 export function useInferenceWorker(): UseInferenceWorkerReturn {
   const workerRef = useRef<Worker | null>(null);
-  const onTokenRef = useRef<((token: string) => void) | null>(null);
+  const onTokenRef = useRef<((token: string, isThinking?: boolean) => void) | null>(null);
+  const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
   const onCompleteRef = useRef<(() => void) | null>(null);
 
   const [state, setState] = useState<InferenceState>({
@@ -104,12 +106,16 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           break;
 
         case "update":
-          onTokenRef.current?.(data.token);
+          onTokenRef.current?.(data.token, data.isThinking);
           setState((s) => ({
             ...s,
             tps: data.tps,
             numTokens: data.numTokens,
           }));
+          break;
+
+        case "thinking_complete":
+          onThinkingCompleteRef.current?.(data.thinking);
           break;
 
         case "complete":
@@ -181,7 +187,8 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     generate,
     interrupt,
     reset,
-    onToken: onTokenRef,
-    onComplete: onCompleteRef,
+    onTokenRef,
+    onThinkingCompleteRef,
+    onCompleteRef,
   };
 }

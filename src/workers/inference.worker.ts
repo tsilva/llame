@@ -16,6 +16,115 @@ let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
 let shouldInterrupt = false;
 
+// Thinking parser to handle different thinking tag formats
+class ThinkingParser {
+  private buffer = "";
+  private inThinking = false;
+  private thinkingContent = "";
+  private contentBuffer = "";
+  private thinkingComplete = false;
+  private hasDetectedThinking = false;
+
+  // Tag patterns for different model formats
+  private static readonly START_PATTERNS = [
+    "<thinking>",
+    "<thought>",
+    "<reasoning>",
+    "<think>",
+  ];
+  
+  private static readonly END_PATTERNS = [
+    "</thinking>",
+    "</thought>",
+    "</reasoning>",
+    "</think>",
+  ];
+
+  processToken(token: string): { 
+    type: "thinking" | "content" | "buffer"; 
+    content: string;
+    thinkingComplete?: boolean;
+  } {
+    this.buffer += token;
+
+    // Check for thinking start patterns
+    if (!this.inThinking && !this.thinkingComplete) {
+      for (const pattern of ThinkingParser.START_PATTERNS) {
+        if (this.buffer.includes(pattern)) {
+          this.inThinking = true;
+          this.hasDetectedThinking = true;
+          // Extract any content before the thinking tag
+          const beforeThinking = this.buffer.split(pattern)[0];
+          this.buffer = this.buffer.substring(this.buffer.indexOf(pattern) + pattern.length);
+          if (beforeThinking) {
+            return { type: "content", content: beforeThinking };
+          }
+          return { type: "buffer", content: "" };
+        }
+      }
+    }
+
+    // Check for thinking end patterns
+    if (this.inThinking) {
+      for (const pattern of ThinkingParser.END_PATTERNS) {
+        if (this.buffer.includes(pattern)) {
+          const thinkingPart = this.buffer.split(pattern)[0];
+          this.thinkingContent += thinkingPart;
+          this.inThinking = false;
+          this.thinkingComplete = true;
+          this.buffer = this.buffer.substring(this.buffer.indexOf(pattern) + pattern.length);
+          return { 
+            type: "thinking", 
+            content: thinkingPart,
+            thinkingComplete: true 
+          };
+        }
+      }
+      // Still in thinking, accumulate all
+      this.thinkingContent += token;
+      return { type: "thinking", content: token };
+    }
+
+    // Not in thinking, check if we should emit content
+    // Only emit if we have enough to avoid partial tag matches
+    if (this.buffer.length > 20) {
+      const toEmit = this.buffer.slice(0, -10);
+      this.buffer = this.buffer.slice(-10);
+      return { type: "content", content: toEmit };
+    }
+
+    return { type: "buffer", content: "" };
+  }
+
+  flush(): { type: "thinking" | "content"; content: string } | null {
+    if (this.buffer) {
+      if (this.inThinking) {
+        this.thinkingContent += this.buffer;
+        return { type: "thinking", content: this.buffer };
+      } else {
+        return { type: "content", content: this.buffer };
+      }
+    }
+    return null;
+  }
+
+  isInThinking(): boolean {
+    return this.inThinking;
+  }
+
+  isThinkingComplete(): boolean {
+    return this.thinkingComplete;
+  }
+
+  hasThinking(): boolean {
+    return this.hasDetectedThinking;
+  }
+
+  getThinkingContent(): string {
+    return this.thinkingContent;
+  }
+}
+
 function post(msg: WorkerResponse) {
   self.postMessage(msg);
 }
@@ -65,7 +174,19 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
 
     post({ status: "loading", message: "Loading model..." });
 
-    const dtype = device === "webgpu" ? "fp16" : "q4";
+    // Check if this is a Qwen3.5 model (vision-language model)
+    const isQwen35 = modelId.includes("Qwen3.5");
+    
+    // For Qwen3.5 VLM models, use specific dtype configuration per component
+    // Other models use simple fp16 (webgpu) or q4 (wasm)
+    const dtype = isQwen35 
+      ? { 
+          embed_tokens: device === "webgpu" ? "q4" : "q4", 
+          vision_encoder: "fp16", 
+          decoder_model_merged: device === "webgpu" ? "q4" : "q4" 
+        }
+      : device === "webgpu" ? "fp16" : "q4";
+    
     model = await AutoModelForCausalLM.from_pretrained(modelId, {
       device,
       dtype,
@@ -102,6 +223,8 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
   shouldInterrupt = false;
   post({ status: "generating" });
 
+  const parser = new ThinkingParser();
+
   try {
     const chatMessages = messages.map((m) => ({
       role: m.role,
@@ -125,7 +248,17 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         numTokens++;
         const elapsed = (performance.now() - startTime) / 1000;
         const tps = numTokens / elapsed;
-        post({ status: "update", token, tps, numTokens });
+        
+        const result = parser.processToken(token);
+        
+        if (result.type === "thinking" && result.content) {
+          post({ status: "update", token: result.content, tps, numTokens, isThinking: true });
+          if (result.thinkingComplete) {
+            post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+          }
+        } else if (result.type === "content" && result.content) {
+          post({ status: "update", token: result.content, tps, numTokens, isThinking: false });
+        }
       },
     });
 
@@ -134,11 +267,22 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       ...params,
       streamer,
       stopping_criteria: [
-        (_ids: unknown, _logits: unknown) => {
+        () => {
           return shouldInterrupt;
         },
       ],
     });
+
+    // Flush any remaining content
+    const remaining = parser.flush();
+    if (remaining) {
+      if (remaining.type === "thinking") {
+        post({ status: "update", token: remaining.content, tps: numTokens / ((performance.now() - startTime) / 1000), numTokens, isThinking: true });
+        post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+      } else {
+        post({ status: "update", token: remaining.content, tps: numTokens / ((performance.now() - startTime) / 1000), numTokens, isThinking: false });
+      }
+    }
 
     const elapsed = (performance.now() - startTime) / 1000;
     const tps = numTokens / elapsed;

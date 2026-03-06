@@ -71,6 +71,8 @@ export function ChatInterface({
               msg.role === "assistant" &&
               i === messages.length - 1
             }
+            isGenerating={isGenerating && i === messages.length - 1}
+            isComplete={!isGenerating && i === messages.length - 1 && msg.role === "assistant"}
           />
         ))}
         <div ref={messagesEndRef} />

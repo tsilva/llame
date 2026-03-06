@@ -22,6 +22,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const streamingContentRef = useRef("");
+  const streamingThinkingRef = useRef("");
+  const isCompleteRef = useRef(false);
 
   // Set device based on WebGPU availability
   useEffect(() => {
@@ -53,23 +55,52 @@ export default function Home() {
   }, [worker.error]);
 
   // Token streaming handler
-  worker.onToken.current = useCallback(
-    (token: string) => {
-      streamingContentRef.current += token;
-      const content = streamingContentRef.current;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return [...prev.slice(0, -1), { ...last, content }];
-        }
-        return prev;
-      });
+  // eslint-disable-next-line react-hooks/immutability
+  worker.onTokenRef.current = useCallback(
+    (token: string, isThinking?: boolean) => {
+      if (isThinking) {
+        streamingThinkingRef.current += token;
+        const thinking = streamingThinkingRef.current;
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return [...prev.slice(0, -1), { ...last, thinking }];
+          }
+          return prev;
+        });
+      } else {
+        streamingContentRef.current += token;
+        const content = streamingContentRef.current;
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return [...prev.slice(0, -1), { ...last, content }];
+          }
+          return prev;
+        });
+      }
     },
     []
   );
 
-  worker.onComplete.current = useCallback(() => {
+  // Thinking complete handler
+  // eslint-disable-next-line react-hooks/immutability
+  worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
+    streamingThinkingRef.current = thinking;
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "assistant") {
+        return [...prev.slice(0, -1), { ...last, thinking }];
+      }
+      return prev;
+    });
+  }, []);
+
+  // eslint-disable-next-line react-hooks/immutability
+  worker.onCompleteRef.current = useCallback(() => {
     streamingContentRef.current = "";
+    streamingThinkingRef.current = "";
+    isCompleteRef.current = true;
   }, []);
 
   const handleSend = useCallback(
@@ -86,6 +117,8 @@ export default function Home() {
       };
 
       streamingContentRef.current = "";
+      streamingThinkingRef.current = "";
+      isCompleteRef.current = false;
 
       const newMessages = [...messages, userMsg, assistantMsg];
       setMessages(newMessages);

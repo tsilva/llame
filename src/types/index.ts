@@ -2,6 +2,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  thinking?: string;
 }
 
 export interface GenerationParams {
@@ -33,7 +34,8 @@ export type WorkerResponse =
   | { status: "progress"; progress: ProgressInfo }
   | { status: "loaded"; modelId: string; device: string }
   | { status: "generating" }
-  | { status: "update"; token: string; tps: number; numTokens: number }
+  | { status: "update"; token: string; tps: number; numTokens: number; isThinking?: boolean }
+  | { status: "thinking_complete"; thinking: string }
   | { status: "complete"; tps: number; numTokens: number }
   | { status: "error"; error: string }
   | { status: "unloaded" };

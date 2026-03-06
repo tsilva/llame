@@ -2,16 +2,21 @@ import {
   env,
   AutoTokenizer,
   AutoModelForCausalLM,
+  AutoModelForImageTextToText,
+  AutoProcessor,
   TextStreamer,
   PreTrainedTokenizer,
   PreTrainedModel,
   Tensor,
+  RawImage,
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
 
 env.allowLocalModels = false;
 
 let tokenizer: PreTrainedTokenizer | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let processor: any = null;
 let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
 let shouldInterrupt = false;
@@ -139,6 +144,7 @@ async function dispose() {
     model = null;
   }
   tokenizer = null;
+  processor = null;
   currentModelId = null;
 }
 
@@ -168,37 +174,48 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   };
 
   try {
-    tokenizer = await AutoTokenizer.from_pretrained(modelId, {
-      progress_callback: progressCallback,
-    });
-
-    post({ status: "loading", message: "Loading model..." });
-
     // Check if this is a Qwen3.5 model (vision-language model)
     const isQwen35 = modelId.includes("Qwen3.5");
-    
-    // For Qwen3.5 VLM models, use specific dtype configuration per component
-    // Other models use simple fp16 (webgpu) or q4 (wasm)
-    const dtype = isQwen35 
-      ? { 
-          embed_tokens: device === "webgpu" ? "q4" : "q4", 
-          vision_encoder: "fp16", 
-          decoder_model_merged: device === "webgpu" ? "q4" : "q4" 
-        }
-      : device === "webgpu" ? "fp16" : "q4";
-    
-    model = await AutoModelForCausalLM.from_pretrained(modelId, {
-      device,
-      dtype,
-      progress_callback: progressCallback,
-    } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
+
+    if (isQwen35) {
+      // Qwen3.5 VLM needs AutoProcessor + AutoModelForImageTextToText
+      processor = await AutoProcessor.from_pretrained(modelId, {
+        progress_callback: progressCallback,
+      });
+      tokenizer = processor.tokenizer;
+
+      post({ status: "loading", message: "Loading model..." });
+
+      model = await AutoModelForImageTextToText.from_pretrained(modelId, {
+        device,
+        dtype: {
+          embed_tokens: "q4",
+          vision_encoder: "fp16",
+          decoder_model_merged: "q4",
+        },
+        progress_callback: progressCallback,
+      } as Parameters<typeof AutoModelForImageTextToText.from_pretrained>[1]);
+    } else {
+      // Standard causal LM
+      tokenizer = await AutoTokenizer.from_pretrained(modelId, {
+        progress_callback: progressCallback,
+      });
+
+      post({ status: "loading", message: "Loading model..." });
+
+      model = await AutoModelForCausalLM.from_pretrained(modelId, {
+        device,
+        dtype: device === "webgpu" ? "fp16" : "q4",
+        progress_callback: progressCallback,
+      } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
+    }
 
     currentModelId = modelId;
 
     // Warm up with a dummy generation
     post({ status: "loading", message: "Warming up..." });
     try {
-      const dummyInput = tokenizer("Hello", { return_tensor: true });
+      const dummyInput = tokenizer!("Hello", { return_tensor: true });
       await (model as { generate: (args: Record<string, unknown>) => Promise<unknown> }).generate({
         ...dummyInput,
         max_new_tokens: 1,
@@ -228,26 +245,18 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
   try {
     // Check if this is a Qwen3.5 VLM model
     const isQwen35 = currentModelId?.includes("Qwen3.5") ?? false;
+    const hasImages = isQwen35 && messages.some((m) => m.images && m.images.length > 0);
 
     // Format messages for the model
-    // For VLM models with images, we need to use the multimodal format
     const chatMessages = messages.map((m) => {
-      // If message has images and this is a VLM model, format as multimodal
       if (m.images && m.images.length > 0 && isQwen35) {
         const content = [
           ...m.images.map((img) => ({ type: "image" as const, image: img })),
           { type: "text" as const, text: m.content },
         ];
-        return {
-          role: m.role,
-          content,
-        };
+        return { role: m.role, content };
       }
-      // Standard text-only format
-      return {
-        role: m.role,
-        content: m.content,
-      };
+      return { role: m.role, content: m.content };
     });
 
     const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
@@ -255,7 +264,17 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       add_generation_prompt: true,
     }) as string;
 
-    const inputs = tokenizer(inputText, { return_tensor: true }) as { input_ids: Tensor; attention_mask: Tensor };
+    // For VLM with images, use processor; otherwise use tokenizer
+    let inputs: Record<string, unknown>;
+    if (hasImages && processor) {
+      const images = messages
+        .flatMap((m) => m.images || [])
+        .map((img) => RawImage.fromURL(img));
+      const resolvedImages = await Promise.all(images);
+      inputs = await processor(inputText, resolvedImages.length === 1 ? resolvedImages[0] : resolvedImages);
+    } else {
+      inputs = tokenizer(inputText, { return_tensor: true }) as Record<string, unknown>;
+    }
 
     let numTokens = 0;
     const startTime = performance.now();

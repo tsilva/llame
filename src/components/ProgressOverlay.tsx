@@ -15,24 +15,24 @@ export function ProgressOverlay({ progress, message }: ProgressOverlayProps) {
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-md space-y-4 rounded-xl border border-white/10 bg-[#141414] p-6">
+      <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/[0.08] bg-[#2f2f2f] p-6">
         <div className="text-center">
-          <div className="mb-1 text-lg font-medium text-zinc-200">
+          <div className="mb-1 text-lg font-medium text-[#ececec]">
             Loading Model
           </div>
-          <div className="text-sm text-zinc-500">{message}</div>
+          <div className="text-sm text-[#8e8e8e]">{message}</div>
         </div>
 
         {entries.length > 0 && (
           <>
             <div>
-              <div className="mb-1 flex justify-between text-xs text-zinc-500">
+              <div className="mb-1 flex justify-between text-xs text-[#8e8e8e]">
                 <span>Overall</span>
                 <span>{overallPercent.toFixed(0)}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/5">
                 <div
-                  className="h-full rounded-full bg-blue-500 transition-all duration-200"
+                  className="h-full rounded-full bg-[#10a37f] transition-all duration-200"
                   style={{ width: `${overallPercent}%` }}
                 />
               </div>
@@ -41,13 +41,13 @@ export function ProgressOverlay({ progress, message }: ProgressOverlayProps) {
             <div className="max-h-40 space-y-2 overflow-y-auto">
               {entries.map((p) => (
                 <div key={p.file} className="text-xs">
-                  <div className="mb-0.5 flex justify-between text-zinc-500">
-                    <span className="truncate max-w-[250px]">{p.file}</span>
+                  <div className="mb-0.5 flex justify-between text-[#8e8e8e]">
+                    <span className="max-w-[250px] truncate">{p.file}</span>
                     <span>{p.progress.toFixed(0)}%</span>
                   </div>
                   <div className="h-1 overflow-hidden rounded-full bg-white/5">
                     <div
-                      className="h-full rounded-full bg-blue-500/60 transition-all duration-200"
+                      className="h-full rounded-full bg-[#10a37f]/60 transition-all duration-200"
                       style={{ width: `${p.progress}%` }}
                     />
                   </div>
@@ -55,7 +55,7 @@ export function ProgressOverlay({ progress, message }: ProgressOverlayProps) {
               ))}
             </div>
 
-            <div className="text-center text-xs text-zinc-600">
+            <div className="text-center text-xs text-[#8e8e8e]">
               {formatBytes(totalLoaded)} / {formatBytes(totalSize)}
             </div>
           </>
@@ -63,7 +63,7 @@ export function ProgressOverlay({ progress, message }: ProgressOverlayProps) {
 
         {entries.length === 0 && (
           <div className="flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#10a37f] border-t-transparent" />
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MODEL_PRESETS, DEFAULT_MODEL } from "@/lib/constants";
+import { ChevronDown, Check } from "lucide-react";
 
 interface ModelSelectorProps {
   onLoad: (modelId: string) => void;
@@ -16,52 +17,95 @@ export function ModelSelector({
   isLoading,
   disabled,
 }: ModelSelectorProps) {
-  const [modelId, setModelId] = useState(DEFAULT_MODEL);
+  const [open, setOpen] = useState(false);
+  const [customId, setCustomId] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
 
-  const isLoaded = loadedModel === modelId;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const displayName = loadedModel
+    ? loadedModel.split("/").pop()
+    : "Select model";
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Model
-      </h3>
-
-      <select
-        value={MODEL_PRESETS.find((p) => p.id === modelId) ? modelId : ""}
-        onChange={(e) => {
-          if (e.target.value) setModelId(e.target.value);
-        }}
-        className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-zinc-200 outline-none focus:border-blue-500/50"
-      >
-        <option value="" disabled>
-          Presets...
-        </option>
-        {MODEL_PRESETS.map((preset) => (
-          <option key={preset.id} value={preset.id}>
-            {preset.label}
-          </option>
-        ))}
-      </select>
-
-      <input
-        type="text"
-        value={modelId}
-        onChange={(e) => setModelId(e.target.value)}
-        placeholder="HuggingFace model ID..."
-        className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-blue-500/50"
-      />
-
+    <div ref={ref} className="relative">
       <button
-        onClick={() => onLoad(modelId)}
-        disabled={!modelId.trim() || isLoading || disabled}
-        className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-          isLoaded
-            ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
-            : "bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
-        }`}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[#ececec] hover:bg-[#2f2f2f] transition-colors"
       >
-        {isLoading ? "Loading..." : isLoaded ? "Loaded" : "Load Model"}
+        <span className="max-w-[200px] truncate">
+          {isLoading ? "Loading..." : displayName}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-[#8e8e8e] transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-72 rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-xl z-50">
+          {MODEL_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => {
+                onLoad(preset.id);
+                setOpen(false);
+              }}
+              disabled={isLoading || disabled}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#ececec] hover:bg-[#424242] transition-colors disabled:opacity-40"
+            >
+              <span className="w-4 flex-shrink-0">
+                {loadedModel === preset.id && (
+                  <Check size={14} className="text-[#10a37f]" />
+                )}
+              </span>
+              {preset.label}
+            </button>
+          ))}
+
+          <div className="mx-3 my-1 border-t border-white/[0.08]" />
+
+          <div className="px-3 py-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customId}
+                onChange={(e) => setCustomId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && customId.trim()) {
+                    onLoad(customId.trim());
+                    setOpen(false);
+                    setCustomId("");
+                  }
+                }}
+                placeholder="Custom HF model ID..."
+                className="flex-1 rounded-lg border border-white/[0.08] bg-[#212121] px-2.5 py-1.5 text-sm text-[#ececec] placeholder-[#8e8e8e] outline-none focus:border-white/[0.2]"
+              />
+              <button
+                onClick={() => {
+                  if (customId.trim()) {
+                    onLoad(customId.trim());
+                    setOpen(false);
+                    setCustomId("");
+                  }
+                }}
+                disabled={!customId.trim() || isLoading || disabled}
+                className="rounded-lg bg-[#10a37f] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#0d8c6d] disabled:opacity-40 transition-colors"
+              >
+                Load
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,15 +2,16 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMessage as ChatMessageType, GenerationParams } from "@/types";
-import { DEFAULT_MODEL, DEFAULT_PARAMS } from "@/lib/constants";
+import { DEFAULT_PARAMS } from "@/lib/constants";
 import { useWebGPU } from "@/hooks/useWebGPU";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
-import { StatusBar } from "@/components/StatusBar";
 import { ProgressOverlay } from "@/components/ProgressOverlay";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
-import { SettingsPanel } from "@/components/SettingsPanel";
+import { Sidebar } from "@/components/Sidebar";
+import { SettingsModal } from "@/components/SettingsModal";
+import { PanelLeft } from "lucide-react";
 
 export default function Home() {
   const webgpu = useWebGPU();
@@ -20,26 +21,25 @@ export default function Home() {
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
   const isCompleteRef = useRef(false);
 
-  // Set device based on WebGPU availability
   useEffect(() => {
     if (webgpu.supported === false) {
       setDevice("wasm");
     }
   }, [webgpu.supported]);
 
-  // Sync worker errors
   useEffect(() => {
     if (worker.error) {
       setError(worker.error);
     }
   }, [worker.error]);
 
-  // Token streaming handler
   // eslint-disable-next-line react-hooks/immutability
   worker.onTokenRef.current = useCallback(
     (token: string, isThinking?: boolean) => {
@@ -68,7 +68,6 @@ export default function Home() {
     []
   );
 
-  // Thinking complete handler
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
     streamingThinkingRef.current = thinking;
@@ -109,9 +108,10 @@ export default function Home() {
       const newMessages = [...messages, userMsg, assistantMsg];
       setMessages(newMessages);
 
-      // Send all messages except the empty assistant placeholder
       worker.generate(
-        newMessages.filter((m) => m.content.length > 0 || (m.images && m.images.length > 0)),
+        newMessages.filter(
+          (m) => m.content.length > 0 || (m.images && m.images.length > 0)
+        ),
         params
       );
     },
@@ -133,7 +133,6 @@ export default function Home() {
   const handleDeviceChange = useCallback(
     (d: "webgpu" | "wasm") => {
       setDevice(d);
-      // If a model is loaded, reload with new device
       if (worker.loadedModel) {
         setError(null);
         worker.loadModel(worker.loadedModel, d);
@@ -148,21 +147,51 @@ export default function Home() {
     worker.status === "loaded" || worker.status === "generating";
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0a0a0a]">
-      <StatusBar
-        webgpuSupported={webgpu.supported}
-        loadedModel={worker.loadedModel}
-        loadedDevice={worker.loadedDevice}
-        tps={worker.tps}
-        numTokens={worker.numTokens}
+    <div className="flex h-screen overflow-hidden bg-[#212121]">
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        onNewChat={() => setMessages([])}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onClearChat={() => setMessages([])}
+        modelId={worker.loadedModel}
+        onLoadModel={handleLoadModel}
+        isLoading={isLoading}
         isGenerating={isGenerating}
+        device={device}
+        webgpuSupported={webgpu.supported}
       />
 
-      {error && (
-        <ErrorBanner error={error} onDismiss={() => setError(null)} />
-      )}
+      {/* Main area */}
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 py-2">
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+            >
+              <PanelLeft size={20} />
+            </button>
+          )}
+          <ModelSelector
+            onLoad={handleLoadModel}
+            loadedModel={worker.loadedModel}
+            isLoading={isLoading}
+            disabled={isGenerating}
+          />
+          {isGenerating && worker.tps > 0 && (
+            <span className="ml-auto text-xs font-mono text-[#8e8e8e]">
+              {worker.tps.toFixed(1)} t/s
+            </span>
+          )}
+        </div>
 
-      <div className="relative flex flex-1 overflow-hidden">
+        {error && (
+          <ErrorBanner error={error} onDismiss={() => setError(null)} />
+        )}
+
         {isLoading && (
           <ProgressOverlay
             progress={worker.progress}
@@ -170,43 +199,29 @@ export default function Home() {
           />
         )}
 
-        {/* Sidebar */}
-        <div className="w-64 flex-shrink-0 space-y-6 overflow-y-auto border-r border-white/10 bg-[#0e0e0e] p-4 scrollbar-thin">
-          <ModelSelector
-            onLoad={handleLoadModel}
-            loadedModel={worker.loadedModel}
-            isLoading={isLoading}
-            disabled={isGenerating}
-          />
-
-          <SettingsPanel
-            params={params}
-            onChange={setParams}
-            device={device}
-            onDeviceChange={handleDeviceChange}
-            webgpuAvailable={webgpu.supported ?? false}
-          />
-
-          {messages.length > 0 && (
-            <button
-              onClick={() => setMessages([])}
-              disabled={isGenerating}
-              className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-400 hover:border-white/20 transition-colors disabled:opacity-40"
-            >
-              Clear chat
-            </button>
-          )}
-        </div>
-
-        {/* Main chat area */}
         <ChatInterface
           messages={messages}
           isGenerating={isGenerating}
           isModelLoaded={isModelLoaded}
           onSend={handleSend}
           onStop={handleStop}
+          tps={worker.tps}
+          numTokens={worker.numTokens}
+          loadedModel={worker.loadedModel}
+          device={worker.loadedDevice}
         />
       </div>
+
+      {/* Settings modal */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        params={params}
+        onChange={setParams}
+        device={device}
+        onDeviceChange={handleDeviceChange}
+        webgpuAvailable={webgpu.supported ?? false}
+      />
     </div>
   );
 }

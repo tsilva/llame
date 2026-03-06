@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { GenerationParams } from "@/types";
 import { DEFAULT_PARAMS, PARAM_RANGES } from "@/lib/constants";
+import { X } from "lucide-react";
 
-interface SettingsPanelProps {
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   params: GenerationParams;
   onChange: (params: GenerationParams) => void;
   device: "webgpu" | "wasm";
@@ -12,51 +14,62 @@ interface SettingsPanelProps {
   webgpuAvailable: boolean;
 }
 
-export function SettingsPanel({
+export function SettingsModal({
+  isOpen,
+  onClose,
   params,
   onChange,
   device,
   onDeviceChange,
   webgpuAvailable,
-}: SettingsPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
+}: SettingsModalProps) {
+  if (!isOpen) return null;
 
   const update = (key: keyof GenerationParams, value: number | boolean) => {
     onChange({ ...params, [key]: value });
   };
 
   return (
-    <div className="space-y-3">
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-500 hover:text-zinc-400 transition-colors"
-      >
-        <span>Settings</span>
-        <span>{collapsed ? "+" : "-"}</span>
-      </button>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#2f2f2f] p-6 shadow-xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-[#ececec]">Settings</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-[#8e8e8e] hover:bg-[#424242] hover:text-[#ececec] transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-      {!collapsed && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Device selector */}
           <div className="space-y-2">
-            <label className="text-xs text-zinc-500">Device</label>
+            <label className="text-xs text-[#8e8e8e]">Device</label>
             <div className="flex gap-2">
               <button
                 onClick={() => onDeviceChange("webgpu")}
                 disabled={!webgpuAvailable}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   device === "webgpu"
-                    ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
-                    : "bg-[#1a1a1a] text-zinc-400 border border-white/10 hover:border-white/20"
+                    ? "bg-[#10a37f]/20 text-[#10a37f] border border-[#10a37f]/30"
+                    : "bg-[#212121] text-[#b4b4b4] border border-white/[0.08] hover:border-white/[0.15]"
                 } disabled:opacity-30`}
               >
                 WebGPU
               </button>
               <button
                 onClick={() => onDeviceChange("wasm")}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   device === "wasm"
-                    ? "bg-amber-600/20 text-amber-400 border border-amber-500/30"
-                    : "bg-[#1a1a1a] text-zinc-400 border border-white/10 hover:border-white/20"
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    : "bg-[#212121] text-[#b4b4b4] border border-white/[0.08] hover:border-white/[0.15]"
                 }`}
               >
                 WASM
@@ -64,24 +77,24 @@ export function SettingsPanel({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-zinc-500">Sampling</label>
-              <button
-                onClick={() => update("do_sample", !params.do_sample)}
-                className={`relative h-5 w-9 rounded-full transition-colors ${
-                  params.do_sample ? "bg-blue-600" : "bg-zinc-700"
+          {/* Sampling toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-[#b4b4b4]">Sampling</label>
+            <button
+              onClick={() => update("do_sample", !params.do_sample)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${
+                params.do_sample ? "bg-[#10a37f]" : "bg-[#424242]"
+              }`}
+            >
+              <span
+                className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                  params.do_sample ? "left-[22px]" : "left-1"
                 }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                    params.do_sample ? "left-[18px]" : "left-0.5"
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
 
+          {/* Sliders */}
           <Slider
             label="Max tokens"
             value={params.max_new_tokens}
@@ -120,12 +133,12 @@ export function SettingsPanel({
 
           <button
             onClick={() => onChange(DEFAULT_PARAMS)}
-            className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-400 hover:border-white/20 transition-colors"
+            className="w-full rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#8e8e8e] hover:text-[#b4b4b4] hover:border-white/[0.15] transition-colors"
           >
             Reset defaults
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -146,10 +159,10 @@ function Slider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-zinc-500">{label}</span>
-        <span className="font-mono text-zinc-400">
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-[#b4b4b4]">{label}</span>
+        <span className="font-mono text-[#8e8e8e]">
           {Number.isInteger(step) ? value : value.toFixed(2)}
         </span>
       </div>
@@ -160,7 +173,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-blue-500"
+        className="w-full accent-[#10a37f]"
       />
     </div>
   );

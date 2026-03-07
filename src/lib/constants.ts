@@ -5,7 +5,7 @@ export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 export const MODEL_PRESETS = [
   { id: "onnx-community/Qwen3.5-0.8B-ONNX", label: "Qwen3.5 0.8B (~850MB)" },
   { id: "onnx-community/Qwen3.5-2B-ONNX", label: "Qwen3.5 2B (~2GB)" },
-  { id: "HuggingFaceTB/SmolLM3-3B-ONNX", label: "SmolLM3 3B (~1.8GB)" },
+  { id: "HuggingFaceTB/SmolLM3-3B-ONNX", label: "SmolLM3 3B (~2.1GB)" },
 ];
 
 export const CONTEXT_WINDOWS: Record<string, number> = {

@@ -114,7 +114,7 @@ function dispose() {
 function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
   if (device !== "webgpu") return "q4";
   const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
-  if (match && parseFloat(match[1]) >= 1.0) return "q4";
+  if (match && parseFloat(match[1]) >= 1.0) return "q4f16";
   return "fp16";
 }
 

@@ -17,19 +17,33 @@ interface MarkdownRendererProps {
   muted?: boolean;
 }
 
-const CodeBlock: React.FC<{
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-}> = ({ inline, className, children }) => {
-  const [copied, setCopied] = useState(false);
-
-  if (inline) {
-    return <code className="inline-code">{children}</code>;
+function getTextContent(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
   }
 
+  if (Array.isArray(node)) {
+    return node.map(getTextContent).join("");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getTextContent(node.props.children);
+  }
+
+  return "";
+}
+
+const PreBlock: React.FC<{
+  children?: React.ReactNode;
+}> = ({ children }) => {
+  const [copied, setCopied] = useState(false);
+  const codeElement = React.isValidElement<{ children?: React.ReactNode; className?: string }>(children)
+    ? children
+    : null;
+  const code = getTextContent(codeElement?.props.children ?? children).replace(/\n$/, "");
+  const language = codeElement?.props.className?.replace("language-", "") ?? "code";
+
   const handleCopy = async () => {
-    const code = String(children).replace(/\n$/, "");
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -39,7 +53,7 @@ const CodeBlock: React.FC<{
     <div className="relative group my-4 rounded-lg overflow-hidden bg-[#1a1a1a] border border-white/[0.08]">
       <div className="flex items-center justify-between px-3 py-2 bg-[#252525] border-b border-white/[0.08]">
         <span className="text-xs text-[#8e8e8e] font-mono">
-          {className ? className.replace("language-", "") : "code"}
+          {language}
         </span>
         <button
           onClick={handleCopy}
@@ -53,14 +67,19 @@ const CodeBlock: React.FC<{
         </button>
       </div>
       <pre className="p-3 sm:p-4 overflow-x-auto">
-        <code className={className}>{children}</code>
+        {children}
       </pre>
     </div>
   );
 };
 
 const components: Components = {
-  code: (props) => <CodeBlock {...props} />,
+  code: ({ className, children, ...props }) => (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  ),
+  pre: ({ children }) => <PreBlock>{children}</PreBlock>,
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
   ),

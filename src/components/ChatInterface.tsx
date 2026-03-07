@@ -23,7 +23,6 @@ interface ChatInterfaceProps {
   isProcessing: boolean;
   processingMessage: string;
   isModelLoaded: boolean;
-  loadedModel: string | null;
   modelId: string;
   isLoading: boolean;
   loadingProgress: Map<string, ProgressInfo>;
@@ -34,9 +33,12 @@ interface ChatInterfaceProps {
   numTokens: number;
   device: string | null;
   isMobile: boolean;
+  allowImageInputs: boolean;
   thinkingComplete: boolean;
   thinkingEnabled: boolean;
+  showThinkingToggle: boolean;
   onToggleThinking: () => void;
+  showRawConversation: boolean;
 }
 
 interface PendingImage {
@@ -66,7 +68,6 @@ export function ChatInterface({
   isProcessing,
   processingMessage,
   isModelLoaded,
-  loadedModel,
   modelId,
   isLoading,
   loadingProgress,
@@ -77,9 +78,12 @@ export function ChatInterface({
   numTokens,
   device,
   isMobile,
+  allowImageInputs,
   thinkingComplete,
   thinkingEnabled,
+  showThinkingToggle,
   onToggleThinking,
+  showRawConversation,
 }: ChatInterfaceProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -88,7 +92,7 @@ export function ChatInterface({
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>(STATIC_SUGGESTIONS);
+  const [imageSuggestions, setImageSuggestions] = useState<Suggestion[]>(STATIC_SUGGESTIONS);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,14 +131,6 @@ export function ChatInterface({
     }
   }, [input]);
 
-  // Clear input when conversation changes (new conversation or switch)
-  useEffect(() => {
-    if (messages.length === 0) {
-      setInput("");
-      setPendingImages([]);
-    }
-  }, [messages]);
-
   // Load book_page.png as data URL for Web Worker compatibility
   useEffect(() => {
     const loadBookPageImage = async () => {
@@ -144,7 +140,7 @@ export function ChatInterface({
         const reader = new FileReader();
         reader.onloadend = () => {
           const dataUrl = reader.result as string;
-          setSuggestions((prev) =>
+          setImageSuggestions((prev) =>
             prev.map((s) =>
               s.text === "Transcribe image to plain text" ? { ...s, image: dataUrl } : s
             )
@@ -160,9 +156,9 @@ export function ChatInterface({
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if ((!trimmed && pendingImages.length === 0) || isGenerating) return;
+    if ((!trimmed && activePendingImages.length === 0) || isGenerating) return;
 
-    const imageDataUrls = pendingImages.map((img) => img.dataUrl);
+    const imageDataUrls = activePendingImages.map((img) => img.dataUrl);
 
     setInput("");
     setPendingImages([]);
@@ -197,6 +193,10 @@ export function ChatInterface({
   };
 
   const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!allowImageInputs) {
+      e.target.value = "";
+      return;
+    }
     const files = Array.from(e.target.files || []);
     const newImages = await Promise.all(files.map(processFile));
     setPendingImages((prev) =>
@@ -207,16 +207,19 @@ export function ChatInterface({
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!allowImageInputs) return;
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!allowImageInputs) return;
     setIsDragging(false);
   };
 
   const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!allowImageInputs) return;
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
     const newImages = await Promise.all(files.map(processFile));
@@ -241,6 +244,10 @@ export function ChatInterface({
   const hasMessages = messages.length > 0;
   const modelName = MODEL_PRESETS.find(p => p.id === modelId)?.label?.replace(/\s*\(.*\)/, "") || modelId.split("/").pop() || "Unknown model";
   const needsLoad = !isModelLoaded;
+  const activePendingImages = allowImageInputs ? pendingImages : [];
+  const suggestions = allowImageInputs
+    ? imageSuggestions
+    : imageSuggestions.filter((suggestion) => !suggestion.image);
 
   return (
     <div
@@ -250,7 +257,7 @@ export function ChatInterface({
       onDrop={handleDrop}
     >
       {/* Drag overlay */}
-      {isDragging && (
+      {allowImageInputs && isDragging && (
         <div className="absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-[#10a37f] bg-[#10a37f]/10 pointer-events-none">
           <p className="text-[#10a37f] text-lg font-medium">
             Drop images here
@@ -308,6 +315,7 @@ export function ChatInterface({
                   }
                   tps={isLastAssistant ? tps : undefined}
                   numTokens={isLastAssistant ? numTokens : undefined}
+                  showRaw={showRawConversation}
                 />
               );
             })}
@@ -340,9 +348,9 @@ export function ChatInterface({
       <div className="mx-auto w-full max-w-[768px] px-3 pb-3 pt-2 md:px-4 md:pb-4">
         <div className="rounded-3xl border border-white/[0.08] bg-[#2f2f2f] px-4 py-3">
           {/* Image previews inside pill */}
-          {pendingImages.length > 0 && (
+          {activePendingImages.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
-              {pendingImages.map((img) => (
+              {activePendingImages.map((img) => (
                 <div key={img.id} className="group relative">
                   <img
                     src={img.dataUrl}
@@ -368,28 +376,32 @@ export function ChatInterface({
               accept="image/*"
               multiple
               className="hidden"
-              disabled={needsLoad}
+              disabled={!allowImageInputs || needsLoad}
             />
 
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={needsLoad || pendingImages.length >= 5 || isGenerating}
-              className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
-              title={needsLoad ? "Load model first to use images" : "Upload images"}
-            >
-              <ImagePlus size={20} />
-            </button>
+            {allowImageInputs && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={needsLoad || activePendingImages.length >= 5 || isGenerating}
+                className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
+                title={needsLoad ? "Load model first to use images" : "Upload images"}
+              >
+                <ImagePlus size={20} />
+              </button>
+            )}
 
-            <button
-              onClick={onToggleThinking}
-              disabled={isGenerating}
-              className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
-              }`}
-              title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}
-            >
-              <Brain size={20} />
-            </button>
+            {showThinkingToggle && (
+              <button
+                onClick={onToggleThinking}
+                disabled={isGenerating}
+                className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
+                }`}
+                title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}
+              >
+                <Brain size={20} />
+              </button>
+            )}
 
             <textarea
               ref={textareaRef}
@@ -415,7 +427,7 @@ export function ChatInterface({
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!input.trim() && pendingImages.length === 0}
+                disabled={!input.trim() && activePendingImages.length === 0}
                 className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
               >
                 <ArrowUp size={18} className="text-[#212121]" />

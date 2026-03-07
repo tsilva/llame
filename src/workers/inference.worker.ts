@@ -10,6 +10,7 @@ import {
   RawImage,
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
+import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 
 env.allowLocalModels = false;
 
@@ -160,8 +161,7 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   };
 
   try {
-    // Check if this is a Qwen3.5 model (vision-language model)
-    const isQwen35 = modelId.includes("Qwen3.5");
+    const isQwen35 = isVlmModel(modelId);
 
     if (isQwen35) {
       // Qwen3.5 VLM needs AutoProcessor + AutoModelForImageTextToText
@@ -235,8 +235,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
   post({ status: "generating" });
 
   try {
-    // Check if this is a Qwen3.5 VLM model
-    const isQwen35 = currentModelId?.includes("Qwen3.5") ?? false;
+    const isQwen35 = currentModelId ? isVlmModel(currentModelId) : false;
     const hasImages = isQwen35 && messages.some((m) => m.images && m.images.length > 0);
 
     // Format messages for the model
@@ -251,17 +250,16 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       return { role: m.role, content: m.content };
     });
 
-    // Only prompt supported models to emit reasoning when the UI toggle is on.
-    const supportsThinking = Boolean(
-      currentModelId?.toLowerCase().includes("qwen") ||
-      currentModelId?.toLowerCase().includes("smollm3")
-    );
-    const thinkingEnabled = supportsThinking && params.thinkingEnabled;
+    const thinkingMode = currentModelId ? getModelThinkingMode(currentModelId) : "unsupported";
+    const thinkingEnabled = currentModelId
+      ? getEffectiveThinkingEnabled(currentModelId, params.thinkingEnabled)
+      : false;
     const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
       tokenize: false,
       add_generation_prompt: true,
-      ...(thinkingEnabled && { enable_thinking: true }),
+      ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
     }) as string;
+    post({ status: "prompt", inputText });
 
     // Keep parsing <think> tags even when hidden so they don't leak into chat content.
     // Only start in thinking mode when reasoning was explicitly enabled in the prompt.
@@ -294,6 +292,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       skip_special_tokens: false,
       callback_function: (rawToken: string) => {
         if (myId !== generationId) return;
+        post({ status: "raw_update", token: rawToken });
         // Filter out special tokens except thinking tags (which we need to parse)
         const token = rawToken.replace(/<\|[^>]*\|>/g, "");
         if (!token) return;

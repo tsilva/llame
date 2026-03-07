@@ -13,6 +13,7 @@ interface ChatMessageProps {
   isComplete?: boolean;
   tps?: number;
   numTokens?: number;
+  showRaw?: boolean;
 }
 
 export function ChatMessage({
@@ -22,11 +23,16 @@ export function ChatMessage({
   isComplete,
   tps,
   numTokens,
+  showRaw,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const hasThinking = message.thinking !== undefined && message.thinking !== null;
   const hasImages = message.images && message.images.length > 0;
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  if (showRaw) {
+    return <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} tps={tps} numTokens={numTokens} />;
+  }
 
   if (isUser) {
     return (
@@ -90,6 +96,105 @@ export function ChatMessage({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function RawChatMessage({
+  message,
+  isComplete,
+  isGenerating,
+  tps,
+  numTokens,
+}: {
+  message: ChatMessageType;
+  isComplete?: boolean;
+  isGenerating?: boolean;
+  tps?: number;
+  numTokens?: number;
+}) {
+  const isUser = message.role === "user";
+  const rawOutputAvailable = typeof message.debug?.rawOutput === "string";
+  const modelInputAvailable = typeof message.debug?.modelInput === "string";
+
+  return (
+    <div className="animate-fade-in">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#171717] p-4">
+        <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[#6f6f6f]">
+          {isUser ? "User" : "Assistant"}
+        </div>
+
+        {isUser ? (
+          <>
+            <RawSection label="message" content={message.content || "(empty)"} />
+            {message.images && message.images.length > 0 && (
+              <details className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
+                <summary className="cursor-pointer text-[11px] font-medium uppercase tracking-[0.18em] text-[#8e8e8e]">
+                  image payloads ({message.images.length})
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {message.images.map((image, index) => (
+                    <RawSection key={index} label={`image ${index + 1}`} content={image} />
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
+        ) : (
+          <>
+            <RawSection
+              label="model input"
+              content={
+                modelInputAvailable
+                  ? (message.debug?.modelInput ?? "")
+                  : "Raw model input is unavailable for this older message."
+              }
+              muted={!modelInputAvailable}
+            />
+            <div className="mt-3">
+              <RawSection
+                label="model output"
+                content={
+                  rawOutputAvailable
+                    ? (message.debug?.rawOutput ?? "")
+                    : "Raw model output is unavailable for this older message."
+                }
+                muted={!rawOutputAvailable}
+              />
+            </div>
+            {isComplete && !isGenerating && numTokens && numTokens > 0 && (
+              <div className="mt-3 text-xs text-[#6f6f6f]">
+                {numTokens} tokens{tps && tps > 0 ? ` · ${tps.toFixed(1)} tokens/sec` : ""}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RawSection({
+  label,
+  content,
+  muted,
+}: {
+  label: string;
+  content: string;
+  muted?: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#6f6f6f]">
+        {label}
+      </div>
+      <pre
+        className={`overflow-x-auto whitespace-pre-wrap break-words rounded-xl border border-white/[0.06] px-3 py-2 font-mono text-xs leading-6 ${
+          muted ? "bg-black/10 text-[#7c7c7c]" : "bg-black/20 text-[#d6d6d6]"
+        }`}
+      >
+        {content}
+      </pre>
     </div>
   );
 }

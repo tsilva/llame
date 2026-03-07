@@ -37,6 +37,8 @@ interface UseInferenceWorkerReturn extends InferenceState {
   generate: (messages: ChatMessage[], params: GenerationParams) => void;
   interrupt: () => void;
   reset: () => void;
+  onPromptRef: React.MutableRefObject<((inputText: string) => void) | null>;
+  onRawTokenRef: React.MutableRefObject<((token: string) => void) | null>;
   onTokenRef: React.MutableRefObject<((token: string, isThinking?: boolean) => void) | null>;
   onThinkingCompleteRef: React.MutableRefObject<((thinking: string) => void) | null>;
   onCompleteRef: React.MutableRefObject<(() => void) | null>;
@@ -59,6 +61,8 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     numTokens: 0,
     inputTokens: 0,
   });
+  const onPromptRef = useRef<((inputText: string) => void) | null>(null);
+  const onRawTokenRef = useRef<((token: string) => void) | null>(null);
   const onTokenRef = useRef<((token: string, isThinking?: boolean) => void) | null>(null);
   const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
   const onCompleteRef = useRef<(() => void) | null>(null);
@@ -102,6 +106,10 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
       } else if (d.status === "generating") {
         interruptedRef.current = false;
         setState((s) => ({ ...s, status: "generating", tps: 0, numTokens: 0, inputTokens: 0 }));
+      } else if (d.status === "prompt") {
+        if (!interruptedRef.current) onPromptRef.current?.(d.inputText);
+      } else if (d.status === "raw_update") {
+        if (!interruptedRef.current) onRawTokenRef.current?.(d.token);
       } else if (d.status === "update") {
         if (interruptedRef.current) return;
         onTokenRef.current?.(d.token, d.isThinking);
@@ -231,6 +239,8 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     generate,
     interrupt,
     reset,
+    onPromptRef,
+    onRawTokenRef,
     onTokenRef,
     onThinkingCompleteRef,
     onCompleteRef,

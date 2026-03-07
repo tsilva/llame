@@ -2,14 +2,20 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMessage as ChatMessageType, Conversation, GenerationParams } from "@/types";
-import { DEFAULT_PARAMS, DEFAULT_MODEL } from "@/lib/constants";
+import {
+  DEFAULT_PARAMS,
+  DEFAULT_MODEL,
+  canToggleThinking,
+  getEffectiveThinkingEnabled,
+  isVlmModel,
+} from "@/lib/constants";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
-import { PanelLeft, Github, X } from "lucide-react";
+import { PanelLeft, Github, X, Code2 } from "lucide-react";
 
 interface PendingGeneration {
   conversationId: string;
@@ -40,12 +46,18 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showRawConversation, setShowRawConversation] = useState(false);
 
   // Load thinking preference from localStorage
   useEffect(() => {
     const savedThinking = localStorage.getItem("llame-thinking-enabled");
     if (savedThinking !== null) {
       setParams((prev) => ({ ...prev, thinkingEnabled: savedThinking === "true" }));
+    }
+
+    const savedRawView = localStorage.getItem("llame-raw-conversation");
+    if (savedRawView !== null) {
+      setShowRawConversation(savedRawView === "true");
     }
   }, []);
 
@@ -54,11 +66,30 @@ export default function Home() {
     localStorage.setItem("llame-thinking-enabled", params.thinkingEnabled.toString());
   }, [params.thinkingEnabled]);
 
+  useEffect(() => {
+    localStorage.setItem("llame-raw-conversation", showRawConversation.toString());
+  }, [showRawConversation]);
+
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
+  const streamingRawOutputRef = useRef("");
   const isCompleteRef = useRef(false);
   const [thinkingComplete, setThinkingComplete] = useState(false);
   const activeConversationIdRef = useRef<string | null>(null);
+
+  const updateLastAssistantMessage = useCallback(
+    (updater: (message: ChatMessageType) => ChatMessageType) => {
+      const conv = storage.activeConversation;
+      if (!conv) return;
+
+      const last = conv.messages[conv.messages.length - 1];
+      if (last?.role !== "assistant") return;
+
+      const updatedMessages = [...conv.messages.slice(0, -1), updater(last)];
+      storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
+    },
+    [storage]
+  );
 
   // Sync ref with state
   useEffect(() => {
@@ -123,10 +154,15 @@ export default function Home() {
         id: crypto.randomUUID(),
         role: "assistant",
         content: "",
+        debug: {
+          modelInput: "",
+          rawOutput: "",
+        },
       };
 
       streamingContentRef.current = "";
       streamingThinkingRef.current = "";
+      streamingRawOutputRef.current = "";
       isCompleteRef.current = false;
       setThinkingComplete(false);
 
@@ -146,53 +182,58 @@ export default function Home() {
   }, [pendingGeneration, worker.status, worker.loadedModel, worker.loadedDevice, params, storage, worker]);
 
   // eslint-disable-next-line react-hooks/immutability
+  worker.onPromptRef.current = useCallback((inputText: string) => {
+    updateLastAssistantMessage((last) => ({
+      ...last,
+      debug: {
+        ...last.debug,
+        modelInput: inputText,
+      },
+    }));
+  }, [updateLastAssistantMessage]);
+
+  // eslint-disable-next-line react-hooks/immutability
+  worker.onRawTokenRef.current = useCallback((token: string) => {
+    streamingRawOutputRef.current += token;
+    const rawOutput = streamingRawOutputRef.current;
+
+    updateLastAssistantMessage((last) => ({
+      ...last,
+      debug: {
+        ...last.debug,
+        rawOutput,
+      },
+    }));
+  }, [updateLastAssistantMessage]);
+
+  // eslint-disable-next-line react-hooks/immutability
   worker.onTokenRef.current = useCallback(
     (token: string, isThinking?: boolean) => {
       if (isThinking) {
         streamingThinkingRef.current += token;
         const thinking = streamingThinkingRef.current;
-
-        const conv = storage.activeConversation;
-        if (!conv) return;
-        const last = conv.messages[conv.messages.length - 1];
-        if (last?.role === "assistant") {
-          const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
-          storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
-        }
+        updateLastAssistantMessage((last) => ({ ...last, thinking }));
       } else {
         streamingContentRef.current += token;
         const content = streamingContentRef.current;
-
-        const conv = storage.activeConversation;
-        if (!conv) return;
-        const last = conv.messages[conv.messages.length - 1];
-        if (last?.role === "assistant") {
-          const updatedMessages = [...conv.messages.slice(0, -1), { ...last, content }];
-          storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
-        }
+        updateLastAssistantMessage((last) => ({ ...last, content }));
       }
     },
-    [storage]
+    [updateLastAssistantMessage]
   );
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
     streamingThinkingRef.current = thinking;
     setThinkingComplete(true);
-
-    const conv = storage.activeConversation;
-    if (!conv) return;
-    const last = conv.messages[conv.messages.length - 1];
-    if (last?.role === "assistant") {
-      const updatedMessages = [...conv.messages.slice(0, -1), { ...last, thinking }];
-      storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
-    }
-  }, [storage]);
+    updateLastAssistantMessage((last) => ({ ...last, thinking }));
+  }, [updateLastAssistantMessage]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onCompleteRef.current = useCallback(() => {
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
+    streamingRawOutputRef.current = "";
     isCompleteRef.current = true;
     storage.flushPendingSave();
   }, [storage]);
@@ -202,6 +243,7 @@ export default function Home() {
       worker.interrupt();
       streamingContentRef.current = "";
       streamingThinkingRef.current = "";
+      streamingRawOutputRef.current = "";
       isCompleteRef.current = true;
     }
     const newConv = storage.createConversation(lastSelectedModel);
@@ -261,10 +303,15 @@ export default function Home() {
           id: crypto.randomUUID(),
           role: "assistant",
           content: "",
+          debug: {
+            modelInput: "",
+            rawOutput: "",
+          },
         };
 
         streamingContentRef.current = "";
         streamingThinkingRef.current = "";
+        streamingRawOutputRef.current = "";
         isCompleteRef.current = false;
         setThinkingComplete(false);
 
@@ -286,12 +333,15 @@ export default function Home() {
     worker.interrupt();
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
+    streamingRawOutputRef.current = "";
     isCompleteRef.current = true;
   }, [worker]);
 
   const handleToggleThinking = useCallback(() => {
+    const modelId = storage.activeConversation?.modelId || DEFAULT_MODEL;
+    if (!canToggleThinking(modelId)) return;
     setParams((prev) => ({ ...prev, thinkingEnabled: !prev.thinkingEnabled }));
-  }, []);
+  }, [storage.activeConversation?.modelId]);
 
   const handleDeviceChange = useCallback(
     (d: "webgpu" | "wasm") => {
@@ -326,6 +376,7 @@ export default function Home() {
       worker.interrupt();
       streamingContentRef.current = "";
       streamingThinkingRef.current = "";
+      streamingRawOutputRef.current = "";
       isCompleteRef.current = true;
     }
     storage.setActiveConversation(id);
@@ -341,6 +392,10 @@ export default function Home() {
   const isProcessing = worker.status === "processing";
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
+  const activeModelId = storage.activeConversation?.modelId || DEFAULT_MODEL;
+  const allowImageInputs = !isVlmModel(activeModelId);
+  const thinkingEnabled = getEffectiveThinkingEnabled(activeModelId, params.thinkingEnabled);
+  const showThinkingToggle = canToggleThinking(activeModelId);
 
   const currentMessages = storage.activeConversation?.messages || [];
 
@@ -380,7 +435,7 @@ export default function Home() {
             isLoading={isLoading}
             device={device}
             webgpuSupported={webgpuSupported}
-            modelId={storage.activeConversation?.modelId || DEFAULT_MODEL}
+            modelId={activeModelId}
             onModelChange={handleModelChange}
             isGenerating={isGenerating}
           />
@@ -390,6 +445,18 @@ export default function Home() {
                 {worker.tps.toFixed(1)} t/s
               </span>
             )}
+            <button
+              onClick={() => setShowRawConversation((prev) => !prev)}
+              className={`rounded-full p-2 transition-colors ${
+                showRawConversation
+                  ? "bg-[#2f2f2f] text-[#b4b4b4]"
+                  : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
+              }`}
+              aria-label={showRawConversation ? "Show formatted conversation" : "Show raw conversation"}
+              title={showRawConversation ? "Show formatted conversation" : "Show raw conversation"}
+            >
+              <Code2 size={18} />
+            </button>
             <a
               href="https://github.com/tsilva/llame"
               target="_blank"
@@ -413,14 +480,14 @@ export default function Home() {
         )}
 
         <ChatInterface
+          key={storage.activeConversationId || "no-conversation"}
           conversationId={storage.activeConversationId}
           messages={currentMessages}
           isGenerating={isGenerating}
           isProcessing={isProcessing}
           processingMessage={worker.processingMessage}
           isModelLoaded={isModelLoaded}
-          loadedModel={worker.loadedModel}
-          modelId={storage.activeConversation?.modelId || DEFAULT_MODEL}
+          modelId={activeModelId}
           isLoading={isLoading}
           loadingProgress={worker.progress}
           loadingMessage={worker.loadingMessage}
@@ -430,9 +497,12 @@ export default function Home() {
           numTokens={worker.numTokens}
           device={worker.loadedDevice}
           isMobile={isMobile}
+          allowImageInputs={allowImageInputs}
           thinkingComplete={thinkingComplete}
-          thinkingEnabled={params.thinkingEnabled}
+          thinkingEnabled={thinkingEnabled}
+          showThinkingToggle={showThinkingToggle}
           onToggleThinking={handleToggleThinking}
+          showRawConversation={showRawConversation}
         />
       </div>
 

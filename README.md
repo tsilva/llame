@@ -34,6 +34,7 @@
 - 🚀 **In-browser inference** — models run entirely on your device via Web Workers
 - ⚡ **WebGPU acceleration** — fp16 precision with automatic WASM fallback for unsupported browsers
 - 💬 **Chat interface** — real-time token streaming with tokens/second counter
+- 🧪 **Raw debug view** — toggle between formatted chat and exact model input/output for debugging
 - 🖼️ **Vision capable** — supports image input for visual question answering
 - 🎛️ **Tunable generation** — temperature, top-p, top-k, repetition penalty, max tokens
 - 📊 **Progress tracking** — live download progress overlay when loading models

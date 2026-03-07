@@ -1,9 +1,15 @@
+export interface MessageDebugData {
+  modelInput?: string;
+  rawOutput?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   thinking?: string;
   images?: string[]; // Base64-encoded images for VLM support
+  debug?: MessageDebugData;
 }
 
 export interface Conversation {
@@ -62,6 +68,8 @@ export type WorkerResponse =
   | { status: "loaded"; modelId: string; device: string; precision: string }
   | { status: "processing"; message: string }
   | { status: "generating" }
+  | { status: "prompt"; inputText: string }
+  | { status: "raw_update"; token: string }
   | { status: "update"; token: string; tps: number; numTokens: number; inputTokens?: number; isThinking?: boolean }
   | { status: "thinking_complete"; thinking: string }
   | { status: "complete"; tps: number; numTokens: number }

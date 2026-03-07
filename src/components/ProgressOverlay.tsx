@@ -1,6 +1,7 @@
 "use client";
 
 import { ProgressInfo } from "@/types";
+import { useRef } from "react";
 
 interface ProgressOverlayProps {
   progress: Map<string, ProgressInfo>;
@@ -8,10 +9,18 @@ interface ProgressOverlayProps {
 }
 
 export function ProgressOverlay({ progress, message }: ProgressOverlayProps) {
+  const maxPercentRef = useRef(0);
   const entries = Array.from(progress.values());
   const totalLoaded = entries.reduce((s, p) => s + p.loaded, 0);
   const totalSize = entries.reduce((s, p) => s + p.total, 0);
-  const overallPercent = totalSize > 0 ? (totalLoaded / totalSize) * 100 : 0;
+  const rawPercent = totalSize > 0 ? (totalLoaded / totalSize) * 100 : 0;
+
+  if (entries.length === 0) {
+    maxPercentRef.current = 0;
+  } else {
+    maxPercentRef.current = Math.max(maxPercentRef.current, rawPercent);
+  }
+  const overallPercent = maxPercentRef.current;
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">

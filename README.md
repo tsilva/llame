@@ -115,3 +115,7 @@ MIT
 [Try the Live Demo](https://llame.vercel.app) · [Read the Architecture](#%EF%B8%8F-architecture) · [Star on GitHub](https://github.com/tsilva/llame) ⭐
 
 </div>
+
+## License
+
+MIT

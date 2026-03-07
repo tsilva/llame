@@ -5,11 +5,13 @@ export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 export const MODEL_PRESETS = [
   { id: "onnx-community/Qwen3.5-0.8B-ONNX", label: "Qwen3.5 0.8B (~850MB)" },
   { id: "onnx-community/Qwen3.5-2B-ONNX", label: "Qwen3.5 2B (~2GB)" },
+  { id: "HuggingFaceTB/SmolLM3-3B-ONNX", label: "SmolLM3 3B (~1.8GB)" },
 ];
 
 export const CONTEXT_WINDOWS: Record<string, number> = {
   "onnx-community/Qwen3.5-0.8B-ONNX": 32768, // 32k context window
   "onnx-community/Qwen3.5-2B-ONNX": 32768, // 32k context window
+  "HuggingFaceTB/SmolLM3-3B-ONNX": 32768, // 32k context window
 };
 
 export const DEFAULT_PARAMS: GenerationParams = {

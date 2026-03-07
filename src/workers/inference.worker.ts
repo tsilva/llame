@@ -235,11 +235,11 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     });
 
     // Enable thinking for Qwen3/3.5 models so they produce <think> tags
-    const isQwen = currentModelId?.toLowerCase().includes("qwen") ?? false;
+    const supportsThinking = currentModelId?.toLowerCase().includes("qwen") || currentModelId?.toLowerCase().includes("smollm3");
     const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
       tokenize: false,
       add_generation_prompt: true,
-      ...(isQwen && params.thinkingEnabled && { enable_thinking: true }),
+      ...(supportsThinking && params.thinkingEnabled && { enable_thinking: true }),
     }) as string;
 
     // If the template ends with <think>, the model will start generating thinking

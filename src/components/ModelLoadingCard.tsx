@@ -18,8 +18,12 @@ export function ModelLoadingCard({
   const [showDetails, setShowDetails] = useState(false);
   const maxPercentRef = useRef(0);
   const entries = Array.from(progress.values());
-  // Use pre-computed progress values from worker instead of recalculating from bytes
-  const totalProgress = entries.reduce((sum, p) => sum + p.progress, 0);
+  // Use pre-computed progress values from worker (normalize to 0-100 if needed)
+  const normalizedProgress = entries.map(p => ({
+    ...p,
+    progress: p.progress <= 1 ? p.progress * 100 : p.progress
+  }));
+  const totalProgress = normalizedProgress.reduce((sum, p) => sum + p.progress, 0);
   const rawPercent = entries.length > 0 ? totalProgress / entries.length : 0;
 
   if (entries.length === 0) {
@@ -88,7 +92,7 @@ export function ModelLoadingCard({
               {/* Individual file progress */}
               {showDetails && (
                 <div className="space-y-1.5 max-h-[120px] overflow-y-auto overflow-x-hidden mb-2">
-                  {entries.map((p) => (
+                  {normalizedProgress.map((p) => (
                     <div key={p.file} className="text-xs">
                       <div className="mb-0.5 flex justify-between text-[#8e8e8e]">
                         <span className="max-w-[140px] sm:max-w-[200px] truncate">{p.file}</span>

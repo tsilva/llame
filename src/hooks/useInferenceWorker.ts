@@ -46,6 +46,19 @@ interface UseInferenceWorkerReturn extends InferenceState {
 
 export function useInferenceWorker(): UseInferenceWorkerReturn {
   const workerRef = useRef<Worker | null>(null);
+  const stateRef = useRef<InferenceState>({
+    status: "idle",
+    loadingMessage: "",
+    processingMessage: "",
+    progress: new Map(),
+    error: null,
+    loadedModel: null,
+    loadedDevice: null,
+    loadedPrecision: null,
+    tps: 0,
+    numTokens: 0,
+    inputTokens: 0,
+  });
   const onTokenRef = useRef<((token: string, isThinking?: boolean) => void) | null>(null);
   const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
   const onCompleteRef = useRef<(() => void) | null>(null);
@@ -67,12 +80,13 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
   const interruptedRef = useRef(false);
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL("../workers/inference.worker.ts", import.meta.url),
-      { type: "module" }
-    );
+    stateRef.current = state;
+  }, [state]);
 
+  const attachWorker = useCallback((worker: Worker) => {
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      if (workerRef.current !== worker) return;
+
       const d = event.data;
 
       if (d.status === "ready") {
@@ -105,13 +119,46 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
         setState((s) => ({ ...s, status: "idle", loadedModel: null, loadedDevice: null, loadedPrecision: null }));
       }
     };
-
-    workerRef.current = worker;
-
-    return () => {
-      worker.terminate();
-    };
   }, []);
+
+  const createWorker = useCallback(() => {
+    const worker = new Worker(
+      new URL("../workers/inference.worker.ts", import.meta.url),
+      { type: "module" }
+    );
+    attachWorker(worker);
+    return worker;
+  }, [attachWorker]);
+
+  const replaceWorker = useCallback(() => {
+    interruptedRef.current = false;
+    workerRef.current?.terminate();
+    const worker = createWorker();
+    workerRef.current = worker;
+    setState((s) => ({
+      ...s,
+      status: "idle",
+      loadingMessage: "",
+      processingMessage: "",
+      progress: new Map(),
+      error: null,
+      loadedModel: null,
+      loadedDevice: null,
+      loadedPrecision: null,
+      tps: 0,
+      numTokens: 0,
+      inputTokens: 0,
+    }));
+    return worker;
+  }, [createWorker]);
+
+  useEffect(() => {
+    workerRef.current = createWorker();
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, [createWorker]);
 
   const postMessage = useCallback((msg: WorkerRequest) => {
     workerRef.current?.postMessage(msg);
@@ -119,10 +166,25 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
 
   const loadModel = useCallback(
     (modelId: string, device: "webgpu" | "wasm") => {
+      const current = stateRef.current;
+      // Cross-model loads are safer with a fresh worker because ORT/WebGPU
+      // resources from a previous session can survive in-process disposal.
+      const needsFreshWorker =
+        current.status === "loading" ||
+        current.status === "processing" ||
+        (current.loadedModel !== null && (current.loadedModel !== modelId || current.loadedDevice !== device));
+
+      if (needsFreshWorker) {
+        const worker = replaceWorker();
+        setState((s) => ({ ...s, progress: new Map(), error: null, status: "loading" }));
+        worker.postMessage({ type: "load", modelId, device });
+        return;
+      }
+
       setState((s) => ({ ...s, progress: new Map(), error: null }));
       postMessage({ type: "load", modelId, device });
     },
-    [postMessage]
+    [postMessage, replaceWorker]
   );
 
   const generate = useCallback(
@@ -144,8 +206,8 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
   }, [postMessage]);
 
   const reset = useCallback(() => {
-    postMessage({ type: "reset" });
-  }, [postMessage]);
+    replaceWorker();
+  }, [replaceWorker]);
 
   const { loadedModel, inputTokens, ...restState } = state;
 

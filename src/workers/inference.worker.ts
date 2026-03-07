@@ -251,17 +251,21 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       return { role: m.role, content: m.content };
     });
 
-    // Enable thinking for Qwen3/3.5 models so they produce <think> tags
-    const supportsThinking = currentModelId?.toLowerCase().includes("qwen") || currentModelId?.toLowerCase().includes("smollm3");
+    // Only prompt supported models to emit reasoning when the UI toggle is on.
+    const supportsThinking = Boolean(
+      currentModelId?.toLowerCase().includes("qwen") ||
+      currentModelId?.toLowerCase().includes("smollm3")
+    );
+    const thinkingEnabled = supportsThinking && params.thinkingEnabled;
     const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
       tokenize: false,
       add_generation_prompt: true,
-      ...(supportsThinking && params.thinkingEnabled && { enable_thinking: true }),
+      ...(thinkingEnabled && { enable_thinking: true }),
     }) as string;
 
-    // If the template ends with <think>, the model will start generating thinking
-    // content directly — so initialize the parser in thinking mode
-    const templateEndsWithThink = inputText.trimEnd().endsWith("<think>");
+    // Keep parsing <think> tags even when hidden so they don't leak into chat content.
+    // Only start in thinking mode when reasoning was explicitly enabled in the prompt.
+    const templateEndsWithThink = thinkingEnabled && inputText.trimEnd().endsWith("<think>");
     const parser = new ThinkingParser(templateEndsWithThink);
 
     // Calculate input token count for context fullness tracking
@@ -300,9 +304,11 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         const result = parser.processToken(token);
 
         if (result.type === "thinking" && result.content) {
-          post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: true });
-          if (result.thinkingComplete) {
-            post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+          if (thinkingEnabled) {
+            post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: true });
+            if (result.thinkingComplete) {
+              post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+            }
           }
         } else if (result.type === "content" && result.content) {
           post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
@@ -327,8 +333,10 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     if (remaining) {
       const finalTps = numTokens / ((performance.now() - startTime) / 1000);
       if (remaining.type === "thinking") {
-        post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: true });
-        post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+        if (thinkingEnabled) {
+          post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: true });
+          post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+        }
       } else {
         post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: false });
       }

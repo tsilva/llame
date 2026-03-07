@@ -7,7 +7,6 @@ import {
   TextStreamer,
   PreTrainedTokenizer,
   PreTrainedModel,
-  Tensor,
   RawImage,
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
@@ -19,6 +18,7 @@ let tokenizer: PreTrainedTokenizer | null = null;
 let processor: any = null;
 let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
+let currentDevice: "webgpu" | "wasm" | null = null;
 let currentPrecision: string | null = null;
 let shouldInterrupt = false;
 let generationId = 0;
@@ -96,10 +96,22 @@ function post(msg: WorkerResponse) {
   self.postMessage(msg);
 }
 
-function dispose() {
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "string" && err) return err;
+  try {
+    const serialized = JSON.stringify(err);
+    if (serialized && serialized !== "{}") return serialized;
+  } catch {
+    // Ignore serialization failures and fall back below.
+  }
+  return "Unknown error";
+}
+
+async function dispose() {
   if (model) {
     try {
-      (model as unknown as { dispose?: () => Promise<void> }).dispose?.();
+      await (model as unknown as { dispose?: () => Promise<void> }).dispose?.();
     } catch {
       // ignore
     }
@@ -108,6 +120,7 @@ function dispose() {
   tokenizer = null;
   processor = null;
   currentModelId = null;
+  currentDevice = null;
   currentPrecision = null;
 }
 
@@ -119,12 +132,15 @@ function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
 }
 
 async function loadModel(modelId: string, device: "webgpu" | "wasm") {
-  if (currentModelId === modelId && currentPrecision) {
+  if (currentModelId === modelId && currentDevice === device && currentPrecision) {
     post({ status: "loaded", modelId, device, precision: currentPrecision });
     return;
   }
 
+  shouldInterrupt = true;
+  generationId++;
   await dispose();
+  shouldInterrupt = false;
 
   post({ status: "loading", message: "Loading tokenizer..." });
 
@@ -187,6 +203,7 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
     }
 
     currentModelId = modelId;
+    currentDevice = device;
 
     // Warm up with a dummy generation
     post({ status: "loading", message: "Warming up..." });
@@ -203,7 +220,7 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
     post({ status: "loaded", modelId, device, precision: currentPrecision! });
   } catch (err) {
     await dispose();
-    post({ status: "error", error: `Failed to load model: ${(err as Error).message}` });
+    post({ status: "error", error: `Failed to load model: ${getErrorMessage(err)}` });
   }
 }
 
@@ -327,7 +344,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     } else {
       post({
         status: "error",
-        error: `Generation failed: ${(err as Error).message}`,
+        error: `Generation failed: ${getErrorMessage(err)}`,
       });
     }
   }
@@ -347,7 +364,10 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
       shouldInterrupt = true;
       break;
     case "reset":
+      shouldInterrupt = true;
+      generationId++;
       await dispose();
+      shouldInterrupt = false;
       post({ status: "unloaded" });
       break;
   }

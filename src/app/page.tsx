@@ -11,6 +11,12 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
 import { PanelLeft, Github, X } from "lucide-react";
 
+interface PendingGeneration {
+  conversationId: string;
+  modelId: string;
+  device: "webgpu" | "wasm";
+}
+
 export default function Home() {
   const [webgpuSupported, setWebgpuSupported] = useState<boolean | null>(null);
   useEffect(() => {
@@ -25,7 +31,7 @@ export default function Home() {
   const worker = useInferenceWorker();
   const storage = useStorage();
 
-  const [pendingGeneration, setPendingGeneration] = useState<{ content: string; images?: string[] } | null>(null);
+  const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
 
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
@@ -97,13 +103,20 @@ export default function Home() {
 
   useEffect(() => {
     if (worker.error) {
+      setPendingGeneration(null);
       setError(worker.error);
     }
   }, [worker.error]);
 
   // Handle pending generation after model loads
   useEffect(() => {
-    if (pendingGeneration && worker.status === "loaded") {
+    if (
+      pendingGeneration &&
+      worker.status === "loaded" &&
+      worker.loadedModel === pendingGeneration.modelId &&
+      worker.loadedDevice === pendingGeneration.device &&
+      storage.activeConversation?.id === pendingGeneration.conversationId
+    ) {
       setPendingGeneration(null);
 
       const assistantMsg: ChatMessageType = {
@@ -130,7 +143,7 @@ export default function Home() {
         );
       }
     }
-  }, [pendingGeneration, worker.status, params, worker, storage]);
+  }, [pendingGeneration, worker.status, worker.loadedModel, worker.loadedDevice, params, storage, worker]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onTokenRef.current = useCallback(
@@ -236,7 +249,11 @@ export default function Home() {
       const needsSwitch = worker.loadedModel && worker.loadedModel !== updatedConv.modelId;
 
       if (needsLoad || needsSwitch) {
-        setPendingGeneration({ content, images });
+        setPendingGeneration({
+          conversationId: updatedConv.id,
+          modelId: updatedConv.modelId,
+          device,
+        });
         setError(null);
         worker.loadModel(updatedConv.modelId, device);
       } else if (worker.status === "loaded") {
@@ -290,6 +307,7 @@ export default function Home() {
   const handleModelChange = useCallback(
     (modelId: string) => {
       setLastSelectedModel(modelId);
+      setPendingGeneration(null);
       if (storage.activeConversation) {
         const updatedConv = { ...storage.activeConversation, modelId };
         storage.updateConversation(updatedConv);
@@ -303,6 +321,7 @@ export default function Home() {
   );
 
   const handleSwitchConversation = (id: string) => {
+    setPendingGeneration(null);
     if (worker.status === "generating") {
       worker.interrupt();
       streamingContentRef.current = "";

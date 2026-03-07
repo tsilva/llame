@@ -21,6 +21,7 @@ let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
 let currentPrecision: string | null = null;
 let shouldInterrupt = false;
+let generationId = 0;
 
 // Thinking parser to handle different thinking tag formats
 class ThinkingParser {
@@ -259,6 +260,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     return;
   }
 
+  const myId = ++generationId;
   shouldInterrupt = false;
   post({ status: "generating" });
 
@@ -317,6 +319,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       skip_prompt: true,
       skip_special_tokens: false,
       callback_function: (rawToken: string) => {
+        if (myId !== generationId) return;
         // Filter out special tokens except thinking tags (which we need to parse)
         const token = rawToken.replace(/<\|[^>]*\|>/g, "");
         if (!token) return;
@@ -342,11 +345,12 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       ...params,
       streamer,
       stopping_criteria: [
-        () => {
-          return shouldInterrupt;
-        },
+        () => shouldInterrupt || myId !== generationId,
       ],
     });
+
+    // Don't flush or complete if superseded by a newer generation
+    if (myId !== generationId) return;
 
     // Flush any remaining content
     const remaining = parser.flush();
@@ -364,6 +368,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const tps = numTokens / elapsed;
     post({ status: "complete", tps, numTokens });
   } catch (err) {
+    if (myId !== generationId) return;
     if (shouldInterrupt) {
       post({ status: "complete", tps: 0, numTokens: 0 });
     } else {

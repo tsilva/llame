@@ -146,8 +146,10 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           break;
 
         case "complete":
+          if (!interruptedRef.current) {
+            onCompleteRef.current?.();
+          }
           interruptedRef.current = false;
-          onCompleteRef.current?.();
           setState((s) => ({
             ...s,
             status: "loaded",

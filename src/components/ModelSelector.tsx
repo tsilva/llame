@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { MODEL_PRESETS } from "@/lib/constants";
+import { getModelDisplayName, MODEL_PRESETS } from "@/lib/constants";
 
 interface ModelSelectorProps {
   isLoading: boolean;
@@ -12,10 +12,21 @@ interface ModelSelectorProps {
   webgpuSupported: boolean | null;
   modelId: string;
   onModelChange: (modelId: string) => void;
+  onOpenModelBrowser: () => void;
   isGenerating: boolean;
 }
 
-export function ModelSelector({ isLoading, loadedModel, loadedPrecision, device, webgpuSupported, modelId, onModelChange, isGenerating }: ModelSelectorProps) {
+export function ModelSelector({
+  isLoading,
+  loadedModel,
+  loadedPrecision,
+  device,
+  webgpuSupported,
+  modelId,
+  onModelChange,
+  onOpenModelBrowser,
+  isGenerating,
+}: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -38,10 +49,9 @@ export function ModelSelector({ isLoading, loadedModel, loadedPrecision, device,
     };
   }, [open]);
 
-  const presetLabel = MODEL_PRESETS.find(p => p.id === modelId)?.label?.replace(/\s*\(.*\)/, "");
   const displayModel = isLoading
     ? "Loading..."
-    : presetLabel || loadedModel?.replace(/^onnx-community\//, "") || "Qwen3.5 0.8B";
+    : getModelDisplayName(modelId) || getModelDisplayName(loadedModel || "") || "Qwen3.5 0.8B";
 
   const runtimeLabel = webgpuSupported === null
     ? "Checking..."
@@ -94,6 +104,17 @@ export function ModelSelector({ isLoading, loadedModel, loadedPrecision, device,
               <span>{preset.label}</span>
             </button>
           ))}
+          <div className="my-1 border-t border-white/[0.08]" />
+          <button
+            onClick={() => {
+              setOpen(false);
+              onOpenModelBrowser();
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
+          >
+            <span className="w-[14px]" />
+            <span>More models…</span>
+          </button>
         </div>
       )}
     </div>

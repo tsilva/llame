@@ -24,8 +24,21 @@ export function getModelPreset(modelId: string) {
   return MODEL_PRESETS.find((preset) => preset.id === modelId);
 }
 
+export function getModelDisplayName(modelId: string) {
+  const preset = getModelPreset(modelId);
+  if (preset) {
+    return preset.label.replace(/\s*\(.*\)/, "");
+  }
+
+  const repoName = modelId.split("/").pop();
+  return repoName?.replace(/-ONNX$/i, "") || modelId;
+}
+
 export function getModelThinkingMode(modelId: string): ThinkingMode {
-  return getModelPreset(modelId)?.thinkingMode ?? "unsupported";
+  const presetMode = getModelPreset(modelId)?.thinkingMode;
+  if (presetMode) return presetMode;
+  if (modelId.includes("Qwen3.5")) return "optional";
+  return "unsupported";
 }
 
 export function getEffectiveThinkingEnabled(modelId: string, preferred: boolean): boolean {

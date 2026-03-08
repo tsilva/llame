@@ -12,6 +12,7 @@ import {
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
 import { ChatInterface } from "@/components/ChatInterface";
+import { ModelBrowserModal } from "@/components/ModelBrowserModal";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -46,6 +47,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
   const [showRawConversation, setShowRawConversation] = useState(false);
 
   // Load thinking preference from localStorage
@@ -437,6 +439,7 @@ export default function Home() {
             webgpuSupported={webgpuSupported}
             modelId={activeModelId}
             onModelChange={handleModelChange}
+            onOpenModelBrowser={() => setModelBrowserOpen(true)}
             isGenerating={isGenerating}
           />
           <div className="ml-auto flex items-center gap-2">
@@ -521,6 +524,19 @@ export default function Home() {
           storage.clearAllChats();
         }}
         isGenerating={isGenerating}
+      />
+
+      <ModelBrowserModal
+        isOpen={modelBrowserOpen}
+        onClose={() => setModelBrowserOpen(false)}
+        onSelectModel={(modelId) => {
+          handleModelChange(modelId);
+          setModelBrowserOpen(false);
+        }}
+        currentModelId={activeModelId}
+        device={device}
+        webgpuSupported={webgpuSupported}
+        disabled={isLoading || isGenerating}
       />
     </div>
   );

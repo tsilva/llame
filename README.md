@@ -33,6 +33,7 @@
 
 - 🚀 **In-browser inference** — models run entirely on your device via Web Workers
 - ⚡ **WebGPU acceleration** — fp16 precision with automatic WASM fallback for unsupported browsers
+- 🔎 **Model browser** — search ONNX Community models from the UI and inspect a local compatibility estimate before switching
 - 💬 **Chat interface** — real-time token streaming with tokens/second counter
 - 🧪 **Raw debug view** — toggle between formatted chat and exact model input/output for debugging
 - 🖼️ **Vision capable** — supports image input for visual question answering
@@ -65,13 +66,17 @@ src/
 
 All inference runs in a dedicated Web Worker (`inference.worker.ts`) using `@huggingface/transformers`, keeping the UI thread free.
 
-## 🎛️ Supported Model
+## 🎛️ Supported Models
 
-| Model | Size | Download |
-|-------|------|----------|
+The dropdown ships with a few curated presets, and the in-app model browser can search additional repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face.
+
+| Preset | Size | Download |
+|--------|------|----------|
 | Qwen3.5 0.8B | 0.8B params | ~850MB |
+| Qwen3.5 2B | 2B params | ~2GB |
+| SmolLM3 3B | 3B params | ~2.1GB |
 
-Models are loaded from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face and cached in the browser after first download.
+For searched models, llame shows a best-effort compatibility badge based on the selected runtime, browser WebGPU support, reported device memory, CPU concurrency, and the model's inferred size. It is a heuristic, not a guarantee.
 
 ## 💻 Requirements
 

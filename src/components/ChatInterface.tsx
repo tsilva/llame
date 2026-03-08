@@ -10,7 +10,7 @@ import {
   ChangeEvent,
 } from "react";
 import { ChatMessage as ChatMessageType, ProgressInfo } from "@/types";
-import { MODEL_PRESETS } from "@/lib/constants";
+import { getModelDisplayName } from "@/lib/constants";
 import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
 import { compressImage } from "@/lib/imageUtils";
@@ -242,7 +242,7 @@ export function ChatInterface({
   };
 
   const hasMessages = messages.length > 0;
-  const modelName = MODEL_PRESETS.find(p => p.id === modelId)?.label?.replace(/\s*\(.*\)/, "") || modelId.split("/").pop() || "Unknown model";
+  const modelName = getModelDisplayName(modelId) || "Unknown model";
   const needsLoad = !isModelLoaded;
   const activePendingImages = allowImageInputs ? pendingImages : [];
   const suggestions = allowImageInputs

@@ -1,0 +1,245 @@
+"use client";
+
+export interface HubModelApiEntry {
+  id: string;
+  downloads?: number;
+  likes?: number;
+  tags?: string[];
+  pipeline_tag?: string;
+  lastModified?: string;
+  createdAt?: string;
+  usedStorage?: number;
+}
+
+export interface DiscoveredModel {
+  id: string;
+  name: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  pipelineTag: string | null;
+  lastModified: string | null;
+  parameterCountB: number | null;
+  estimatedDownloadGb: number | null;
+  isVisionModel: boolean;
+}
+
+export interface CompatibilityContext {
+  device: "webgpu" | "wasm";
+  webgpuSupported: boolean | null;
+  deviceMemoryGb: number | null;
+  hardwareConcurrency: number | null;
+}
+
+export interface ModelCompatibility {
+  score: number;
+  label: "Very likely" | "Likely" | "Maybe" | "Unlikely";
+  tone: "green" | "emerald" | "amber" | "red";
+  summary: string;
+}
+
+const GIGABYTE = 1024 ** 3;
+
+function parseParameterCountB(modelId: string, tags: string[]) {
+  const haystacks = [modelId, ...tags];
+
+  for (const value of haystacks) {
+    const match = value.match(/(?:^|[^\d])(\d+(?:\.\d+)?)\s*B(?:$|[^\w])/i);
+    if (match) {
+      const parsed = Number.parseFloat(match[1]);
+      if (Number.isFinite(parsed) && parsed > 0 && parsed < 1000) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function estimateDownloadGb(parameterCountB: number | null, usedStorage?: number) {
+  if (typeof usedStorage === "number" && Number.isFinite(usedStorage) && usedStorage > 0) {
+    return usedStorage / GIGABYTE;
+  }
+
+  if (parameterCountB === null) return null;
+  if (parameterCountB <= 1) return parameterCountB * 1.05;
+  if (parameterCountB <= 3) return parameterCountB * 0.9;
+  return parameterCountB * 0.8;
+}
+
+function isVisionModel(modelId: string, tags: string[], pipelineTag: string | null) {
+  return (
+    pipelineTag === "image-text-to-text" ||
+    modelId.includes("Qwen3.5") ||
+    tags.some((tag) => tag.includes("vision") || tag.includes("vlm"))
+  );
+}
+
+function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
+  const tags = entry.tags ?? [];
+  const parameterCountB = parseParameterCountB(entry.id, tags);
+  const pipelineTag = entry.pipeline_tag ?? null;
+
+  return {
+    id: entry.id,
+    name: entry.id.split("/").pop()?.replace(/-ONNX$/i, "") || entry.id,
+    downloads: entry.downloads ?? 0,
+    likes: entry.likes ?? 0,
+    tags,
+    pipelineTag,
+    lastModified: entry.lastModified ?? entry.createdAt ?? null,
+    parameterCountB,
+    estimatedDownloadGb: estimateDownloadGb(parameterCountB, entry.usedStorage),
+    isVisionModel: isVisionModel(entry.id, tags, pipelineTag),
+  };
+}
+
+export async function searchOnnxCommunityModels(query: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({
+    author: "onnx-community",
+    limit: "24",
+    sort: "downloads",
+    direction: "-1",
+    full: "true",
+    config: "true",
+  });
+
+  const trimmed = query.trim();
+  if (trimmed) {
+    params.set("search", trimmed);
+  }
+
+  const response = await fetch(`https://huggingface.co/api/models?${params.toString()}`, {
+    signal,
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Hugging Face search failed (${response.status})`);
+  }
+
+  const data = (await response.json()) as HubModelApiEntry[];
+
+  return data
+    .filter((entry) => entry.id?.includes("/"))
+    .filter((entry) => {
+      const tags = entry.tags ?? [];
+      return entry.id.endsWith("-ONNX") || tags.includes("onnx");
+    })
+    .map(normalizeModel);
+}
+
+function estimateWorkingSetGb(model: DiscoveredModel, context: CompatibilityContext) {
+  if (model.parameterCountB === null && model.estimatedDownloadGb === null) return null;
+
+  if (model.estimatedDownloadGb !== null) {
+    const multiplier = context.device === "webgpu"
+      ? model.isVisionModel ? 1.6 : 1.35
+      : 1.85;
+    return model.estimatedDownloadGb * multiplier;
+  }
+
+  const size = model.parameterCountB ?? 0;
+
+  if (context.device === "webgpu") {
+    if (model.isVisionModel) return size * 1.8;
+    if (size <= 1) return size * 1.3;
+    if (size <= 3) return size * 1.55;
+    return size * 1.85;
+  }
+
+  if (size <= 1) return size * 0.9;
+  if (size <= 3) return size * 1.15;
+  return size * 1.45;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function assessModelCompatibility(model: DiscoveredModel, context: CompatibilityContext): ModelCompatibility {
+  if (context.device === "webgpu" && context.webgpuSupported === false) {
+    return {
+      score: 10,
+      label: "Unlikely",
+      tone: "red",
+      summary: "WebGPU is unavailable in this browser. Switch to WASM for this model.",
+    };
+  }
+
+  let score = context.device === "webgpu" ? 72 : 56;
+
+  const size = model.parameterCountB;
+  const workingSetGb = estimateWorkingSetGb(model, context);
+
+  if (size !== null) {
+    if (size <= 1) score += 15;
+    else if (size <= 2) score += 8;
+    else if (size <= 4) score -= 4;
+    else if (size <= 7) score -= 18;
+    else score -= 32;
+  } else {
+    score -= 4;
+  }
+
+  if (model.isVisionModel) {
+    score -= 10;
+  }
+
+  if (context.device === "wasm" && size !== null) {
+    if (size > 2) score -= 18;
+    if (size > 4) score -= 16;
+  }
+
+  if (context.deviceMemoryGb !== null && workingSetGb !== null) {
+    const browserBudgetGb = context.deviceMemoryGb * (context.device === "webgpu" ? 0.45 : 0.35);
+
+    if (workingSetGb <= browserBudgetGb * 0.75) score += 10;
+    else if (workingSetGb <= browserBudgetGb) score += 2;
+    else if (workingSetGb <= browserBudgetGb * 1.25) score -= 12;
+    else score -= 26;
+  }
+
+  if (context.hardwareConcurrency !== null) {
+    if (context.device === "wasm" && context.hardwareConcurrency <= 4) score -= 10;
+    if (context.device === "wasm" && context.hardwareConcurrency >= 8 && (size ?? 0) <= 2) score += 4;
+  }
+
+  score = clamp(score, 5, 95);
+
+  if (score >= 82) {
+    return {
+      score,
+      label: "Very likely",
+      tone: "green",
+      summary: "Good fit for this browser and runtime.",
+    };
+  }
+
+  if (score >= 65) {
+    return {
+      score,
+      label: "Likely",
+      tone: "emerald",
+      summary: "Should run, but load time and speed depend on your GPU and RAM.",
+    };
+  }
+
+  if (score >= 45) {
+    return {
+      score,
+      label: "Maybe",
+      tone: "amber",
+      summary: "Borderline for this machine. Smaller models are safer.",
+    };
+  }
+
+  return {
+    score,
+    label: "Unlikely",
+    tone: "red",
+    summary: "Large for this browser/runtime combination. Memory pressure is the main risk.",
+  };
+}

@@ -24,6 +24,11 @@ export interface DiscoveredModel {
   isVisionModel: boolean;
 }
 
+export interface ModelSearchPage {
+  models: DiscoveredModel[];
+  nextCursor: string | null;
+}
+
 export interface CompatibilityContext {
   device: "webgpu" | "wasm";
   webgpuSupported: boolean | null;
@@ -110,7 +115,28 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
   };
 }
 
-export async function searchOnnxCommunityModels(query: string, signal?: AbortSignal) {
+function parseNextCursor(linkHeader: string | null) {
+  if (!linkHeader) return null;
+
+  const nextLink = linkHeader
+    .split(",")
+    .map((part) => part.trim())
+    .find((part) => /rel="?next"?/.test(part));
+
+  if (!nextLink) return null;
+
+  const match = nextLink.match(/<([^>]+)>/);
+  if (!match) return null;
+
+  try {
+    const url = new URL(match[1]);
+    return url.searchParams.get("cursor");
+  } catch {
+    return null;
+  }
+}
+
+export async function searchOnnxCommunityModels(query: string, signal?: AbortSignal, cursor?: string | null): Promise<ModelSearchPage> {
   const params = new URLSearchParams({
     author: "onnx-community",
     limit: "24",
@@ -123,6 +149,9 @@ export async function searchOnnxCommunityModels(query: string, signal?: AbortSig
   const trimmed = query.trim();
   if (trimmed) {
     params.set("search", trimmed);
+  }
+  if (cursor) {
+    params.set("cursor", cursor);
   }
 
   const response = await fetch(`https://huggingface.co/api/models?${params.toString()}`, {
@@ -138,14 +167,17 @@ export async function searchOnnxCommunityModels(query: string, signal?: AbortSig
 
   const data = (await response.json()) as HubModelApiEntry[];
 
-  return data
-    .filter((entry) => entry.id?.includes("/"))
-    .filter((entry) => {
-      const tags = entry.tags ?? [];
-      return entry.id.endsWith("-ONNX") || tags.includes("onnx");
-    })
-    .filter(isSupportedChatModel)
-    .map(normalizeModel);
+  return {
+    models: data
+      .filter((entry) => entry.id?.includes("/"))
+      .filter((entry) => {
+        const tags = entry.tags ?? [];
+        return entry.id.endsWith("-ONNX") || tags.includes("onnx");
+      })
+      .filter(isSupportedChatModel)
+      .map(normalizeModel),
+    nextCursor: parseNextCursor(response.headers.get("Link")),
+  };
 }
 
 function estimateWorkingSetGb(model: DiscoveredModel, context: CompatibilityContext) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2, Search, X } from "lucide-react";
 import {
   assessModelCompatibility,
@@ -77,6 +77,11 @@ function BrowserProfileLine({ device, webgpuSupported, profile }: {
   );
 }
 
+function mergeModels(existing: DiscoveredModel[], incoming: DiscoveredModel[]) {
+  const seen = new Set(existing.map((model) => model.id));
+  return [...existing, ...incoming.filter((model) => !seen.has(model.id))];
+}
+
 export function ModelBrowserModal({
   isOpen,
   onClose,
@@ -90,11 +95,55 @@ export function ModelBrowserModal({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<DiscoveredModel[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedQuery, setResolvedQuery] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [profile, setProfile] = useState<BrowserProfile>({
     deviceMemoryGb: null,
     hardwareConcurrency: null,
   });
+  const requestControllerRef = useRef<AbortController | null>(null);
+
+  const fetchModels = useCallback(async (searchQuery: string, cursor: string | null, append: boolean) => {
+    requestControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
+
+    if (append) {
+      setLoadingMore(true);
+      setError(null);
+    } else {
+      setInitialLoading(true);
+      setError(null);
+    }
+
+    try {
+      const page = await searchOnnxCommunityModels(searchQuery, controller.signal, cursor);
+      setResults((current) => append ? mergeModels(current, page.models) : page.models);
+      setNextCursor(page.nextCursor);
+      setError(null);
+    } catch (err: unknown) {
+      if ((err as Error).name === "AbortError") return;
+
+      setError(err instanceof Error ? err.message : "Failed to search models");
+
+      if (!append) {
+        setNextCursor(null);
+        setResults([]);
+      }
+    } finally {
+      if (requestControllerRef.current === controller) {
+        requestControllerRef.current = null;
+      }
+
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setInitialLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -123,23 +172,10 @@ export function ModelBrowserModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const controller = new AbortController();
+    void fetchModels(debouncedQuery, null, false);
 
-    searchOnnxCommunityModels(debouncedQuery, controller.signal)
-      .then((models) => {
-        setResults(models);
-        setError(null);
-        setResolvedQuery(debouncedQuery);
-      })
-      .catch((err: unknown) => {
-        if ((err as Error).name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "Failed to search models");
-        setResults([]);
-        setResolvedQuery(debouncedQuery);
-      });
-
-    return () => controller.abort();
-  }, [debouncedQuery, isOpen]);
+    return () => requestControllerRef.current?.abort();
+  }, [debouncedQuery, fetchModels, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -152,14 +188,28 @@ export function ModelBrowserModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (isOpen) return;
+
+    requestControllerRef.current?.abort();
+    setInitialLoading(false);
+    setLoadingMore(false);
+    setNextCursor(null);
+    setError(null);
+    setResults([]);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const loading = resolvedQuery !== debouncedQuery;
   const compatibilityContext: CompatibilityContext = {
     device,
     webgpuSupported,
     deviceMemoryGb: profile.deviceMemoryGb,
     hardwareConcurrency: profile.hardwareConcurrency,
+  };
+  const handleLoadMore = () => {
+    if (!nextCursor || loadingMore) return;
+    void fetchModels(debouncedQuery, nextCursor, true);
   };
 
   return (
@@ -201,26 +251,26 @@ export function ModelBrowserModal({
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-thin">
-          {loading && (
+          {initialLoading && (
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-4 text-sm text-[#b4b4b4]">
               <Loader2 size={16} className="animate-spin text-[#10a37f]" />
               <span>Searching ONNX Community…</span>
             </div>
           )}
 
-          {!loading && error && (
+          {!initialLoading && error && (
             <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {error}
             </div>
           )}
 
-          {!loading && !error && results.length === 0 && (
+          {!initialLoading && !error && results.length === 0 && (
             <div className="rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-5 text-sm text-[#8e8e8e]">
               No ONNX Community LLMs or VLMs matched that search.
             </div>
           )}
 
-          {!loading && !error && results.map((model) => {
+          {!initialLoading && results.map((model) => {
             const compatibility = assessModelCompatibility(model, compatibilityContext);
             const sizeLabel = formatSizeLabel(model.estimatedDownloadGb);
             const updatedLabel = formatDateLabel(model.lastModified);
@@ -302,6 +352,20 @@ export function ModelBrowserModal({
               </div>
             );
           })}
+
+          {!initialLoading && results.length > 0 && nextCursor && (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-[#212121] px-4 py-2.5 text-sm text-[#d0d0d0] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingMore && <Loader2 size={15} className="animate-spin text-[#10a37f]" />}
+                <span>{loadingMore ? "Loading more models…" : "Load more models"}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

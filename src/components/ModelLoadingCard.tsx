@@ -2,7 +2,7 @@
 
 import { ProgressInfo } from "@/types";
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 interface ModelLoadingCardProps {
   progress: Map<string, ProgressInfo>;
@@ -16,22 +16,15 @@ export function ModelLoadingCard({
   modelName,
 }: ModelLoadingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
-  const maxPercentRef = useRef(0);
   const entries = Array.from(progress.values());
   // Use pre-computed progress values from worker (normalize to 0-100 if needed)
   const normalizedProgress = entries.map(p => ({
     ...p,
     progress: p.progress <= 1 ? p.progress * 100 : p.progress
   }));
-  const totalProgress = normalizedProgress.reduce((sum, p) => sum + p.progress, 0);
-  const rawPercent = entries.length > 0 ? totalProgress / entries.length : 0;
-
-  if (entries.length === 0) {
-    maxPercentRef.current = 0;
-  } else {
-    maxPercentRef.current = Math.max(maxPercentRef.current, rawPercent);
-  }
-  const overallPercent = maxPercentRef.current;
+  const loadedBytes = entries.reduce((sum, p) => sum + p.loaded, 0);
+  const totalBytes = entries.reduce((sum, p) => sum + p.total, 0);
+  const overallPercent = totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
 
   const displayModelName = modelName.split("/").pop() || modelName;
 
@@ -111,7 +104,7 @@ export function ModelLoadingCard({
 
               {/* Total size */}
               <div className="text-center text-xs text-[#8e8e8e]">
-                {formatBytes(entries.reduce((s, p) => s + p.loaded, 0))} / {formatBytes(entries.reduce((s, p) => s + p.total, 0))}
+                {formatBytes(loadedBytes)} / {formatBytes(totalBytes)}
               </div>
             </>
           )}

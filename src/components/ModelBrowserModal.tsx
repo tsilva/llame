@@ -6,6 +6,7 @@ import {
   assessModelCompatibility,
   CompatibilityContext,
   DiscoveredModel,
+  ModelBrowserSort,
   searchOnnxCommunityModels,
 } from "@/lib/modelBrowser";
 
@@ -23,6 +24,33 @@ interface BrowserProfile {
   deviceMemoryGb: number | null;
   hardwareConcurrency: number | null;
 }
+
+type ModelTypeFilter = "all" | "text" | "vision";
+type CompatibilityFilter = "all" | "recommended";
+type SizeFilter = "all" | "small" | "medium" | "large";
+
+const SORT_OPTIONS: { value: ModelBrowserSort; label: string }[] = [
+  { value: "downloads", label: "Top downloads" },
+  { value: "recency", label: "Most recent" },
+];
+
+const TYPE_FILTER_OPTIONS: { value: ModelTypeFilter; label: string }[] = [
+  { value: "all", label: "All types" },
+  { value: "text", label: "Text only" },
+  { value: "vision", label: "Vision" },
+];
+
+const COMPATIBILITY_FILTER_OPTIONS: { value: CompatibilityFilter; label: string }[] = [
+  { value: "all", label: "All fits" },
+  { value: "recommended", label: "Likely on this device" },
+];
+
+const SIZE_FILTER_OPTIONS: { value: SizeFilter; label: string }[] = [
+  { value: "all", label: "All sizes" },
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+];
 
 function formatCompactNumber(value: number) {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
@@ -82,6 +110,80 @@ function mergeModels(existing: DiscoveredModel[], incoming: DiscoveredModel[]) {
   return [...existing, ...incoming.filter((model) => !seen.has(model.id))];
 }
 
+function parseModelDate(value: string | null) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function compareModels(sortBy: ModelBrowserSort, left: DiscoveredModel, right: DiscoveredModel) {
+  if (sortBy === "recency") {
+    return parseModelDate(right.lastModified) - parseModelDate(left.lastModified);
+  }
+
+  return right.downloads - left.downloads;
+}
+
+function getModelSizeClass(model: DiscoveredModel): Exclude<SizeFilter, "all"> | null {
+  const sizeSignal = model.parameterCountB ?? model.estimatedDownloadGb;
+  if (sizeSignal === null) return null;
+  if (sizeSignal <= 1.5) return "small";
+  if (sizeSignal <= 4) return "medium";
+  return "large";
+}
+
+function matchesTypeFilter(model: DiscoveredModel, filter: ModelTypeFilter) {
+  if (filter === "all") return true;
+  return filter === "vision" ? model.isVisionModel : !model.isVisionModel;
+}
+
+function matchesCompatibilityFilter(
+  model: DiscoveredModel,
+  filter: CompatibilityFilter,
+  compatibilityContext: CompatibilityContext,
+) {
+  if (filter === "all") return true;
+
+  const compatibility = assessModelCompatibility(model, compatibilityContext);
+  return compatibility.label === "Very likely" || compatibility.label === "Likely";
+}
+
+function matchesSizeFilter(model: DiscoveredModel, filter: SizeFilter) {
+  if (filter === "all") return true;
+  return getModelSizeClass(model) === filter;
+}
+
+function SelectControl<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <label className="min-w-[150px] flex-1 space-y-1">
+      <span className="block text-[11px] font-medium uppercase tracking-[0.16em] text-[#6f6f6f]">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value as T)}
+        className="w-full rounded-xl border border-white/[0.08] bg-[#212121] px-3 py-2.5 text-sm text-[#ececec] outline-none transition-colors focus:border-[#10a37f]/40"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function ModelBrowserModal({
   isOpen,
   onClose,
@@ -93,6 +195,10 @@ export function ModelBrowserModal({
 }: ModelBrowserModalProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [sortBy, setSortBy] = useState<ModelBrowserSort>("downloads");
+  const [typeFilter, setTypeFilter] = useState<ModelTypeFilter>("all");
+  const [compatibilityFilter, setCompatibilityFilter] = useState<CompatibilityFilter>("all");
+  const [sizeFilter, setSizeFilter] = useState<SizeFilter>("all");
   const [results, setResults] = useState<DiscoveredModel[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -104,7 +210,12 @@ export function ModelBrowserModal({
   });
   const requestControllerRef = useRef<AbortController | null>(null);
 
-  const fetchModels = useCallback(async (searchQuery: string, cursor: string | null, append: boolean) => {
+  const fetchModels = useCallback(async (
+    searchQuery: string,
+    cursor: string | null,
+    append: boolean,
+    requestedSort: ModelBrowserSort,
+  ) => {
     requestControllerRef.current?.abort();
 
     const controller = new AbortController();
@@ -119,7 +230,10 @@ export function ModelBrowserModal({
     }
 
     try {
-      const page = await searchOnnxCommunityModels(searchQuery, controller.signal, cursor);
+      const page = await searchOnnxCommunityModels(searchQuery, controller.signal, {
+        cursor,
+        sort: requestedSort,
+      });
       setResults((current) => append ? mergeModels(current, page.models) : page.models);
       setNextCursor(page.nextCursor);
       setError(null);
@@ -172,10 +286,10 @@ export function ModelBrowserModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    void fetchModels(debouncedQuery, null, false);
+    void fetchModels(debouncedQuery, null, false, sortBy);
 
     return () => requestControllerRef.current?.abort();
-  }, [debouncedQuery, fetchModels, isOpen]);
+  }, [debouncedQuery, fetchModels, isOpen, sortBy]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -207,9 +321,23 @@ export function ModelBrowserModal({
     deviceMemoryGb: profile.deviceMemoryGb,
     hardwareConcurrency: profile.hardwareConcurrency,
   };
+  const displayedResults = [...results]
+    .sort((left, right) => compareModels(sortBy, left, right))
+    .filter((model) => matchesTypeFilter(model, typeFilter))
+    .filter((model) => matchesCompatibilityFilter(model, compatibilityFilter, compatibilityContext))
+    .filter((model) => matchesSizeFilter(model, sizeFilter));
+  const hasActiveFilters =
+    typeFilter !== "all" ||
+    compatibilityFilter !== "all" ||
+    sizeFilter !== "all";
   const handleLoadMore = () => {
     if (!nextCursor || loadingMore) return;
-    void fetchModels(debouncedQuery, nextCursor, true);
+    void fetchModels(debouncedQuery, nextCursor, true, sortBy);
+  };
+  const clearFilters = () => {
+    setTypeFilter("all");
+    setCompatibilityFilter("all");
+    setSizeFilter("all");
   };
 
   return (
@@ -238,16 +366,58 @@ export function ModelBrowserModal({
         </div>
 
         <div className="border-b border-white/[0.08] px-5 py-4">
-          <label className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#212121] px-3.5 py-3 focus-within:border-[#10a37f]/40">
-            <Search size={18} className="text-[#6f6f6f]" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search ONNX Community LLMs and VLMs"
-              className="w-full bg-transparent text-sm text-[#ececec] outline-none placeholder:text-[#6f6f6f]"
-              autoFocus
-            />
-          </label>
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#212121] px-3.5 py-3 focus-within:border-[#10a37f]/40">
+              <Search size={18} className="text-[#6f6f6f]" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search ONNX Community LLMs and VLMs"
+                className="w-full bg-transparent text-sm text-[#ececec] outline-none placeholder:text-[#6f6f6f]"
+                autoFocus
+              />
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <SelectControl
+                label="Sort"
+                value={sortBy}
+                options={SORT_OPTIONS}
+                onChange={setSortBy}
+              />
+              <SelectControl
+                label="Type"
+                value={typeFilter}
+                options={TYPE_FILTER_OPTIONS}
+                onChange={setTypeFilter}
+              />
+              <SelectControl
+                label="Fit"
+                value={compatibilityFilter}
+                options={COMPATIBILITY_FILTER_OPTIONS}
+                onChange={setCompatibilityFilter}
+              />
+              <SelectControl
+                label="Size"
+                value={sizeFilter}
+                options={SIZE_FILTER_OPTIONS}
+                onChange={setSizeFilter}
+              />
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#212121] px-3.5 py-2.5 text-xs text-[#8e8e8e]">
+                <span>Filters are narrowing the current results.</span>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="rounded-lg px-2 py-1 text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-thin">
@@ -264,13 +434,15 @@ export function ModelBrowserModal({
             </div>
           )}
 
-          {!initialLoading && !error && results.length === 0 && (
+          {!initialLoading && !error && displayedResults.length === 0 && (
             <div className="rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-5 text-sm text-[#8e8e8e]">
-              No ONNX Community LLMs or VLMs matched that search.
+              {results.length === 0
+                ? "No ONNX Community LLMs or VLMs matched that search."
+                : "No models matched the current filters. Try widening the fit, type, or size filters."}
             </div>
           )}
 
-          {!initialLoading && results.map((model) => {
+          {!initialLoading && displayedResults.map((model) => {
             const compatibility = assessModelCompatibility(model, compatibilityContext);
             const sizeLabel = formatSizeLabel(model.estimatedDownloadGb);
             const updatedLabel = formatDateLabel(model.lastModified);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
@@ -17,43 +17,87 @@ function Spinner() {
   );
 }
 
+interface ThinkingState {
+  elapsedSeconds: number;
+  finalSeconds: number | null;
+  userExpanded: boolean | null;
+}
+
+type ThinkingAction =
+  | { type: "start" }
+  | { type: "tick" }
+  | { type: "complete" }
+  | { type: "set-user-expanded"; value: boolean };
+
+function thinkingReducer(state: ThinkingState, action: ThinkingAction): ThinkingState {
+  switch (action.type) {
+    case "start":
+      return {
+        elapsedSeconds: 0,
+        finalSeconds: null,
+        userExpanded: null,
+      };
+    case "tick":
+      return {
+        ...state,
+        elapsedSeconds: state.elapsedSeconds + 1,
+      };
+    case "complete":
+      return {
+        ...state,
+        finalSeconds: state.finalSeconds ?? state.elapsedSeconds,
+      };
+    case "set-user-expanded":
+      return {
+        ...state,
+        userExpanded: action.value,
+      };
+  }
+}
+
 export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming }: ThinkingBlockProps) {
-  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
-  const [seconds, setSeconds] = useState(0);
-  const [finalSeconds, setFinalSeconds] = useState<number | null>(null);
+  const [{ elapsedSeconds, finalSeconds, userExpanded }, dispatch] = useReducer(thinkingReducer, {
+    elapsedSeconds: 0,
+    finalSeconds: null,
+    userExpanded: null,
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wasThinkingRef = useRef(false);
 
   // Track thinking duration
   useEffect(() => {
-    if (isGenerating && !isComplete) {
-      setSeconds(0);
-      setFinalSeconds(null);
+    const isThinkingInProgress = isGenerating && !isComplete;
+    const wasThinking = wasThinkingRef.current;
+
+    if (isThinkingInProgress && !wasThinking) {
+      dispatch({ type: "start" });
       intervalRef.current = setInterval(() => {
-        setSeconds((s) => s + 1);
+        dispatch({ type: "tick" });
       }, 1000);
-    } else {
+    }
+
+    if (!isThinkingInProgress && wasThinking) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      if (isComplete && finalSeconds === null) {
-        setFinalSeconds(seconds);
-      }
+      dispatch({ type: "complete" });
     }
+
+    wasThinkingRef.current = isThinkingInProgress;
+  }, [isComplete, isGenerating]);
+
+  useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isGenerating, isComplete]);
+  }, []);
 
   // Auto-expand while thinking is in progress, collapse once thinking completes
   const isThinkingInProgress = isGenerating && !isComplete;
   const isExpanded = isThinkingInProgress || userExpanded === true;
-
-  if (isThinkingInProgress && userExpanded !== null) {
-    setUserExpanded(null);
-  }
 
   useLayoutEffect(() => {
     if (isThinkingInProgress && shouldAutoScroll.current && scrollRef.current) {
@@ -69,17 +113,17 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming 
     }
   };
 
-  const displaySeconds = finalSeconds ?? seconds;
+  const displaySeconds = finalSeconds ?? elapsedSeconds;
   const label = isThinkingInProgress
-    ? seconds > 0
-      ? `Thinking for ${seconds}s...`
+    ? elapsedSeconds > 0
+      ? `Thinking for ${elapsedSeconds}s...`
       : "Thinking..."
     : `Thought for ${displaySeconds} second${displaySeconds !== 1 ? "s" : ""}`;
 
   return (
     <div className="mb-3">
       <button
-        onClick={() => !isThinkingInProgress && setUserExpanded(isExpanded ? false : true)}
+        onClick={() => !isThinkingInProgress && dispatch({ type: "set-user-expanded", value: !isExpanded })}
         className={`flex items-center gap-2 py-1 text-sm transition-colors ${
           isThinkingInProgress ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
         } ${isThinkingInProgress ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}

@@ -27,7 +27,6 @@ export function Sidebar({
   activeConversationId,
   onSwitchConversation,
   onDeleteConversation,
-  isLoading,
   isGenerating,
 }: SidebarProps) {
   // Sort conversations by updatedAt (most recent first)

@@ -68,7 +68,7 @@ All inference runs in a dedicated Web Worker (`inference.worker.ts`) using `@hug
 
 ## 🎛️ Supported Models
 
-The dropdown ships with a few curated presets, and the in-app model browser can search additional LLM and VLM repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face.
+The dropdown ships with a few curated presets, and the in-app model browser can search additional LLM and VLM repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face, sort them by downloads or recency, and filter by type, size, and current-device fit.
 
 | Preset | Size | Download |
 |--------|------|----------|

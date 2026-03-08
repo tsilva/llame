@@ -29,6 +29,8 @@ export interface ModelSearchPage {
   nextCursor: string | null;
 }
 
+export type ModelBrowserSort = "downloads" | "recency";
+
 export interface CompatibilityContext {
   device: "webgpu" | "wasm";
   webgpuSupported: boolean | null;
@@ -136,12 +138,37 @@ function parseNextCursor(linkHeader: string | null) {
   }
 }
 
-export async function searchOnnxCommunityModels(query: string, signal?: AbortSignal, cursor?: string | null): Promise<ModelSearchPage> {
+interface SearchOnnxCommunityModelsOptions {
+  cursor?: string | null;
+  sort?: ModelBrowserSort;
+}
+
+function getHubSort(sort: ModelBrowserSort) {
+  if (sort === "recency") {
+    return {
+      sort: "lastModified",
+      direction: "-1",
+    };
+  }
+
+  return {
+    sort: "downloads",
+    direction: "-1",
+  };
+}
+
+export async function searchOnnxCommunityModels(
+  query: string,
+  signal?: AbortSignal,
+  options: SearchOnnxCommunityModelsOptions = {},
+): Promise<ModelSearchPage> {
+  const requestedSort = options.sort ?? "downloads";
+  const hubSort = getHubSort(requestedSort);
   const params = new URLSearchParams({
     author: "onnx-community",
     limit: "24",
-    sort: "downloads",
-    direction: "-1",
+    sort: hubSort.sort,
+    direction: hubSort.direction,
     full: "true",
     config: "true",
   });
@@ -150,8 +177,8 @@ export async function searchOnnxCommunityModels(query: string, signal?: AbortSig
   if (trimmed) {
     params.set("search", trimmed);
   }
-  if (cursor) {
-    params.set("cursor", cursor);
+  if (options.cursor) {
+    params.set("cursor", options.cursor);
   }
 
   const response = await fetch(`https://huggingface.co/api/models?${params.toString()}`, {

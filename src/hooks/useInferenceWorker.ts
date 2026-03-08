@@ -27,6 +27,7 @@ interface InferenceState {
   loadedModel: string | null;
   loadedDevice: string | null;
   loadedPrecision: string | null;
+  loadedSupportsImages: boolean | null;
   tps: number;
   numTokens: number;
   inputTokens: number;
@@ -57,6 +58,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     loadedModel: null,
     loadedDevice: null,
     loadedPrecision: null,
+    loadedSupportsImages: null,
     tps: 0,
     numTokens: 0,
     inputTokens: 0,
@@ -76,6 +78,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     loadedModel: null,
     loadedDevice: null,
     loadedPrecision: null,
+    loadedSupportsImages: null,
     tps: 0,
     numTokens: 0,
     inputTokens: 0,
@@ -100,7 +103,16 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
       } else if (d.status === "progress") {
         setState((s) => { const p = new Map(s.progress); p.set(d.progress.file, d.progress); return { ...s, progress: p }; });
       } else if (d.status === "loaded") {
-        setState((s) => ({ ...s, status: "loaded", loadedModel: d.modelId, loadedDevice: d.device, loadedPrecision: d.precision, progress: new Map(), error: null }));
+        setState((s) => ({
+          ...s,
+          status: "loaded",
+          loadedModel: d.modelId,
+          loadedDevice: d.device,
+          loadedPrecision: d.precision,
+          loadedSupportsImages: d.supportsImages,
+          progress: new Map(),
+          error: null,
+        }));
       } else if (d.status === "processing") {
         setState((s) => ({ ...s, status: "processing", processingMessage: d.message }));
       } else if (d.status === "generating") {
@@ -124,7 +136,14 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
         interruptedRef.current = false;
         setState((s) => ({ ...s, status: "error", error: d.error }));
       } else if (d.status === "unloaded") {
-        setState((s) => ({ ...s, status: "idle", loadedModel: null, loadedDevice: null, loadedPrecision: null }));
+        setState((s) => ({
+          ...s,
+          status: "idle",
+          loadedModel: null,
+          loadedDevice: null,
+          loadedPrecision: null,
+          loadedSupportsImages: null,
+        }));
       }
     };
   }, []);
@@ -153,6 +172,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
       loadedModel: null,
       loadedDevice: null,
       loadedPrecision: null,
+      loadedSupportsImages: null,
       tps: 0,
       numTokens: 0,
       inputTokens: 0,

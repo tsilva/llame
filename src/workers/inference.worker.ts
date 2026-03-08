@@ -1,5 +1,6 @@
 import {
   env,
+  AutoConfig,
   AutoTokenizer,
   AutoModelForCausalLM,
   AutoModelForImageTextToText,
@@ -21,6 +22,7 @@ let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
 let currentDevice: "webgpu" | "wasm" | null = null;
 let currentPrecision: string | null = null;
+let currentSupportsImages = false;
 let shouldInterrupt = false;
 let generationId = 0;
 
@@ -123,6 +125,7 @@ async function dispose() {
   currentModelId = null;
   currentDevice = null;
   currentPrecision = null;
+  currentSupportsImages = false;
 }
 
 function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
@@ -132,9 +135,13 @@ function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
   return "fp16";
 }
 
+function supportsModelType(autoModelClass: { supports?: (modelType: string) => boolean }, modelType: string) {
+  return autoModelClass.supports?.(modelType) ?? false;
+}
+
 async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   if (currentModelId === modelId && currentDevice === device && currentPrecision) {
-    post({ status: "loaded", modelId, device, precision: currentPrecision });
+    post({ status: "loaded", modelId, device, precision: currentPrecision, supportsImages: currentSupportsImages });
     return;
   }
 
@@ -161,10 +168,17 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   };
 
   try {
-    const isQwen35 = isVlmModel(modelId);
+    const config = await AutoConfig.from_pretrained(modelId);
+    const modelType = config.model_type;
+    if (!modelType) {
+      throw new Error("Model config is missing model_type");
+    }
+    const supportsImages = supportsModelType(AutoModelForImageTextToText, modelType);
+    const supportsCausalLM = supportsModelType(AutoModelForCausalLM, modelType);
+    const isQwen35 = modelType === "qwen3_5" || modelType === "qwen3_5_moe" || modelId.includes("Qwen3.5");
 
-    if (isQwen35) {
-      // Qwen3.5 VLM needs AutoProcessor + AutoModelForImageTextToText
+    if (supportsImages) {
+      currentSupportsImages = true;
       processor = await AutoProcessor.from_pretrained(modelId, {
         progress_callback: progressCallback,
       });
@@ -172,19 +186,22 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
 
       post({ status: "loading", message: "Loading model..." });
 
-      const vlmDtype = {
-        embed_tokens: "q4",
-        vision_encoder: "fp16",
-        decoder_model_merged: "q4",
-      };
-      currentPrecision = "q4";
+      const dtype = isQwen35
+        ? {
+            embed_tokens: "q4",
+            vision_encoder: "fp16",
+            decoder_model_merged: "q4",
+          }
+        : pickDtype(modelId, device);
+      currentPrecision = typeof dtype === "string" ? dtype : "q4";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
         device,
-        dtype: vlmDtype,
+        dtype,
         progress_callback: progressCallback,
       } as Parameters<typeof AutoModelForImageTextToText.from_pretrained>[1]);
-    } else {
+    } else if (supportsCausalLM) {
+      currentSupportsImages = false;
       // Standard causal LM
       tokenizer = await AutoTokenizer.from_pretrained(modelId, {
         progress_callback: progressCallback,
@@ -200,6 +217,8 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
         dtype,
         progress_callback: progressCallback,
       } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
+    } else {
+      throw new Error(`Unsupported model type: ${modelType}`);
     }
 
     currentModelId = modelId;
@@ -217,7 +236,7 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
       // Warm-up failure is non-critical
     }
 
-    post({ status: "loaded", modelId, device, precision: currentPrecision! });
+    post({ status: "loaded", modelId, device, precision: currentPrecision!, supportsImages: currentSupportsImages });
   } catch (err) {
     await dispose();
     post({ status: "error", error: `Failed to load model: ${getErrorMessage(err)}` });
@@ -235,12 +254,12 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
   post({ status: "generating" });
 
   try {
-    const isQwen35 = currentModelId ? isVlmModel(currentModelId) : false;
-    const hasImages = isQwen35 && messages.some((m) => m.images && m.images.length > 0);
+    const supportsImages = currentSupportsImages || (currentModelId ? isVlmModel(currentModelId) : false);
+    const hasImages = supportsImages && messages.some((m) => m.images && m.images.length > 0);
 
     // Format messages for the model
     const chatMessages = messages.map((m) => {
-      if (m.images && m.images.length > 0 && isQwen35) {
+      if (m.images && m.images.length > 0 && supportsImages) {
         const content = [
           ...m.images.map((img) => ({ type: "image" as const, image: img })),
           { type: "text" as const, text: m.content },
@@ -254,11 +273,19 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const thinkingEnabled = currentModelId
       ? getEffectiveThinkingEnabled(currentModelId, params.thinkingEnabled)
       : false;
-    const inputText = tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
-      tokenize: false,
-      add_generation_prompt: true,
-      ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
-    }) as string;
+    const inputText = (
+      supportsImages && processor
+        ? processor.apply_chat_template(chatMessages, {
+            tokenize: false,
+            add_generation_prompt: true,
+            ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
+          })
+        : tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
+            tokenize: false,
+            add_generation_prompt: true,
+            ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
+          })
+    ) as string;
     post({ status: "prompt", inputText });
 
     // Keep parsing <think> tags even when hidden so they don't leak into chat content.

@@ -17,7 +17,7 @@ export const MODEL_PRESETS = [
 ] satisfies ModelPreset[];
 
 export function isVlmModel(modelId: string) {
-  return modelId.includes("Qwen3.5");
+  return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma3n|paligemma|smolvlm|idefics|llava|mistral3/i.test(modelId);
 }
 
 export function getModelPreset(modelId: string) {

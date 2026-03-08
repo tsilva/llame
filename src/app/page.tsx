@@ -395,7 +395,9 @@ export default function Home() {
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
   const activeModelId = storage.activeConversation?.modelId || DEFAULT_MODEL;
-  const allowImageInputs = !isVlmModel(activeModelId);
+  const allowImageInputs = worker.loadedModel === activeModelId
+    ? worker.loadedSupportsImages ?? isVlmModel(activeModelId)
+    : isVlmModel(activeModelId);
   const thinkingEnabled = getEffectiveThinkingEnabled(activeModelId, params.thinkingEnabled);
   const showThinkingToggle = canToggleThinking(activeModelId);
 

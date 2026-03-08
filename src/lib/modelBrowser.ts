@@ -39,6 +39,8 @@ export interface ModelCompatibility {
 }
 
 const GIGABYTE = 1024 ** 3;
+const SUPPORTED_PIPELINE_TAGS = new Set(["text-generation", "image-text-to-text"]);
+const SUPPORTED_TEXT_TAGS = new Set(["text-generation", "conversational"]);
 
 function parseParameterCountB(modelId: string, tags: string[]) {
   const haystacks = [modelId, ...tags];
@@ -72,6 +74,20 @@ function isVisionModel(modelId: string, tags: string[], pipelineTag: string | nu
     pipelineTag === "image-text-to-text" ||
     modelId.includes("Qwen3.5") ||
     tags.some((tag) => tag.includes("vision") || tag.includes("vlm"))
+  );
+}
+
+function isSupportedChatModel(entry: HubModelApiEntry) {
+  const tags = entry.tags ?? [];
+  const pipelineTag = entry.pipeline_tag ?? null;
+
+  if (pipelineTag) {
+    return SUPPORTED_PIPELINE_TAGS.has(pipelineTag);
+  }
+
+  return (
+    isVisionModel(entry.id, tags, pipelineTag) ||
+    tags.some((tag) => SUPPORTED_TEXT_TAGS.has(tag))
   );
 }
 
@@ -128,6 +144,7 @@ export async function searchOnnxCommunityModels(query: string, signal?: AbortSig
       const tags = entry.tags ?? [];
       return entry.id.endsWith("-ONNX") || tags.includes("onnx");
     })
+    .filter(isSupportedChatModel)
     .map(normalizeModel);
 }
 

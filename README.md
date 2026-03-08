@@ -33,7 +33,7 @@
 
 - 🚀 **In-browser inference** — models run entirely on your device via Web Workers
 - ⚡ **WebGPU acceleration** — fp16 precision with automatic WASM fallback for unsupported browsers
-- 🔎 **Model browser** — search ONNX Community models from the UI and inspect a local compatibility estimate before switching
+- 🔎 **Model browser** — search ONNX Community LLMs and VLMs from the UI and inspect a local compatibility estimate before switching
 - 💬 **Chat interface** — real-time token streaming with tokens/second counter
 - 🧪 **Raw debug view** — toggle between formatted chat and exact model input/output for debugging
 - 🖼️ **Vision capable** — supports image input for visual question answering
@@ -68,7 +68,7 @@ All inference runs in a dedicated Web Worker (`inference.worker.ts`) using `@hug
 
 ## 🎛️ Supported Models
 
-The dropdown ships with a few curated presets, and the in-app model browser can search additional repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face.
+The dropdown ships with a few curated presets, and the in-app model browser can search additional LLM and VLM repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face.
 
 | Preset | Size | Download |
 |--------|------|----------|

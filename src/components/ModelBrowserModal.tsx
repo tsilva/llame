@@ -172,9 +172,9 @@ export function ModelBrowserModal({
       <div className="mx-4 flex max-h-[88dvh] w-full max-w-4xl flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter">
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-medium text-[#ececec]">Browse ONNX Community models</h2>
+            <h2 className="text-lg font-medium text-[#ececec]">Browse ONNX Community LLMs and VLMs</h2>
             <p className="text-sm text-[#8e8e8e]">
-              Search Hugging Face and use the compatibility badge as a browser-side estimate, not a guarantee.
+              Search Hugging Face for chat-capable ONNX models and use the compatibility badge as a browser-side estimate, not a guarantee.
             </p>
             <BrowserProfileLine device={device} webgpuSupported={webgpuSupported} profile={profile} />
           </div>
@@ -193,7 +193,7 @@ export function ModelBrowserModal({
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search ONNX Community models"
+              placeholder="Search ONNX Community LLMs and VLMs"
               className="w-full bg-transparent text-sm text-[#ececec] outline-none placeholder:text-[#6f6f6f]"
               autoFocus
             />
@@ -216,7 +216,7 @@ export function ModelBrowserModal({
 
           {!loading && !error && results.length === 0 && (
             <div className="rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-5 text-sm text-[#8e8e8e]">
-              No ONNX Community models matched that search.
+              No ONNX Community LLMs or VLMs matched that search.
             </div>
           )}
 

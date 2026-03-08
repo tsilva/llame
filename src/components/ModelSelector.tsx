@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { getModelDisplayName, MODEL_PRESETS } from "@/lib/constants";
+import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS } from "@/lib/constants";
 
 interface ModelSelectorProps {
   isLoading: boolean;
@@ -90,7 +90,7 @@ export function ModelSelector({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-[240px] rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-2xl shadow-black/40 animate-fade-in">
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[280px] rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-2xl shadow-black/40 animate-fade-in">
           {MODEL_PRESETS.map((preset) => (
             <button
               key={preset.id}
@@ -98,10 +98,15 @@ export function ModelSelector({
                 onModelChange(preset.id);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
+              className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
             >
-              <Check size={14} className={preset.id === modelId ? "text-[#10a37f]" : "invisible"} />
-              <span>{preset.label}</span>
+              <Check size={14} className={`mt-0.5 shrink-0 ${preset.id === modelId ? "text-[#10a37f]" : "invisible"}`} />
+              <span className="min-w-0">
+                <span className="block truncate">{preset.label}</span>
+                <span className="block truncate text-[11px] text-[#8e8e8e]">
+                  {getModelCardMeta(preset.id).join(" · ")}
+                </span>
+              </span>
             </button>
           ))}
           <div className="my-1 border-t border-white/[0.08]" />

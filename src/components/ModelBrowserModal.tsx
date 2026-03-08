@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2, Search, X } from "lucide-react";
+import { formatDownloadSizeLabel, getModelCardMeta } from "@/lib/constants";
 import {
   assessModelCompatibility,
   CompatibilityContext,
@@ -40,12 +41,6 @@ const COMPATIBILITY_FILTER_OPTIONS: { value: CompatibilityFilter; label: string 
 
 function formatCompactNumber(value: number) {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-}
-
-function formatSizeLabel(value: number | null) {
-  if (value === null) return null;
-  if (value < 1) return `${Math.round(value * 1024)} MB`;
-  return `${value.toFixed(value >= 10 ? 0 : 1)} GB`;
 }
 
 function formatDateLabel(value: string | null) {
@@ -407,8 +402,12 @@ export function ModelBrowserModal({
 
           {!initialLoading && displayedResults.map((model) => {
             const compatibility = assessModelCompatibility(model, compatibilityContext);
-            const sizeLabel = formatSizeLabel(model.estimatedDownloadGb);
             const updatedLabel = formatDateLabel(model.lastModified);
+            const metaLine = getModelCardMeta(model.id, {
+              parameterCountLabel: model.parameterCountB !== null ? `${model.parameterCountB}B` : null,
+              downloadSizeLabel: formatDownloadSizeLabel(model.estimatedDownloadGb),
+              isVisionModel: model.isVisionModel,
+            }).join(" · ");
             const active = model.id === currentModelId;
 
             return (
@@ -431,22 +430,15 @@ export function ModelBrowserModal({
                     </div>
 
                     <p className="truncate text-xs text-[#6f6f6f]">{model.id}</p>
+                    {metaLine && (
+                      <p className="text-[11px] text-[#8e8e8e]">{metaLine}</p>
+                    )}
                     <p className="text-xs leading-5 text-[#b4b4b4]">{compatibility.summary}</p>
 
                     <div className="flex flex-wrap gap-1.5 text-[11px] text-[#8e8e8e]">
                       <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                         {model.isVisionModel ? "Vision" : "Text"}
                       </span>
-                      {model.parameterCountB !== null && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
-                          {model.parameterCountB}B params
-                        </span>
-                      )}
-                      {sizeLabel && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
-                          ~{sizeLabel} download
-                        </span>
-                      )}
                       {model.pipelineTag && (
                         <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           {model.pipelineTag}

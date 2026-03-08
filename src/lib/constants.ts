@@ -8,13 +8,45 @@ interface ModelPreset {
   id: string;
   label: string;
   thinkingMode: ThinkingMode;
+  parameterCountLabel: string;
+  quantizationLabel: string;
+  downloadSizeLabel: string;
 }
 
 export const MODEL_PRESETS = [
-  { id: "onnx-community/Qwen3.5-0.8B-ONNX", label: "Qwen3.5 0.8B (~850MB)", thinkingMode: "optional" },
-  { id: "onnx-community/Qwen3.5-2B-ONNX", label: "Qwen3.5 2B (~2GB)", thinkingMode: "optional" },
-  { id: "HuggingFaceTB/SmolLM3-3B-ONNX", label: "SmolLM3 3B (~2.1GB)", thinkingMode: "optional" },
+  {
+    id: "onnx-community/Qwen3.5-0.8B-ONNX",
+    label: "Qwen3.5 0.8B",
+    thinkingMode: "optional",
+    parameterCountLabel: "0.8B",
+    quantizationLabel: "q4+fp16",
+    downloadSizeLabel: "850MB",
+  },
+  {
+    id: "onnx-community/Qwen3.5-2B-ONNX",
+    label: "Qwen3.5 2B",
+    thinkingMode: "optional",
+    parameterCountLabel: "2B",
+    quantizationLabel: "q4+fp16",
+    downloadSizeLabel: "2GB",
+  },
+  {
+    id: "HuggingFaceTB/SmolLM3-3B-ONNX",
+    label: "SmolLM3 3B",
+    thinkingMode: "optional",
+    parameterCountLabel: "3B",
+    quantizationLabel: "q4/q4f16",
+    downloadSizeLabel: "2.1GB",
+  },
 ] satisfies ModelPreset[];
+
+function parseModelParameterCountB(modelId: string) {
+  const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
+  if (!match) return null;
+
+  const value = Number.parseFloat(match[1]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
 
 export function isVlmModel(modelId: string) {
   return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma3n|paligemma|smolvlm|idefics|llava|mistral3/i.test(modelId);
@@ -27,11 +59,40 @@ export function getModelPreset(modelId: string) {
 export function getModelDisplayName(modelId: string) {
   const preset = getModelPreset(modelId);
   if (preset) {
-    return preset.label.replace(/\s*\(.*\)/, "");
+    return preset.label;
   }
 
   const repoName = modelId.split("/").pop();
   return repoName?.replace(/-ONNX$/i, "") || modelId;
+}
+
+export function getModelQuantizationLabel(modelId: string, isVisionModel = isVlmModel(modelId)) {
+  if (isVisionModel) return "q4+fp16";
+
+  const parameterCountB = parseModelParameterCountB(modelId);
+  if (parameterCountB !== null && parameterCountB >= 1) return "q4/q4f16";
+
+  return "q4/fp16";
+}
+
+export function formatDownloadSizeLabel(valueGb: number | null) {
+  if (valueGb === null) return null;
+  if (valueGb < 1) return `${Math.round(valueGb * 1024)}MB`;
+  return `${valueGb.toFixed(valueGb >= 10 ? 0 : 1)}GB`;
+}
+
+export function getModelCardMeta(modelId: string, options?: {
+  parameterCountLabel?: string | null;
+  downloadSizeLabel?: string | null;
+  isVisionModel?: boolean;
+}) {
+  const preset = getModelPreset(modelId);
+
+  return [
+    options?.parameterCountLabel ?? preset?.parameterCountLabel ?? null,
+    preset?.quantizationLabel ?? getModelQuantizationLabel(modelId, options?.isVisionModel),
+    options?.downloadSizeLabel ?? preset?.downloadSizeLabel ?? null,
+  ].filter((part): part is string => Boolean(part));
 }
 
 export function getModelThinkingMode(modelId: string): ThinkingMode {

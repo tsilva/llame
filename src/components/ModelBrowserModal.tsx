@@ -25,31 +25,17 @@ interface BrowserProfile {
   hardwareConcurrency: number | null;
 }
 
-type ModelTypeFilter = "all" | "text" | "vision";
 type CompatibilityFilter = "all" | "recommended";
-type SizeFilter = "all" | "small" | "medium" | "large";
 
 const SORT_OPTIONS: { value: ModelBrowserSort; label: string }[] = [
+  { value: "relevance", label: "Relevance" },
   { value: "downloads", label: "Top downloads" },
   { value: "recency", label: "Most recent" },
-];
-
-const TYPE_FILTER_OPTIONS: { value: ModelTypeFilter; label: string }[] = [
-  { value: "all", label: "All types" },
-  { value: "text", label: "Text only" },
-  { value: "vision", label: "Vision" },
 ];
 
 const COMPATIBILITY_FILTER_OPTIONS: { value: CompatibilityFilter; label: string }[] = [
   { value: "all", label: "All fits" },
   { value: "recommended", label: "Likely on this device" },
-];
-
-const SIZE_FILTER_OPTIONS: { value: SizeFilter; label: string }[] = [
-  { value: "all", label: "All sizes" },
-  { value: "small", label: "Small" },
-  { value: "medium", label: "Medium" },
-  { value: "large", label: "Large" },
 ];
 
 function formatCompactNumber(value: number) {
@@ -116,25 +102,28 @@ function parseModelDate(value: string | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getRelevanceScore(model: DiscoveredModel) {
+  const downloadsScore = Math.log10(model.downloads + 1) * 100;
+  const likesScore = Math.log10(model.likes + 1) * 18;
+  const modifiedAt = parseModelDate(model.lastModified);
+  const ageDays = modifiedAt > 0
+    ? (Date.now() - modifiedAt) / (1000 * 60 * 60 * 24)
+    : 3650;
+  const freshnessScore = Math.max(0, 26 - Math.min(ageDays, 365) / 18);
+
+  return downloadsScore + likesScore + freshnessScore;
+}
+
 function compareModels(sortBy: ModelBrowserSort, left: DiscoveredModel, right: DiscoveredModel) {
   if (sortBy === "recency") {
     return parseModelDate(right.lastModified) - parseModelDate(left.lastModified);
   }
 
+  if (sortBy === "relevance") {
+    return getRelevanceScore(right) - getRelevanceScore(left);
+  }
+
   return right.downloads - left.downloads;
-}
-
-function getModelSizeClass(model: DiscoveredModel): Exclude<SizeFilter, "all"> | null {
-  const sizeSignal = model.parameterCountB ?? model.estimatedDownloadGb;
-  if (sizeSignal === null) return null;
-  if (sizeSignal <= 1.5) return "small";
-  if (sizeSignal <= 4) return "medium";
-  return "large";
-}
-
-function matchesTypeFilter(model: DiscoveredModel, filter: ModelTypeFilter) {
-  if (filter === "all") return true;
-  return filter === "vision" ? model.isVisionModel : !model.isVisionModel;
 }
 
 function matchesCompatibilityFilter(
@@ -146,11 +135,6 @@ function matchesCompatibilityFilter(
 
   const compatibility = assessModelCompatibility(model, compatibilityContext);
   return compatibility.label === "Very likely" || compatibility.label === "Likely";
-}
-
-function matchesSizeFilter(model: DiscoveredModel, filter: SizeFilter) {
-  if (filter === "all") return true;
-  return getModelSizeClass(model) === filter;
 }
 
 function SelectControl<T extends string>({
@@ -195,10 +179,8 @@ export function ModelBrowserModal({
 }: ModelBrowserModalProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [sortBy, setSortBy] = useState<ModelBrowserSort>("downloads");
-  const [typeFilter, setTypeFilter] = useState<ModelTypeFilter>("all");
+  const [sortBy, setSortBy] = useState<ModelBrowserSort>("relevance");
   const [compatibilityFilter, setCompatibilityFilter] = useState<CompatibilityFilter>("all");
-  const [sizeFilter, setSizeFilter] = useState<SizeFilter>("all");
   const [results, setResults] = useState<DiscoveredModel[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -323,21 +305,14 @@ export function ModelBrowserModal({
   };
   const displayedResults = [...results]
     .sort((left, right) => compareModels(sortBy, left, right))
-    .filter((model) => matchesTypeFilter(model, typeFilter))
-    .filter((model) => matchesCompatibilityFilter(model, compatibilityFilter, compatibilityContext))
-    .filter((model) => matchesSizeFilter(model, sizeFilter));
-  const hasActiveFilters =
-    typeFilter !== "all" ||
-    compatibilityFilter !== "all" ||
-    sizeFilter !== "all";
+    .filter((model) => matchesCompatibilityFilter(model, compatibilityFilter, compatibilityContext));
+  const hasActiveFilters = compatibilityFilter !== "all";
   const handleLoadMore = () => {
     if (!nextCursor || loadingMore) return;
     void fetchModels(debouncedQuery, nextCursor, true, sortBy);
   };
   const clearFilters = () => {
-    setTypeFilter("all");
     setCompatibilityFilter("all");
-    setSizeFilter("all");
   };
 
   return (
@@ -386,22 +361,10 @@ export function ModelBrowserModal({
                 onChange={setSortBy}
               />
               <SelectControl
-                label="Type"
-                value={typeFilter}
-                options={TYPE_FILTER_OPTIONS}
-                onChange={setTypeFilter}
-              />
-              <SelectControl
                 label="Fit"
                 value={compatibilityFilter}
                 options={COMPATIBILITY_FILTER_OPTIONS}
                 onChange={setCompatibilityFilter}
-              />
-              <SelectControl
-                label="Size"
-                value={sizeFilter}
-                options={SIZE_FILTER_OPTIONS}
-                onChange={setSizeFilter}
               />
             </div>
 
@@ -438,7 +401,7 @@ export function ModelBrowserModal({
             <div className="rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-5 text-sm text-[#8e8e8e]">
               {results.length === 0
                 ? "No ONNX Community LLMs or VLMs matched that search."
-                : "No models matched the current filters. Try widening the fit, type, or size filters."}
+                : "No models matched the current filters. Try widening the fit filter."}
             </div>
           )}
 
@@ -451,63 +414,66 @@ export function ModelBrowserModal({
             return (
               <div
                 key={model.id}
-                className="rounded-2xl border border-white/[0.08] bg-[#212121] p-4"
+                className="rounded-xl border border-white/[0.08] bg-[#212121] px-3.5 py-3"
               >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <h3 className="text-sm font-medium text-[#ececec]">{model.name}</h3>
-                      <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
                         {compatibility.label}
                       </span>
                       {active && (
-                        <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[11px] font-medium text-[#7ee7c7]">
+                        <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]">
                           Current
                         </span>
                       )}
                     </div>
 
                     <p className="truncate text-xs text-[#6f6f6f]">{model.id}</p>
-                    <p className="text-sm text-[#b4b4b4]">{compatibility.summary}</p>
+                    <p className="text-xs leading-5 text-[#b4b4b4]">{compatibility.summary}</p>
 
-                    <div className="flex flex-wrap gap-2 text-[11px] text-[#8e8e8e]">
+                    <div className="flex flex-wrap gap-1.5 text-[11px] text-[#8e8e8e]">
+                      <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                        {model.isVisionModel ? "Vision" : "Text"}
+                      </span>
                       {model.parameterCountB !== null && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           {model.parameterCountB}B params
                         </span>
                       )}
                       {sizeLabel && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           ~{sizeLabel} download
                         </span>
                       )}
                       {model.pipelineTag && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           {model.pipelineTag}
                         </span>
                       )}
-                      <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                      <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                         {formatCompactNumber(model.downloads)} downloads
                       </span>
                       {model.likes > 0 && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           {formatCompactNumber(model.likes)} likes
                         </span>
                       )}
                       {updatedLabel && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-1">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
                           Updated {updatedLabel}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 self-start lg:self-center">
                     <a
                       href={`https://huggingface.co/${model.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-xs text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
                     >
                       <span>View</span>
                       <ExternalLink size={14} />
@@ -515,7 +481,7 @@ export function ModelBrowserModal({
                     <button
                       onClick={() => onSelectModel(model.id)}
                       disabled={disabled || active}
-                      className="rounded-lg bg-[#10a37f] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg bg-[#10a37f] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {active ? "Selected" : "Use model"}
                     </button>

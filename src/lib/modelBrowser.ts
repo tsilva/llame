@@ -29,7 +29,7 @@ export interface ModelSearchPage {
   nextCursor: string | null;
 }
 
-export type ModelBrowserSort = "downloads" | "recency";
+export type ModelBrowserSort = "relevance" | "downloads" | "recency";
 
 export interface CompatibilityContext {
   device: "webgpu" | "wasm";
@@ -162,7 +162,7 @@ export async function searchOnnxCommunityModels(
   signal?: AbortSignal,
   options: SearchOnnxCommunityModelsOptions = {},
 ): Promise<ModelSearchPage> {
-  const requestedSort = options.sort ?? "downloads";
+  const requestedSort = options.sort ?? "relevance";
   const hubSort = getHubSort(requestedSort);
   const params = new URLSearchParams({
     author: "onnx-community",

@@ -1,13 +1,13 @@
 <div align="center">
   <img src="logo.png" alt="llame" width="512"/>
 
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.vercel.app)
+  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)   [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
 
   **No Python. No CUDA. No server. Just a URL.**
 
   **🧠 Run LLMs directly in your browser — no server, no API keys, just WebGPU ⚡**
 
-  [Live Demo](https://llame.vercel.app)
+  [Live Demo](https://llame.tsilva.eu)
 </div>
 
 ## Overview
@@ -118,7 +118,7 @@ MIT
 
 <div align="center">
 
-[Try the Live Demo](https://llame.vercel.app) · [Read the Architecture](#%EF%B8%8F-architecture) · [Star on GitHub](https://github.com/tsilva/llame) ⭐
+[Try the Live Demo](https://llame.tsilva.eu) · [Read the Architecture](#%EF%B8%8F-architecture) · [Star on GitHub](https://github.com/tsilva/llame) ⭐
 
 </div>
 

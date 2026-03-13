@@ -93,6 +93,8 @@ WebGPU is detected automatically. If unavailable, the app falls back to WASM wit
 
 The app is configured as a static export (`output: "export"`) with required `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers for `SharedArrayBuffer` support.
 
+For Google Analytics 4, set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the build environment. The root layout injects the GA script only when that variable is present, so local development works without analytics by default.
+
 Deploy to Vercel:
 
 ```bash

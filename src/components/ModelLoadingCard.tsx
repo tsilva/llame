@@ -29,7 +29,7 @@ export function ModelLoadingCard({
   const displayModelName = modelName.split("/").pop() || modelName;
 
   return (
-    <div className="flex gap-3 animate-fade-in">
+    <div className="flex gap-3 animate-fade-in" role="status" aria-live="polite">
       {/* Avatar */}
       <div className="mt-1 flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-[#10a37f]">
         <Sparkles size={14} className="text-white" />
@@ -67,6 +67,7 @@ export function ModelLoadingCard({
               {/* Expand/collapse toggle */}
               <button
                 onClick={() => setShowDetails(!showDetails)}
+                aria-expanded={showDetails}
                 className="flex items-center gap-1 text-xs text-[#8e8e8e] hover:text-[#ececec] transition-colors mb-2"
               >
                 {showDetails ? (

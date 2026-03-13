@@ -12,6 +12,9 @@ import {
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
+import { ThinkingParser } from "@/lib/thinkingParser";
+import { withRetry } from "@/lib/network";
+import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
 
 env.allowLocalModels = false;
 
@@ -20,90 +23,22 @@ let tokenizer: PreTrainedTokenizer | null = null;
 let processor: any = null;
 let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
+let currentRevision: string | null = null;
 let currentDevice: "webgpu" | "wasm" | null = null;
 let currentPrecision: string | null = null;
 let currentSupportsImages = false;
 let shouldInterrupt = false;
 let generationId = 0;
 
-// Thinking parser to handle different thinking tag formats
-class ThinkingParser {
-  private buffer = "";
-  private inThinking = false;
-  private thinkingContent = "";
-  private thinkingComplete = false;
-
-  private static readonly START_RE = /<(think|thinking|thought|reasoning)>/;
-  private static readonly END_RE = /<\/(think|thinking|thought|reasoning)>/;
-
-  constructor(startInThinking = false) {
-    if (startInThinking) this.inThinking = true;
-  }
-
-  processToken(token: string): {
-    type: "thinking" | "content" | "buffer";
-    content: string;
-    thinkingComplete?: boolean;
-  } {
-    this.buffer += token;
-
-    if (!this.inThinking && !this.thinkingComplete) {
-      const startMatch = this.buffer.match(ThinkingParser.START_RE);
-      if (startMatch) {
-        this.inThinking = true;
-        const before = this.buffer.slice(0, startMatch.index!);
-        this.buffer = this.buffer.slice(startMatch.index! + startMatch[0].length);
-        if (before) return { type: "content", content: before };
-        return { type: "buffer", content: "" };
-      }
-    }
-
-    if (this.inThinking) {
-      const endMatch = this.buffer.match(ThinkingParser.END_RE);
-      if (endMatch) {
-        const thinkingPart = this.buffer.slice(0, endMatch.index!);
-        this.thinkingContent += thinkingPart;
-        this.inThinking = false;
-        this.thinkingComplete = true;
-        this.buffer = this.buffer.slice(endMatch.index! + endMatch[0].length);
-        return { type: "thinking", content: thinkingPart, thinkingComplete: true };
-      }
-      this.thinkingContent += token;
-      return { type: "thinking", content: token };
-    }
-
-    if (this.buffer.length > 20) {
-      const toEmit = this.buffer.slice(0, -10);
-      this.buffer = this.buffer.slice(-10);
-      return { type: "content", content: toEmit };
-    }
-
-    return { type: "buffer", content: "" };
-  }
-
-  flush(): { type: "thinking" | "content"; content: string } | null {
-    if (!this.buffer) return null;
-    if (this.inThinking) {
-      this.thinkingContent += this.buffer;
-      return { type: "thinking", content: this.buffer };
-    }
-    return { type: "content", content: this.buffer };
-  }
-
-  getThinkingContent(): string {
-    return this.thinkingContent;
-  }
+function post(message: WorkerResponse) {
+  self.postMessage(message);
 }
 
-function post(msg: WorkerResponse) {
-  self.postMessage(msg);
-}
-
-function getErrorMessage(err: unknown): string {
-  if (err instanceof Error && err.message) return err.message;
-  if (typeof err === "string" && err) return err;
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
   try {
-    const serialized = JSON.stringify(err);
+    const serialized = JSON.stringify(error);
     if (serialized && serialized !== "{}") return serialized;
   } catch {
     // Ignore serialization failures and fall back below.
@@ -116,13 +51,14 @@ async function dispose() {
     try {
       await (model as unknown as { dispose?: () => Promise<void> }).dispose?.();
     } catch {
-      // ignore
+      // Ignore disposal failures.
     }
     model = null;
   }
   tokenizer = null;
   processor = null;
   currentModelId = null;
+  currentRevision = null;
   currentDevice = null;
   currentPrecision = null;
   currentSupportsImages = false;
@@ -131,7 +67,7 @@ async function dispose() {
 function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
   if (device !== "webgpu") return "q4";
   const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
-  if (match && parseFloat(match[1]) >= 1.0) return "q4f16";
+  if (match && Number.parseFloat(match[1]) >= 1.0) return "q4f16";
   return "fp16";
 }
 
@@ -139,14 +75,30 @@ function supportsModelType(autoModelClass: { supports?: (modelType: string) => b
   return autoModelClass.supports?.(modelType) ?? false;
 }
 
-async function loadModel(modelId: string, device: "webgpu" | "wasm") {
-  if (currentModelId === modelId && currentDevice === device && currentPrecision) {
-    post({ status: "loaded", modelId, device, precision: currentPrecision, supportsImages: currentSupportsImages });
+async function loadConfig(modelId: string, revision: string | null) {
+  return withRetry(() => AutoConfig.from_pretrained(modelId, revision ? { revision } : undefined), 3);
+}
+
+async function loadModel(modelId: string, revision: string | null, device: "webgpu" | "wasm") {
+  if (
+    currentModelId === modelId &&
+    currentDevice === device &&
+    currentPrecision &&
+    currentRevision === (revision ?? null)
+  ) {
+    post({
+      status: "loaded",
+      modelId,
+      revision: currentRevision,
+      device,
+      precision: currentPrecision,
+      supportsImages: currentSupportsImages,
+    });
     return;
   }
 
   shouldInterrupt = true;
-  generationId++;
+  generationId += 1;
   await dispose();
   shouldInterrupt = false;
 
@@ -168,20 +120,23 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
   };
 
   try {
-    const config = await AutoConfig.from_pretrained(modelId);
+    const config = await loadConfig(modelId, revision);
     const modelType = config.model_type;
     if (!modelType) {
       throw new Error("Model config is missing model_type");
     }
+
     const supportsImages = supportsModelType(AutoModelForImageTextToText, modelType);
     const supportsCausalLM = supportsModelType(AutoModelForCausalLM, modelType);
     const isQwen35 = modelType === "qwen3_5" || modelType === "qwen3_5_moe" || modelId.includes("Qwen3.5");
+    const commonOptions = {
+      progress_callback: progressCallback,
+      ...(revision ? { revision } : {}),
+    };
 
     if (supportsImages) {
       currentSupportsImages = true;
-      processor = await AutoProcessor.from_pretrained(modelId, {
-        progress_callback: progressCallback,
-      });
+      processor = await AutoProcessor.from_pretrained(modelId, commonOptions);
       tokenizer = processor.tokenizer;
 
       post({ status: "loading", message: "Loading model..." });
@@ -196,16 +151,13 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
       currentPrecision = typeof dtype === "string" ? dtype : "q4";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
+        ...commonOptions,
         device,
         dtype,
-        progress_callback: progressCallback,
       } as Parameters<typeof AutoModelForImageTextToText.from_pretrained>[1]);
     } else if (supportsCausalLM) {
       currentSupportsImages = false;
-      // Standard causal LM
-      tokenizer = await AutoTokenizer.from_pretrained(modelId, {
-        progress_callback: progressCallback,
-      });
+      tokenizer = await AutoTokenizer.from_pretrained(modelId, commonOptions);
 
       post({ status: "loading", message: "Loading model..." });
 
@@ -213,18 +165,18 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
       currentPrecision = dtype;
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {
+        ...commonOptions,
         device,
         dtype,
-        progress_callback: progressCallback,
       } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
     } else {
       throw new Error(`Unsupported model type: ${modelType}`);
     }
 
     currentModelId = modelId;
+    currentRevision = revision ?? null;
     currentDevice = device;
 
-    // Warm up with a dummy generation
     post({ status: "loading", message: "Warming up..." });
     try {
       const dummyInput = tokenizer!("Hello", { return_tensor: true });
@@ -233,40 +185,64 @@ async function loadModel(modelId: string, device: "webgpu" | "wasm") {
         max_new_tokens: 1,
       });
     } catch {
-      // Warm-up failure is non-critical
+      // Warm-up failure is non-critical.
     }
 
-    post({ status: "loaded", modelId, device, precision: currentPrecision!, supportsImages: currentSupportsImages });
-  } catch (err) {
+    post({
+      status: "loaded",
+      modelId,
+      revision: currentRevision,
+      device,
+      precision: currentPrecision!,
+      supportsImages: currentSupportsImages,
+    });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    const code = classifyWorkerLoadError(error);
     await dispose();
-    post({ status: "error", error: `Failed to load model: ${getErrorMessage(err)}` });
+    post({
+      status: "error",
+      error: `Failed to load model: ${message}`,
+      code,
+      stage: "load",
+      modelId,
+      revision,
+      device,
+    });
   }
 }
 
 async function generate(messages: ChatMessage[], params: GenerationParams) {
   if (!tokenizer || !model) {
-    post({ status: "error", error: "No model loaded" });
+    post({
+      status: "error",
+      error: "No model loaded",
+      code: "NO_MODEL_LOADED",
+      stage: "generate",
+      modelId: currentModelId,
+      revision: currentRevision,
+      device: currentDevice,
+    });
     return;
   }
 
-  const myId = ++generationId;
+  const requestId = ++generationId;
   shouldInterrupt = false;
   post({ status: "generating" });
 
   try {
     const supportsImages = currentSupportsImages || (currentModelId ? isVlmModel(currentModelId) : false);
-    const hasImages = supportsImages && messages.some((m) => m.images && m.images.length > 0);
+    const hasImages = supportsImages && messages.some((message) => message.images && message.images.length > 0);
 
-    // Format messages for the model
-    const chatMessages = messages.map((m) => {
-      if (m.images && m.images.length > 0 && supportsImages) {
+    const chatMessages = messages.map((message) => {
+      if (message.images && message.images.length > 0 && supportsImages) {
         const content = [
-          ...m.images.map((img) => ({ type: "image" as const, image: img })),
-          { type: "text" as const, text: m.content },
+          ...message.images.map((image) => ({ type: "image" as const, image })),
+          { type: "text" as const, text: message.content },
         ];
-        return { role: m.role, content };
+        return { role: message.role, content };
       }
-      return { role: m.role, content: m.content };
+      return { role: message.role, content: message.content };
     });
 
     const thinkingMode = currentModelId ? getModelThinkingMode(currentModelId) : "unsupported";
@@ -288,24 +264,18 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     ) as string;
     post({ status: "prompt", inputText });
 
-    // Keep parsing <think> tags even when hidden so they don't leak into chat content.
-    // Only start in thinking mode when reasoning was explicitly enabled in the prompt.
     const templateEndsWithThink = thinkingEnabled && inputText.trimEnd().endsWith("<think>");
     const parser = new ThinkingParser(templateEndsWithThink);
-
-    // Calculate input token count for context fullness tracking
     const inputTokens = tokenizer(inputText, { return_tensor: false }).input_ids.length;
 
-    // For VLM with images, use processor; otherwise use tokenizer
     let inputs: Record<string, unknown>;
     if (hasImages && processor) {
       post({ status: "processing", message: "Processing image..." });
       const images = messages
-        .flatMap((m) => m.images || [])
-        .map((img) => RawImage.fromURL(img));
+        .flatMap((message) => message.images || [])
+        .map((image) => RawImage.fromURL(image));
       const resolvedImages = await Promise.all(images);
       inputs = await processor(inputText, resolvedImages.length === 1 ? resolvedImages[0] : resolvedImages);
-      // Transition back to generating state after image processing completes
       post({ status: "generating" });
     } else {
       inputs = tokenizer(inputText, { return_tensor: true }) as Record<string, unknown>;
@@ -313,20 +283,19 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
 
     let numTokens = 0;
     const startTime = performance.now();
-
     const streamer = new TextStreamer(tokenizer, {
       skip_prompt: true,
       skip_special_tokens: false,
       callback_function: (rawToken: string) => {
-        if (myId !== generationId) return;
+        if (requestId !== generationId) return;
+
         post({ status: "raw_update", token: rawToken });
-        // Filter out special tokens except thinking tags (which we need to parse)
         const token = rawToken.replace(/<\|[^>]*\|>/g, "");
         if (!token) return;
-        numTokens++;
+
+        numTokens += 1;
         const elapsed = (performance.now() - startTime) / 1000;
         const tps = numTokens / elapsed;
-
         const result = parser.processToken(token);
 
         if (result.type === "thinking" && result.content) {
@@ -347,14 +316,12 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       ...params,
       streamer,
       stopping_criteria: [
-        () => shouldInterrupt || myId !== generationId,
+        () => shouldInterrupt || requestId !== generationId,
       ],
     });
 
-    // Don't flush or complete if superseded by a newer generation
-    if (myId !== generationId) return;
+    if (requestId !== generationId) return;
 
-    // Flush any remaining content
     const remaining = parser.flush();
     if (remaining) {
       const finalTps = numTokens / ((performance.now() - startTime) / 1000);
@@ -371,16 +338,24 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const elapsed = (performance.now() - startTime) / 1000;
     const tps = numTokens / elapsed;
     post({ status: "complete", tps, numTokens });
-  } catch (err) {
-    if (myId !== generationId) return;
+  } catch (error) {
+    if (requestId !== generationId) return;
+
     if (shouldInterrupt) {
       post({ status: "complete", tps: 0, numTokens: 0 });
-    } else {
-      post({
-        status: "error",
-        error: `Generation failed: ${getErrorMessage(err)}`,
-      });
+      return;
     }
+
+    const message = getErrorMessage(error);
+    post({
+      status: "error",
+      error: `Generation failed: ${message}`,
+      code: classifyWorkerGenerationError(error),
+      stage: "generate",
+      modelId: currentModelId,
+      revision: currentRevision,
+      device: currentDevice,
+    });
   }
 }
 
@@ -389,7 +364,7 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
 
   switch (data.type) {
     case "load":
-      await loadModel(data.modelId, data.device);
+      await loadModel(data.modelId, data.revision ?? null, data.device);
       break;
     case "generate":
       await generate(data.messages, data.params);
@@ -399,7 +374,7 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
       break;
     case "reset":
       shouldInterrupt = true;
-      generationId++;
+      generationId += 1;
       await dispose();
       shouldInterrupt = false;
       post({ status: "unloaded" });

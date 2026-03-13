@@ -105,13 +105,14 @@ export function SettingsModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-4 sm:mx-auto w-full max-w-lg max-h-[85dvh] flex flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter">
+      <div className="mx-4 sm:mx-auto w-full max-w-lg max-h-[85dvh] flex flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
-          <h2 className="text-lg font-medium text-[#ececec]">Settings</h2>
+          <h2 id="settings-title" className="text-lg font-medium text-[#ececec]">Settings</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1 text-[#8e8e8e] hover:bg-[#424242] hover:text-[#ececec] transition-colors duration-150"
+            aria-label="Close settings"
           >
             <X size={20} />
           </button>

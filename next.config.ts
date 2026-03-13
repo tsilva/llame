@@ -12,6 +12,7 @@ const getGitHash = () => {
 const nextConfig: NextConfig = {
   output: "export",
   turbopack: {},
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   env: {
     GIT_COMMIT_HASH: getGitHash(),
   },

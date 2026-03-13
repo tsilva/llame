@@ -1,10 +1,11 @@
-import { GenerationParams } from "@/types";
+import { GenerationParams, ModelSelection } from "@/types";
 
 export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
+export const DEFAULT_MODEL_REVISION = "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6";
 
 export type ThinkingMode = "unsupported" | "optional" | "required";
 
-interface ModelPreset {
+export interface ModelPreset extends ModelSelection {
   id: string;
   label: string;
   thinkingMode: ThinkingMode;
@@ -16,27 +17,39 @@ interface ModelPreset {
 export const MODEL_PRESETS = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
+    revision: "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6",
     label: "Qwen3.5 0.8B",
     thinkingMode: "optional",
     parameterCountLabel: "0.8B",
     quantizationLabel: "q4+fp16",
     downloadSizeLabel: "850MB",
+    supportsImages: true,
+    recommendedDevice: "webgpu",
+    supportTier: "curated",
   },
   {
     id: "onnx-community/Qwen3.5-2B-ONNX",
+    revision: "d8ddc1cfd46bdefa6771b3a82097f3610a5b3ee4",
     label: "Qwen3.5 2B",
     thinkingMode: "optional",
     parameterCountLabel: "2B",
     quantizationLabel: "q4+fp16",
     downloadSizeLabel: "2GB",
+    supportsImages: true,
+    recommendedDevice: "webgpu",
+    supportTier: "curated",
   },
   {
     id: "HuggingFaceTB/SmolLM3-3B-ONNX",
+    revision: "af50613703fb6f10ffcb21b27ad48edcb8334232",
     label: "SmolLM3 3B",
     thinkingMode: "optional",
     parameterCountLabel: "3B",
     quantizationLabel: "q4/q4f16",
     downloadSizeLabel: "2.1GB",
+    supportsImages: false,
+    recommendedDevice: "webgpu",
+    supportTier: "curated",
   },
 ] satisfies ModelPreset[];
 
@@ -64,6 +77,18 @@ export function getModelDisplayName(modelId: string) {
 
   const repoName = modelId.split("/").pop();
   return repoName?.replace(/-ONNX$/i, "") || modelId;
+}
+
+export function getModelSelection(modelId: string, overrides?: Partial<ModelSelection>): ModelSelection {
+  const preset = getModelPreset(modelId);
+
+  return {
+    id: modelId,
+    revision: overrides?.revision ?? preset?.revision ?? null,
+    supportsImages: overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(modelId),
+    recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
+    supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",
+  };
 }
 
 export function getModelQuantizationLabel(modelId: string, isVisionModel = isVlmModel(modelId)) {

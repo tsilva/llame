@@ -7,6 +7,9 @@ import {
   ChatMessage,
   GenerationParams,
   ProgressInfo,
+  ModelSelection,
+  WorkerErrorCode,
+  WorkerErrorStage,
 } from "@/types";
 import { CONTEXT_WINDOWS } from "@/lib/constants";
 
@@ -18,13 +21,35 @@ export type InferenceStatus =
   | "generating"
   | "error";
 
+export interface WorkerErrorState {
+  message: string;
+  code: WorkerErrorCode;
+  stage: WorkerErrorStage;
+  modelId?: string | null;
+  revision?: string | null;
+  device?: "webgpu" | "wasm" | null;
+}
+
+interface WorkerLike {
+  onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null;
+  postMessage: (message: WorkerRequest) => void;
+  terminate: () => void;
+}
+
+declare global {
+  interface Window {
+    __LLAME_WORKER_FACTORY__?: () => WorkerLike;
+  }
+}
+
 interface InferenceState {
   status: InferenceStatus;
   loadingMessage: string;
   processingMessage: string;
   progress: Map<string, ProgressInfo>;
-  error: string | null;
+  error: WorkerErrorState | null;
   loadedModel: string | null;
+  loadedRevision: string | null;
   loadedDevice: string | null;
   loadedPrecision: string | null;
   loadedSupportsImages: boolean | null;
@@ -34,7 +59,7 @@ interface InferenceState {
 }
 
 interface UseInferenceWorkerReturn extends InferenceState {
-  loadModel: (modelId: string, device: "webgpu" | "wasm") => void;
+  loadModel: (model: ModelSelection, device: "webgpu" | "wasm") => void;
   generate: (messages: ChatMessage[], params: GenerationParams) => void;
   interrupt: () => void;
   reset: () => void;
@@ -47,99 +72,116 @@ interface UseInferenceWorkerReturn extends InferenceState {
   contextWindow: number;
 }
 
+const INITIAL_STATE: InferenceState = {
+  status: "idle",
+  loadingMessage: "",
+  processingMessage: "",
+  progress: new Map(),
+  error: null,
+  loadedModel: null,
+  loadedRevision: null,
+  loadedDevice: null,
+  loadedPrecision: null,
+  loadedSupportsImages: null,
+  tps: 0,
+  numTokens: 0,
+  inputTokens: 0,
+};
+
 export function useInferenceWorker(): UseInferenceWorkerReturn {
-  const workerRef = useRef<Worker | null>(null);
-  const stateRef = useRef<InferenceState>({
-    status: "idle",
-    loadingMessage: "",
-    processingMessage: "",
-    progress: new Map(),
-    error: null,
-    loadedModel: null,
-    loadedDevice: null,
-    loadedPrecision: null,
-    loadedSupportsImages: null,
-    tps: 0,
-    numTokens: 0,
-    inputTokens: 0,
-  });
+  const workerRef = useRef<WorkerLike | null>(null);
+  const stateRef = useRef<InferenceState>(INITIAL_STATE);
   const onPromptRef = useRef<((inputText: string) => void) | null>(null);
   const onRawTokenRef = useRef<((token: string) => void) | null>(null);
   const onTokenRef = useRef<((token: string, isThinking?: boolean) => void) | null>(null);
   const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
   const onCompleteRef = useRef<(() => void) | null>(null);
-
-  const [state, setState] = useState<InferenceState>({
-    status: "idle",
-    loadingMessage: "",
-    processingMessage: "",
-    progress: new Map(),
-    error: null,
-    loadedModel: null,
-    loadedDevice: null,
-    loadedPrecision: null,
-    loadedSupportsImages: null,
-    tps: 0,
-    numTokens: 0,
-    inputTokens: 0,
-  });
-
   const interruptedRef = useRef(false);
+
+  const [state, setState] = useState<InferenceState>(INITIAL_STATE);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  const attachWorker = useCallback((worker: Worker) => {
+  const attachWorker = useCallback((worker: WorkerLike) => {
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       if (workerRef.current !== worker) return;
 
-      const d = event.data;
+      const response = event.data;
 
-      if (d.status === "ready") {
-        setState((s) => ({ ...s, status: "idle" }));
-      } else if (d.status === "loading") {
-        setState((s) => ({ ...s, status: "loading", loadingMessage: d.message, progress: new Map(), error: null }));
-      } else if (d.status === "progress") {
-        setState((s) => { const p = new Map(s.progress); p.set(d.progress.file, d.progress); return { ...s, progress: p }; });
-      } else if (d.status === "loaded") {
-        setState((s) => ({
-          ...s,
-          status: "loaded",
-          loadedModel: d.modelId,
-          loadedDevice: d.device,
-          loadedPrecision: d.precision,
-          loadedSupportsImages: d.supportsImages,
+      if (response.status === "ready") {
+        setState((current) => ({ ...current, status: "idle" }));
+      } else if (response.status === "loading") {
+        setState((current) => ({
+          ...current,
+          status: "loading",
+          loadingMessage: response.message,
           progress: new Map(),
           error: null,
         }));
-      } else if (d.status === "processing") {
-        setState((s) => ({ ...s, status: "processing", processingMessage: d.message }));
-      } else if (d.status === "generating") {
+      } else if (response.status === "progress") {
+        setState((current) => {
+          const progress = new Map(current.progress);
+          progress.set(response.progress.file, response.progress);
+          return { ...current, progress };
+        });
+      } else if (response.status === "loaded") {
+        setState((current) => ({
+          ...current,
+          status: "loaded",
+          loadedModel: response.modelId,
+          loadedRevision: response.revision ?? null,
+          loadedDevice: response.device,
+          loadedPrecision: response.precision,
+          loadedSupportsImages: response.supportsImages,
+          progress: new Map(),
+          error: null,
+        }));
+      } else if (response.status === "processing") {
+        setState((current) => ({ ...current, status: "processing", processingMessage: response.message }));
+      } else if (response.status === "generating") {
         interruptedRef.current = false;
-        setState((s) => ({ ...s, status: "generating", tps: 0, numTokens: 0, inputTokens: 0 }));
-      } else if (d.status === "prompt") {
-        if (!interruptedRef.current) onPromptRef.current?.(d.inputText);
-      } else if (d.status === "raw_update") {
-        if (!interruptedRef.current) onRawTokenRef.current?.(d.token);
-      } else if (d.status === "update") {
+        setState((current) => ({ ...current, status: "generating", tps: 0, numTokens: 0, inputTokens: 0, error: null }));
+      } else if (response.status === "prompt") {
+        if (!interruptedRef.current) onPromptRef.current?.(response.inputText);
+      } else if (response.status === "raw_update") {
+        if (!interruptedRef.current) onRawTokenRef.current?.(response.token);
+      } else if (response.status === "update") {
         if (interruptedRef.current) return;
-        onTokenRef.current?.(d.token, d.isThinking);
-        setState((s) => ({ ...s, tps: d.tps, numTokens: d.numTokens, inputTokens: d.inputTokens ?? s.inputTokens }));
-      } else if (d.status === "thinking_complete") {
-        if (!interruptedRef.current) onThinkingCompleteRef.current?.(d.thinking);
-      } else if (d.status === "complete") {
+        onTokenRef.current?.(response.token, response.isThinking);
+        setState((current) => ({
+          ...current,
+          tps: response.tps,
+          numTokens: response.numTokens,
+          inputTokens: response.inputTokens ?? current.inputTokens,
+        }));
+      } else if (response.status === "thinking_complete") {
+        if (!interruptedRef.current) onThinkingCompleteRef.current?.(response.thinking);
+      } else if (response.status === "complete") {
         if (!interruptedRef.current) onCompleteRef.current?.();
         interruptedRef.current = false;
-        setState((s) => ({ ...s, status: "loaded", tps: d.tps, numTokens: d.numTokens }));
-      } else if (d.status === "error") {
+        setState((current) => ({ ...current, status: "loaded", tps: response.tps, numTokens: response.numTokens }));
+      } else if (response.status === "error") {
         interruptedRef.current = false;
-        setState((s) => ({ ...s, status: "error", error: d.error }));
-      } else if (d.status === "unloaded") {
-        setState((s) => ({
-          ...s,
+        setState((current) => ({
+          ...current,
+          status: "error",
+          error: {
+            message: response.error,
+            code: response.code,
+            stage: response.stage,
+            modelId: response.modelId,
+            revision: response.revision,
+            device: response.device,
+          },
+        }));
+      } else if (response.status === "unloaded") {
+        setState((current) => ({
+          ...current,
           status: "idle",
           loadedModel: null,
+          loadedRevision: null,
           loadedDevice: null,
           loadedPrecision: null,
           loadedSupportsImages: null,
@@ -148,10 +190,16 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     };
   }, []);
 
-  const createWorker = useCallback(() => {
+  const createWorker = useCallback((): WorkerLike => {
+    if (typeof window !== "undefined" && typeof window.__LLAME_WORKER_FACTORY__ === "function") {
+      const worker = window.__LLAME_WORKER_FACTORY__();
+      attachWorker(worker);
+      return worker;
+    }
+
     const worker = new Worker(
       new URL("../workers/inference.worker.ts", import.meta.url),
-      { type: "module" }
+      { type: "module" },
     );
     attachWorker(worker);
     return worker;
@@ -162,21 +210,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     workerRef.current?.terminate();
     const worker = createWorker();
     workerRef.current = worker;
-    setState((s) => ({
-      ...s,
-      status: "idle",
-      loadingMessage: "",
-      processingMessage: "",
-      progress: new Map(),
-      error: null,
-      loadedModel: null,
-      loadedDevice: null,
-      loadedPrecision: null,
-      loadedSupportsImages: null,
-      tps: 0,
-      numTokens: 0,
-      inputTokens: 0,
-    }));
+    setState(INITIAL_STATE);
     return worker;
   }, [createWorker]);
 
@@ -188,49 +222,54 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     };
   }, [createWorker]);
 
-  const postMessage = useCallback((msg: WorkerRequest) => {
-    workerRef.current?.postMessage(msg);
+  const postMessage = useCallback((message: WorkerRequest) => {
+    workerRef.current?.postMessage(message);
   }, []);
 
-  const loadModel = useCallback(
-    (modelId: string, device: "webgpu" | "wasm") => {
-      const current = stateRef.current;
-      // Cross-model loads are safer with a fresh worker because ORT/WebGPU
-      // resources from a previous session can survive in-process disposal.
-      const needsFreshWorker =
-        current.status === "loading" ||
-        current.status === "processing" ||
-        (current.loadedModel !== null && (current.loadedModel !== modelId || current.loadedDevice !== device));
+  const loadModel = useCallback((model: ModelSelection, device: "webgpu" | "wasm") => {
+    const current = stateRef.current;
+    const needsFreshWorker =
+      current.status === "loading" ||
+      current.status === "processing" ||
+      (
+        current.loadedModel !== null &&
+        (
+          current.loadedModel !== model.id ||
+          current.loadedDevice !== device ||
+          current.loadedRevision !== (model.revision ?? null)
+        )
+      );
 
-      if (needsFreshWorker) {
-        const worker = replaceWorker();
-        setState((s) => ({ ...s, progress: new Map(), error: null, status: "loading" }));
-        worker.postMessage({ type: "load", modelId, device });
-        return;
-      }
+    const message: WorkerRequest = {
+      type: "load",
+      modelId: model.id,
+      revision: model.revision ?? null,
+      device,
+    };
 
-      setState((s) => ({ ...s, progress: new Map(), error: null }));
-      postMessage({ type: "load", modelId, device });
-    },
-    [postMessage, replaceWorker]
-  );
+    if (needsFreshWorker) {
+      const worker = replaceWorker();
+      setState((currentState) => ({ ...currentState, progress: new Map(), error: null, status: "loading" }));
+      worker.postMessage(message);
+      return;
+    }
 
-  const generate = useCallback(
-    (messages: ChatMessage[], params: GenerationParams) => {
-      postMessage({ type: "generate", messages, params });
-    },
-    [postMessage]
-  );
+    setState((currentState) => ({ ...currentState, progress: new Map(), error: null }));
+    postMessage(message);
+  }, [postMessage, replaceWorker]);
+
+  const generate = useCallback((messages: ChatMessage[], params: GenerationParams) => {
+    postMessage({ type: "generate", messages, params });
+  }, [postMessage]);
 
   const interrupt = useCallback(() => {
     interruptedRef.current = true;
     postMessage({ type: "interrupt" });
-    setState((s) => {
-      if (s.status === "generating") {
-        return { ...s, status: "loaded" };
-      }
-      return s;
-    });
+    setState((current) => (
+      current.status === "generating"
+        ? { ...current, status: "loaded" }
+        : current
+    ));
   }, [postMessage]);
 
   const reset = useCallback(() => {
@@ -238,10 +277,9 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
   }, [replaceWorker]);
 
   const { loadedModel, inputTokens, ...restState } = state;
-
   const contextWindow = useMemo(() => {
     if (!loadedModel) return 0;
-    return CONTEXT_WINDOWS[loadedModel] || 32768; // Default to 32k if unknown
+    return CONTEXT_WINDOWS[loadedModel] || 32768;
   }, [loadedModel]);
 
   const contextFullness = useMemo(() => {

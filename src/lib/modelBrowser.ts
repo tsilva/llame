@@ -2,6 +2,7 @@
 
 export interface HubModelApiEntry {
   id: string;
+  sha?: string;
   downloads?: number;
   likes?: number;
   tags?: string[];
@@ -13,6 +14,7 @@ export interface HubModelApiEntry {
 
 export interface DiscoveredModel {
   id: string;
+  revision: string | null;
   name: string;
   downloads: number;
   likes: number;
@@ -105,6 +107,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
 
   return {
     id: entry.id,
+    revision: entry.sha ?? null,
     name: entry.id.split("/").pop()?.replace(/-ONNX$/i, "") || entry.id,
     downloads: entry.downloads ?? 0,
     likes: entry.likes ?? 0,
@@ -181,15 +184,44 @@ export async function searchOnnxCommunityModels(
     params.set("cursor", options.cursor);
   }
 
-  const response = await fetch(`https://huggingface.co/api/models?${params.toString()}`, {
-    signal,
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  let lastError: unknown = null;
+  let response: Response | null = null;
 
-  if (!response.ok) {
-    throw new Error(`Hugging Face search failed (${response.status})`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const timeoutController = new AbortController();
+    const timeout = window.setTimeout(
+      () => timeoutController.abort(new DOMException("Request timed out", "AbortError")),
+      8000,
+    );
+    const requestSignal = signal
+      ? AbortSignal.any([signal, timeoutController.signal])
+      : timeoutController.signal;
+
+    try {
+      response = await fetch(`https://huggingface.co/api/models?${params.toString()}`, {
+        signal: requestSignal,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Hugging Face search failed (${response.status})`);
+      }
+
+      break;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      lastError = error;
+      if (attempt === 2) throw error;
+      await new Promise((resolve) => window.setTimeout(resolve, 300 * 2 ** attempt));
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  if (!response) {
+    throw lastError instanceof Error ? lastError : new Error("Hugging Face search failed");
   }
 
   const data = (await response.json()) as HubModelApiEntry[];

@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS } from "@/lib/constants";
+import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS, ModelPreset } from "@/lib/constants";
+import { ModelSelection } from "@/types";
 
 interface ModelSelectorProps {
   isLoading: boolean;
@@ -10,10 +11,20 @@ interface ModelSelectorProps {
   loadedPrecision: string | null;
   device: "webgpu" | "wasm";
   webgpuSupported: boolean | null;
-  modelId: string;
-  onModelChange: (modelId: string) => void;
+  model: ModelSelection;
+  onModelChange: (model: ModelSelection) => void;
   onOpenModelBrowser: () => void;
   isGenerating: boolean;
+}
+
+function presetToSelection(preset: ModelPreset): ModelSelection {
+  return {
+    id: preset.id,
+    revision: preset.revision ?? null,
+    supportsImages: preset.supportsImages ?? null,
+    recommendedDevice: preset.recommendedDevice,
+    supportTier: preset.supportTier,
+  };
 }
 
 export function ModelSelector({
@@ -22,7 +33,7 @@ export function ModelSelector({
   loadedPrecision,
   device,
   webgpuSupported,
-  modelId,
+  model,
   onModelChange,
   onOpenModelBrowser,
   isGenerating,
@@ -51,7 +62,7 @@ export function ModelSelector({
 
   const displayModel = isLoading
     ? "Loading..."
-    : getModelDisplayName(modelId) || getModelDisplayName(loadedModel || "") || "Qwen3.5 0.8B";
+    : getModelDisplayName(model.id) || getModelDisplayName(loadedModel || "") || "Qwen3.5 0.8B";
 
   const runtimeLabel = webgpuSupported === null
     ? "Checking..."
@@ -64,6 +75,8 @@ export function ModelSelector({
       <button
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[#ececec] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span
@@ -90,17 +103,19 @@ export function ModelSelector({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-[280px] rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-2xl shadow-black/40 animate-fade-in">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-2xl shadow-black/40 animate-fade-in" role="menu">
           {MODEL_PRESETS.map((preset) => (
             <button
               key={preset.id}
               onClick={() => {
-                onModelChange(preset.id);
+                onModelChange(presetToSelection(preset));
                 setOpen(false);
               }}
+              role="menuitemradio"
+              aria-checked={preset.id === model.id}
               className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
             >
-              <Check size={14} className={`mt-0.5 shrink-0 ${preset.id === modelId ? "text-[#10a37f]" : "invisible"}`} />
+              <Check size={14} className={`mt-0.5 shrink-0 ${preset.id === model.id ? "text-[#10a37f]" : "invisible"}`} />
               <span className="min-w-0">
                 <span className="block truncate">{preset.label}</span>
                 <span className="block truncate text-[11px] text-[#8e8e8e]">
@@ -115,6 +130,7 @@ export function ModelSelector({
               setOpen(false);
               onOpenModelBrowser();
             }}
+            role="menuitem"
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
           >
             <span className="w-[14px]" />

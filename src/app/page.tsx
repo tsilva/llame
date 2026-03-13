@@ -1,16 +1,23 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { ChatMessage as ChatMessageType, Conversation, GenerationParams } from "@/types";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  DEFAULT_PARAMS,
+  ChatMessage as ChatMessageType,
+  Conversation,
+  GenerationParams,
+  ModelSelection,
+} from "@/types";
+import {
   DEFAULT_MODEL,
+  DEFAULT_PARAMS,
   canToggleThinking,
   getEffectiveThinkingEnabled,
+  getModelSelection,
   isVlmModel,
 } from "@/lib/constants";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
+import { trackProductEvent, captureTelemetryError } from "@/lib/telemetry";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelBrowserModal } from "@/components/ModelBrowserModal";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -20,41 +27,86 @@ import { PanelLeft, Github, X, Code2 } from "lucide-react";
 
 interface PendingGeneration {
   conversationId: string;
-  modelId: string;
+  model: ModelSelection;
   device: "webgpu" | "wasm";
+  reuseLastAssistant?: boolean;
+}
+
+function createAssistantMessage(): ChatMessageType {
+  return {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    content: "",
+    debug: {
+      modelInput: "",
+      rawOutput: "",
+    },
+  };
+}
+
+function buildModelSelectionFromConversation(conversation: Conversation | null): ModelSelection {
+  if (!conversation) {
+    return getModelSelection(DEFAULT_MODEL);
+  }
+
+  return getModelSelection(conversation.modelId, {
+    revision: conversation.modelRevision ?? null,
+    supportsImages: conversation.modelSupportsImages ?? null,
+    recommendedDevice: conversation.recommendedDevice,
+    supportTier: conversation.supportTier,
+  });
 }
 
 export default function Home() {
   const [webgpuSupported, setWebgpuSupported] = useState<boolean | null>(null);
-  useEffect(() => {
-    (async () => {
-      if (!navigator.gpu) { setWebgpuSupported(false); return; }
-      try {
-        const adapter = await navigator.gpu.requestAdapter();
-        setWebgpuSupported(!!adapter);
-      } catch { setWebgpuSupported(false); }
-    })();
-  }, []);
   const worker = useInferenceWorker();
   const storage = useStorage();
 
   const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
-
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
-  const [lastSelectedModel, setLastSelectedModel] = useState<string>(DEFAULT_MODEL);
-  const [error, setError] = useState<string | null>(null);
+  const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(getModelSelection(DEFAULT_MODEL));
+  const [dismissedWorkerErrorKey, setDismissedWorkerErrorKey] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
   const [showRawConversation, setShowRawConversation] = useState(false);
+  const [thinkingComplete, setThinkingComplete] = useState(false);
 
-  // Load thinking preference from localStorage
+  const streamingContentRef = useRef("");
+  const streamingThinkingRef = useRef("");
+  const streamingRawOutputRef = useRef("");
+  const activeConversationIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!navigator.gpu) {
+        setWebgpuSupported(false);
+        return;
+      }
+
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        setWebgpuSupported(Boolean(adapter));
+      } catch {
+        setWebgpuSupported(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (webgpuSupported === false) {
+      setDevice("wasm");
+      captureTelemetryError("WebGPU unavailable", { webgpu_supported: false });
+      trackProductEvent("browser_webgpu_unavailable", {});
+    }
+  }, [webgpuSupported]);
+
   useEffect(() => {
     const savedThinking = localStorage.getItem("llame-thinking-enabled");
     if (savedThinking !== null) {
-      setParams((prev) => ({ ...prev, thinkingEnabled: savedThinking === "true" }));
+      setParams((current) => ({ ...current, thinkingEnabled: savedThinking === "true" }));
     }
 
     const savedRawView = localStorage.getItem("llame-raw-conversation");
@@ -63,7 +115,6 @@ export default function Home() {
     }
   }, []);
 
-  // Save thinking preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("llame-thinking-enabled", params.thinkingEnabled.toString());
   }, [params.thinkingEnabled]);
@@ -72,56 +123,43 @@ export default function Home() {
     localStorage.setItem("llame-raw-conversation", showRawConversation.toString());
   }, [showRawConversation]);
 
-  const streamingContentRef = useRef("");
-  const streamingThinkingRef = useRef("");
-  const streamingRawOutputRef = useRef("");
-  const isCompleteRef = useRef(false);
-  const [thinkingComplete, setThinkingComplete] = useState(false);
-  const activeConversationIdRef = useRef<string | null>(null);
-
-  const updateLastAssistantMessage = useCallback(
-    (updater: (message: ChatMessageType) => ChatMessageType) => {
-      const conv = storage.activeConversation;
-      if (!conv) return;
-
-      const last = conv.messages[conv.messages.length - 1];
-      if (last?.role !== "assistant") return;
-
-      const updatedMessages = [...conv.messages.slice(0, -1), updater(last)];
-      storage.updateConversation({ ...conv, messages: updatedMessages, updatedAt: Date.now() });
-    },
-    [storage]
-  );
-
-  // Sync ref with state
   useEffect(() => {
     activeConversationIdRef.current = storage.activeConversationId;
   }, [storage.activeConversationId]);
 
-  // Always start with a new chat on page load, unless an empty one exists
-  useEffect(() => {
-    if (!storage.activeConversationId) {
-      // Get most recent conversation to check if it's empty
-      const sortedConvs = [...storage.index].sort((a, b) => b.updatedAt - a.updatedAt);
-      const lastConv = sortedConvs[0];
-      
-      // Reuse last chat if it has no messages, otherwise create new
-      if (lastConv && lastConv.messageCount === 0) {
-        storage.setActiveConversation(lastConv.id);
-      } else {
-        // Create new conversation directly without callback
-        storage.createConversation(lastSelectedModel);
-        if (isMobile) setSidebarOpen(false);
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const updateLastAssistantMessage = useCallback((updater: (message: ChatMessageType) => ChatMessageType) => {
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
 
-  // Track mobile breakpoint
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (lastMessage?.role !== "assistant") return;
+
+    const updatedMessages = [...conversation.messages.slice(0, -1), updater(lastMessage)];
+    storage.updateConversation({ ...conversation, messages: updatedMessages, updatedAt: Date.now() });
+  }, [storage]);
+
+  useEffect(() => {
+    if (!storage.ready) return;
+    if (storage.activeConversationId) return;
+
+    const sortedConversations = [...storage.index].sort((left, right) => right.updatedAt - left.updatedAt);
+    const lastConversation = sortedConversations[0];
+
+    if (lastConversation && lastConversation.messageCount === 0) {
+      storage.setActiveConversation(lastConversation.id);
+      return;
+    }
+
+    const conversation = storage.createConversation(lastSelectedModel);
+    setLastSelectedModel(buildModelSelectionFromConversation(conversation));
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile, lastSelectedModel, storage]);
+
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
-    const onChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsMobile(e.matches);
-      if (e.matches) setSidebarOpen(false);
+    const onChange = (query: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(query.matches);
+      if (query.matches) setSidebarOpen(false);
     };
     onChange(mql);
     mql.addEventListener("change", onChange);
@@ -129,59 +167,78 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (webgpuSupported === false) {
-      setDevice("wasm");
-    }
-  }, [webgpuSupported]);
+    if (!worker.error) return;
+
+    captureTelemetryError(worker.error.message, {
+      worker_code: worker.error.code,
+      worker_stage: worker.error.stage,
+      model_id: worker.error.modelId ?? storage.activeConversation?.modelId ?? null,
+      model_revision: worker.error.revision ?? storage.activeConversation?.modelRevision ?? null,
+      device: worker.error.device ?? device,
+      has_images: storage.activeConversation?.messages.some((message) => Boolean(message.images?.length)) ?? false,
+      webgpu_supported: webgpuSupported,
+    });
+  }, [device, storage.activeConversation, webgpuSupported, worker.error]);
 
   useEffect(() => {
-    if (worker.error) {
-      setPendingGeneration(null);
-      setError(worker.error);
-    }
-  }, [worker.error]);
+    if (!pendingGeneration) return;
+    if (worker.status !== "loaded") return;
+    if (worker.loadedModel !== pendingGeneration.model.id) return;
+    if ((worker.loadedRevision ?? null) !== (pendingGeneration.model.revision ?? null)) return;
+    if (worker.loadedDevice !== pendingGeneration.device) return;
+    if (storage.activeConversation?.id !== pendingGeneration.conversationId) return;
 
-  // Handle pending generation after model loads
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
+
+    setPendingGeneration(null);
+
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    const shouldReuseAssistant = pendingGeneration.reuseLastAssistant && lastMessage?.role === "assistant";
+    const messages = shouldReuseAssistant
+      ? [
+          ...conversation.messages.slice(0, -1),
+          {
+            ...lastMessage,
+            content: "",
+            thinking: undefined,
+            debug: { modelInput: "", rawOutput: "" },
+          },
+        ]
+      : [...conversation.messages, createAssistantMessage()];
+
+    streamingContentRef.current = "";
+    streamingThinkingRef.current = "";
+    streamingRawOutputRef.current = "";
+    setThinkingComplete(false);
+
+    const updatedConversation = {
+      ...conversation,
+      messages,
+      updatedAt: Date.now(),
+    };
+    storage.updateConversation(updatedConversation);
+
+    worker.generate(
+      messages.filter((message) => message.content.length > 0 || (message.images && message.images.length > 0)),
+      params,
+    );
+  }, [
+    params,
+    pendingGeneration,
+    storage,
+    worker,
+  ]);
+
   useEffect(() => {
-    if (
-      pendingGeneration &&
-      worker.status === "loaded" &&
-      worker.loadedModel === pendingGeneration.modelId &&
-      worker.loadedDevice === pendingGeneration.device &&
-      storage.activeConversation?.id === pendingGeneration.conversationId
-    ) {
-      setPendingGeneration(null);
-
-      const assistantMsg: ChatMessageType = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "",
-        debug: {
-          modelInput: "",
-          rawOutput: "",
-        },
-      };
-
-      streamingContentRef.current = "";
-      streamingThinkingRef.current = "";
-      streamingRawOutputRef.current = "";
-      isCompleteRef.current = false;
-      setThinkingComplete(false);
-
-      if (storage.activeConversation) {
-        const newMessages = [...storage.activeConversation.messages, assistantMsg];
-        const updatedConv = { ...storage.activeConversation, messages: newMessages, updatedAt: Date.now() };
-        storage.updateConversation(updatedConv);
-
-        worker.generate(
-          newMessages.filter(
-            (m) => m.content.length > 0 || (m.images && m.images.length > 0)
-          ),
-          params
-        );
-      }
+    if (worker.status === "loaded" && worker.loadedModel) {
+      trackProductEvent("model_loaded", {
+        model_id: worker.loadedModel,
+        model_revision: worker.loadedRevision,
+        device: worker.loadedDevice,
+      });
     }
-  }, [pendingGeneration, worker.status, worker.loadedModel, worker.loadedDevice, params, storage, worker]);
+  }, [worker.loadedDevice, worker.loadedModel, worker.loadedRevision, worker.status]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onPromptRef.current = useCallback((inputText: string) => {
@@ -209,20 +266,18 @@ export default function Home() {
   }, [updateLastAssistantMessage]);
 
   // eslint-disable-next-line react-hooks/immutability
-  worker.onTokenRef.current = useCallback(
-    (token: string, isThinking?: boolean) => {
-      if (isThinking) {
-        streamingThinkingRef.current += token;
-        const thinking = streamingThinkingRef.current;
-        updateLastAssistantMessage((last) => ({ ...last, thinking }));
-      } else {
-        streamingContentRef.current += token;
-        const content = streamingContentRef.current;
-        updateLastAssistantMessage((last) => ({ ...last, content }));
-      }
-    },
-    [updateLastAssistantMessage]
-  );
+  worker.onTokenRef.current = useCallback((token: string, isThinking?: boolean) => {
+    if (isThinking) {
+      streamingThinkingRef.current += token;
+      const thinking = streamingThinkingRef.current;
+      updateLastAssistantMessage((last) => ({ ...last, thinking }));
+      return;
+    }
+
+    streamingContentRef.current += token;
+    const content = streamingContentRef.current;
+    updateLastAssistantMessage((last) => ({ ...last, content }));
+  }, [updateLastAssistantMessage]);
 
   // eslint-disable-next-line react-hooks/immutability
   worker.onThinkingCompleteRef.current = useCallback((thinking: string) => {
@@ -236,176 +291,244 @@ export default function Home() {
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
-    isCompleteRef.current = true;
-    storage.flushPendingSave();
-  }, [storage]);
+    void storage.flushPendingSave();
+    trackProductEvent("generation_complete", {
+      model_id: storage.activeConversation?.modelId ?? worker.loadedModel,
+      device: worker.loadedDevice,
+    });
+  }, [storage, worker.loadedDevice, worker.loadedModel]);
+
+  const activeModel = useMemo(
+    () => buildModelSelectionFromConversation(storage.activeConversation),
+    [storage.activeConversation],
+  );
+
+  useEffect(() => {
+    if (storage.activeConversation) {
+      setLastSelectedModel(activeModel);
+    }
+  }, [activeModel, storage.activeConversation]);
 
   const createNewConversation = useCallback(() => {
     if (worker.status === "generating") {
       worker.interrupt();
-      streamingContentRef.current = "";
-      streamingThinkingRef.current = "";
-      streamingRawOutputRef.current = "";
-      isCompleteRef.current = true;
     }
-    const newConv = storage.createConversation(lastSelectedModel);
+    setPendingGeneration(null);
+    const conversation = storage.createConversation(lastSelectedModel);
     if (isMobile) setSidebarOpen(false);
-    return newConv;
-  }, [isMobile, worker, storage, lastSelectedModel]);
+    return conversation;
+  }, [isMobile, lastSelectedModel, storage, worker]);
 
-  const deleteConversation = (id: string) => {
+  const deleteConversation = useCallback((id: string) => {
     storage.deleteConversation(id);
-  };
+  }, [storage]);
 
-  const handleSend = useCallback(
-    (content: string, images?: string[]) => {
-      let activeConv = storage.activeConversation;
-      if (!activeConv) {
-        activeConv = createNewConversation();
-      }
+  const handleSend = useCallback(async (content: string, images?: string[]) => {
+    let conversation = storage.activeConversation;
+    if (!conversation) {
+      conversation = createNewConversation();
+    }
 
-      const userMsg: ChatMessageType = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-        images,
-      };
+    const userMessage: ChatMessageType = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      images,
+    };
 
-      const updatedMessages = [...activeConv.messages, userMsg];
+    const updatedMessages = [...conversation.messages, userMessage];
+    let title = conversation.title;
+    if (title === "New chat") {
+      title = content.slice(0, 50) || "New chat";
+      if (content.length > 50) title += "...";
+    }
 
-      // Update title from first user message
-      let title = activeConv.title;
-      if (title === "New chat") {
-        title = content.slice(0, 50) || "New chat";
-        if (content.length > 50) title += "...";
-      }
+    const updatedConversation: Conversation = {
+      ...conversation,
+      messages: updatedMessages,
+      title,
+      updatedAt: Date.now(),
+      modelId: activeModel.id,
+      modelRevision: activeModel.revision ?? null,
+      modelSupportsImages: activeModel.supportsImages ?? null,
+      recommendedDevice: activeModel.recommendedDevice,
+      supportTier: activeModel.supportTier,
+    };
+    storage.updateConversation(updatedConversation);
+    setDismissedWorkerErrorKey(null);
+    trackProductEvent("generation_start", {
+      model_id: updatedConversation.modelId,
+      model_revision: updatedConversation.modelRevision,
+      device,
+      has_images: Boolean(images?.length),
+    });
 
-      const updatedConv: Conversation = {
-        ...activeConv,
-        messages: updatedMessages,
-        title,
-        updatedAt: Date.now(),
-        modelId: activeConv.modelId || DEFAULT_MODEL,
-      };
-      storage.updateConversation(updatedConv);
+    const needsLoad = worker.status === "idle" || worker.status === "error";
+    const needsSwitch =
+      worker.loadedModel !== activeModel.id ||
+      (worker.loadedRevision ?? null) !== (activeModel.revision ?? null) ||
+      worker.loadedDevice !== device;
 
-      const needsLoad = worker.status === "idle" || worker.status === "error";
-      const needsSwitch = worker.loadedModel && worker.loadedModel !== updatedConv.modelId;
+    if (needsLoad || needsSwitch) {
+      setPendingGeneration({
+        conversationId: updatedConversation.id,
+        model: activeModel,
+        device,
+      });
+      worker.loadModel(activeModel, device);
+      return;
+    }
 
-      if (needsLoad || needsSwitch) {
-        setPendingGeneration({
-          conversationId: updatedConv.id,
-          modelId: updatedConv.modelId,
-          device,
-        });
-        setError(null);
-        worker.loadModel(updatedConv.modelId, device);
-      } else if (worker.status === "loaded") {
-        const assistantMsg: ChatMessageType = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "",
-          debug: {
-            modelInput: "",
-            rawOutput: "",
-          },
-        };
-
-        streamingContentRef.current = "";
-        streamingThinkingRef.current = "";
-        streamingRawOutputRef.current = "";
-        isCompleteRef.current = false;
-        setThinkingComplete(false);
-
-        const newMessages = [...updatedMessages, assistantMsg];
-        storage.updateConversation({ ...updatedConv, messages: newMessages, updatedAt: Date.now() });
-
-        worker.generate(
-          newMessages.filter(
-            (m) => m.content.length > 0 || (m.images && m.images.length > 0)
-          ),
-          params
-        );
-      }
-    },
-    [storage, worker, device, params, createNewConversation]
-  );
+    const messages = [...updatedMessages, createAssistantMessage()];
+    streamingContentRef.current = "";
+    streamingThinkingRef.current = "";
+    streamingRawOutputRef.current = "";
+    setThinkingComplete(false);
+    storage.updateConversation({ ...updatedConversation, messages, updatedAt: Date.now() });
+    worker.generate(
+      messages.filter((message) => message.content.length > 0 || (message.images && message.images.length > 0)),
+      params,
+    );
+  }, [activeModel, createNewConversation, device, params, storage, worker]);
 
   const handleStop = useCallback(() => {
     worker.interrupt();
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
-    isCompleteRef.current = true;
   }, [worker]);
 
   const handleToggleThinking = useCallback(() => {
-    const modelId = storage.activeConversation?.modelId || DEFAULT_MODEL;
-    if (!canToggleThinking(modelId)) return;
-    setParams((prev) => ({ ...prev, thinkingEnabled: !prev.thinkingEnabled }));
-  }, [storage.activeConversation?.modelId]);
+    if (!canToggleThinking(activeModel.id)) return;
+    setParams((current) => ({ ...current, thinkingEnabled: !current.thinkingEnabled }));
+  }, [activeModel.id]);
 
-  const handleDeviceChange = useCallback(
-    (d: "webgpu" | "wasm") => {
-      setDevice(d);
-      if (worker.loadedModel) {
-        setError(null);
-        worker.loadModel(worker.loadedModel, d);
-      }
-    },
-    [worker]
-  );
+  const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
+    setDevice(nextDevice);
+    setDismissedWorkerErrorKey(null);
+    if (worker.loadedModel || storage.activeConversation) {
+      worker.loadModel(activeModel, nextDevice);
+    }
+  }, [activeModel, storage.activeConversation, worker]);
 
-  const handleModelChange = useCallback(
-    (modelId: string) => {
-      setLastSelectedModel(modelId);
-      setPendingGeneration(null);
-      if (storage.activeConversation) {
-        const updatedConv = { ...storage.activeConversation, modelId };
-        storage.updateConversation(updatedConv);
-      }
-      // If a model is already loaded and it's different, unload it so next message loads new model
-      if (worker.loadedModel && worker.loadedModel !== modelId) {
-        worker.reset();
-      }
-    },
-    [storage, worker]
-  );
+  const handleModelChange = useCallback((selection: ModelSelection) => {
+    setLastSelectedModel(selection);
+    setPendingGeneration(null);
 
-  const handleSwitchConversation = (id: string) => {
+    if (storage.activeConversation) {
+      storage.updateConversation({
+        ...storage.activeConversation,
+        modelId: selection.id,
+        modelRevision: selection.revision ?? null,
+        modelSupportsImages: selection.supportsImages ?? null,
+        recommendedDevice: selection.recommendedDevice,
+        supportTier: selection.supportTier,
+      });
+    }
+
+    if (
+      worker.loadedModel &&
+      (worker.loadedModel !== selection.id || (worker.loadedRevision ?? null) !== (selection.revision ?? null))
+    ) {
+      worker.reset();
+    }
+  }, [storage, worker]);
+
+  const handleSwitchConversation = useCallback((id: string) => {
     setPendingGeneration(null);
     if (worker.status === "generating") {
       worker.interrupt();
-      streamingContentRef.current = "";
-      streamingThinkingRef.current = "";
-      streamingRawOutputRef.current = "";
-      isCompleteRef.current = true;
     }
     storage.setActiveConversation(id);
-    // Update lastSelectedModel to the model of the conversation we're switching to
-    const conv = storage.index.find((c) => c.id === id);
-    if (conv) {
-      setLastSelectedModel(conv.modelId);
+    const conversationMeta = storage.index.find((conversation) => conversation.id === id);
+    if (conversationMeta) {
+      setLastSelectedModel(getModelSelection(conversationMeta.modelId, {
+        revision: conversationMeta.modelRevision ?? null,
+        supportsImages: conversationMeta.modelSupportsImages ?? null,
+        recommendedDevice: conversationMeta.recommendedDevice,
+        supportTier: conversationMeta.supportTier,
+      }));
     }
     if (isMobile) setSidebarOpen(false);
-  };
+  }, [isMobile, storage, worker]);
+
+  const retryLoad = useCallback(() => {
+    const targetModel = pendingGeneration?.model ?? activeModel;
+    const targetDevice = pendingGeneration?.device ?? device;
+    setDismissedWorkerErrorKey(null);
+    worker.loadModel(targetModel, targetDevice);
+    trackProductEvent("recovery_retry_load", {
+      model_id: targetModel.id,
+      device: targetDevice,
+    });
+  }, [activeModel, device, pendingGeneration, worker]);
+
+  const fallbackToDefaultModel = useCallback(() => {
+    const fallbackModel = getModelSelection(DEFAULT_MODEL);
+    handleModelChange(fallbackModel);
+    const fallbackDevice = webgpuSupported === false ? "wasm" : device;
+    setPendingGeneration((current) => (
+      current
+        ? { ...current, model: fallbackModel, device: fallbackDevice }
+        : current
+    ));
+    worker.loadModel(fallbackModel, fallbackDevice);
+    trackProductEvent("recovery_fallback_default_model", {
+      model_id: fallbackModel.id,
+      device: fallbackDevice,
+    });
+  }, [device, handleModelChange, webgpuSupported, worker]);
+
+  const switchToWasmAndRetry = useCallback(() => {
+    setDevice("wasm");
+    setDismissedWorkerErrorKey(null);
+    if (pendingGeneration) {
+      setPendingGeneration({ ...pendingGeneration, device: "wasm" });
+      worker.loadModel(pendingGeneration.model, "wasm");
+    } else {
+      worker.loadModel(activeModel, "wasm");
+    }
+    trackProductEvent("recovery_switch_wasm", {
+      model_id: pendingGeneration?.model.id ?? activeModel.id,
+    });
+  }, [activeModel, pendingGeneration, worker]);
+
+  const retryLastPrompt = useCallback(() => {
+    if (!storage.activeConversation) return;
+    const lastMessage = storage.activeConversation.messages[storage.activeConversation.messages.length - 1];
+    const reuseLastAssistant = lastMessage?.role === "assistant";
+    setDismissedWorkerErrorKey(null);
+    setPendingGeneration({
+      conversationId: storage.activeConversation.id,
+      model: activeModel,
+      device,
+      reuseLastAssistant,
+    });
+    worker.reset();
+    worker.loadModel(activeModel, device);
+    trackProductEvent("recovery_retry_prompt", {
+      model_id: activeModel.id,
+      device,
+    });
+  }, [activeModel, device, storage.activeConversation, worker]);
 
   const isLoading = worker.status === "loading";
   const isProcessing = worker.status === "processing";
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
-  const activeModelId = storage.activeConversation?.modelId || DEFAULT_MODEL;
-  const allowImageInputs = worker.loadedModel === activeModelId
-    ? worker.loadedSupportsImages ?? isVlmModel(activeModelId)
-    : isVlmModel(activeModelId);
-  const thinkingEnabled = getEffectiveThinkingEnabled(activeModelId, params.thinkingEnabled);
-  const showThinkingToggle = canToggleThinking(activeModelId);
-
-  const currentMessages = storage.activeConversation?.messages || [];
+  const allowImageInputs = worker.loadedModel === activeModel.id
+    ? worker.loadedSupportsImages ?? activeModel.supportsImages ?? isVlmModel(activeModel.id)
+    : activeModel.supportsImages ?? isVlmModel(activeModel.id);
+  const thinkingEnabled = getEffectiveThinkingEnabled(activeModel.id, params.thinkingEnabled);
+  const showThinkingToggle = canToggleThinking(activeModel.id);
+  const currentMessages = storage.activeConversation?.messages ?? [];
+  const currentWorkerErrorKey = worker.error
+    ? `${worker.error.stage}:${worker.error.code}:${worker.error.modelId ?? "unknown"}:${worker.error.revision ?? "none"}:${worker.error.device ?? "unknown"}`
+    : null;
+  const visibleWorkerError = worker.error && currentWorkerErrorKey !== dismissedWorkerErrorKey ? worker.error : null;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-[#212121]">
-      {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         isMobile={isMobile}
@@ -420,15 +543,14 @@ export default function Home() {
         isGenerating={isGenerating}
       />
 
-      {/* Main area */}
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2">
           {(!sidebarOpen || isMobile) && (
             <button
               onClick={() => setSidebarOpen(true)}
               disabled={isGenerating}
-              className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f] disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Open sidebar"
             >
               <PanelLeft size={20} />
             </button>
@@ -436,22 +558,22 @@ export default function Home() {
           <ModelSelector
             loadedModel={worker.loadedModel}
             loadedPrecision={worker.loadedPrecision}
-            isLoading={isLoading}
             device={device}
             webgpuSupported={webgpuSupported}
-            modelId={activeModelId}
+            isLoading={isLoading}
+            model={activeModel}
             onModelChange={handleModelChange}
             onOpenModelBrowser={() => setModelBrowserOpen(true)}
             isGenerating={isGenerating}
           />
           <div className="ml-auto flex items-center gap-2">
             {isGenerating && worker.tps > 0 && (
-              <span className="text-xs font-mono text-[#8e8e8e]">
+              <span className="text-xs font-mono text-[#8e8e8e]" aria-live="polite">
                 {worker.tps.toFixed(1)} t/s
               </span>
             )}
             <button
-              onClick={() => setShowRawConversation((prev) => !prev)}
+              onClick={() => setShowRawConversation((current) => !current)}
               className={`rounded-full p-2 transition-colors ${
                 showRawConversation
                   ? "bg-[#2f2f2f] text-[#b4b4b4]"
@@ -466,7 +588,7 @@ export default function Home() {
               href="https://github.com/tsilva/llame"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors"
+              className="rounded-full p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f]"
               aria-label="GitHub repository"
             >
               <Github size={20} />
@@ -474,11 +596,86 @@ export default function Home() {
           </div>
         </div>
 
-        {error && (
-          <div className="mx-3 mb-2 flex items-start gap-2 sm:gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 sm:px-4 sm:py-3">
+        {storage.storageError && (
+          <div
+            className="mx-3 mb-2 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3"
+            role="alert"
+            aria-live="assertive"
+          >
             <span className="mt-0.5 text-red-400">&#x26A0;</span>
-            <p className="flex-1 text-sm text-red-300">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 transition-colors">
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-red-200">
+                {storage.storageError.code === "QUOTA_EXCEEDED"
+                  ? "Conversation storage is full. Clear older chats to keep saving the current session."
+                  : storage.storageError.message}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => void storage.clearOldChats()}
+                  className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                >
+                  Clear older chats
+                </button>
+                <button
+                  onClick={storage.dismissStorageError}
+                  className="rounded-lg px-3 py-1.5 text-sm text-red-100/80 transition-colors hover:bg-red-500/10 hover:text-red-50"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {visibleWorkerError && (
+          <div
+            className="mx-3 mb-2 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3"
+            role="alert"
+            aria-live="assertive"
+          >
+            <span className="mt-0.5 text-red-400">&#x26A0;</span>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-red-200">{visibleWorkerError.message}</p>
+              <div className="flex flex-wrap gap-2">
+                {visibleWorkerError.code === "NETWORK_ERROR" && (
+                  <button
+                    onClick={retryLoad}
+                    className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                  >
+                    Retry
+                  </button>
+                )}
+                {visibleWorkerError.code === "INSUFFICIENT_RESOURCES" && device === "webgpu" && (
+                  <button
+                    onClick={switchToWasmAndRetry}
+                    className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                  >
+                    Switch to WASM
+                  </button>
+                )}
+                {(visibleWorkerError.code === "MODEL_ARTIFACT_ERROR" || visibleWorkerError.code === "UNSUPPORTED_MODEL") && (
+                  <button
+                    onClick={fallbackToDefaultModel}
+                    className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                  >
+                    Switch to default model
+                  </button>
+                )}
+                {visibleWorkerError.stage === "generate" && (
+                  <button
+                    onClick={retryLastPrompt}
+                    className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                  >
+                    Reset worker and retry
+                  </button>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setDismissedWorkerErrorKey(currentWorkerErrorKey)}
+              className="text-red-400 transition-colors hover:text-red-300"
+              aria-label="Dismiss error"
+            >
               <X size={16} />
             </button>
           </div>
@@ -492,7 +689,7 @@ export default function Home() {
           isProcessing={isProcessing}
           processingMessage={worker.processingMessage}
           isModelLoaded={isModelLoaded}
-          modelId={activeModelId}
+          modelId={activeModel.id}
           isLoading={isLoading}
           loadingProgress={worker.progress}
           loadingMessage={worker.loadingMessage}
@@ -511,7 +708,6 @@ export default function Home() {
         />
       </div>
 
-      {/* Settings modal */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -523,7 +719,7 @@ export default function Home() {
         storageStats={storage.storageStats}
         conversationsCount={storage.index.length}
         onClearAllChats={() => {
-          storage.clearAllChats();
+          void storage.clearAllChats();
         }}
         isGenerating={isGenerating}
       />
@@ -531,11 +727,11 @@ export default function Home() {
       <ModelBrowserModal
         isOpen={modelBrowserOpen}
         onClose={() => setModelBrowserOpen(false)}
-        onSelectModel={(modelId) => {
-          handleModelChange(modelId);
+        onSelectModel={(selection) => {
+          handleModelChange(selection);
           setModelBrowserOpen(false);
         }}
-        currentModelId={activeModelId}
+        currentModelId={activeModel.id}
         device={device}
         webgpuSupported={webgpuSupported}
         disabled={isLoading || isGenerating}

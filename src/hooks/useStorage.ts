@@ -1,10 +1,35 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Conversation, ConversationMeta, StorageStats } from "@/types";
+import { Conversation, ConversationMeta, ModelSelection, StorageErrorState, StorageStats } from "@/types";
+import { DEFAULT_MODEL, getModelSelection } from "@/lib/constants";
 import * as storage from "@/lib/storage";
+import { captureTelemetryError } from "@/lib/telemetry";
 
 export type StorageWarning = "none" | "warning" | "critical";
+
+function createConversationRecord(model?: string | ModelSelection): Conversation {
+  const selection = typeof model === "string"
+    ? getModelSelection(model)
+    : model ?? getModelSelection(DEFAULT_MODEL);
+
+  return {
+    id: crypto.randomUUID(),
+    title: "New chat",
+    messages: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    modelId: selection.id,
+    modelRevision: selection.revision ?? null,
+    modelSupportsImages: selection.supportsImages ?? null,
+    recommendedDevice: selection.recommendedDevice,
+    supportTier: selection.supportTier,
+  };
+}
+
+function sortByUpdatedAt(conversations: ConversationMeta[]) {
+  return [...conversations].sort((left, right) => right.updatedAt - left.updatedAt);
+}
 
 export function useStorage() {
   const [index, setIndex] = useState<ConversationMeta[]>([]);
@@ -12,224 +37,260 @@ export function useStorage() {
   const [activeConversationId, setActiveIdState] = useState<string | null>(null);
   const [storageStats, setStorageStats] = useState<StorageStats>({
     usedBytes: 0,
-    quotaBytes: 5 * 1024 * 1024,
+    quotaBytes: 50 * 1024 * 1024,
     conversationCount: 0,
   });
+  const [storageError, setStorageError] = useState<StorageErrorState | null>(null);
+  const [ready, setReady] = useState(false);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingConvRef = useRef<Conversation | null>(null);
   const indexRef = useRef<ConversationMeta[]>([]);
+  const activeConversationIdRef = useRef<string | null>(null);
 
-  // Keep ref in sync
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
 
-  const refreshStats = useCallback((idx: ConversationMeta[]) => {
-    setStorageStats(storage.getStorageStats(idx));
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  const refreshStats = useCallback(async (idx: ConversationMeta[]) => {
+    setStorageStats(await storage.getStorageStats(idx));
   }, []);
 
-  const flushPendingSave = useCallback(() => {
+  const reportStorageError = useCallback((error: StorageErrorState, context: Record<string, string | number | boolean | null | undefined> = {}) => {
+    setStorageError(error);
+    captureTelemetryError(error.message, {
+      ...context,
+      storage_code: error.code,
+    });
+  }, []);
+
+  const persistConversation = useCallback(async (conversation: Conversation) => {
+    try {
+      const meta = await storage.saveConversation(conversation);
+      setIndex((current) => {
+        const next = current.filter((item) => item.id !== conversation.id);
+        next.push(meta);
+        indexRef.current = next;
+        return next;
+      });
+      await refreshStats(indexRef.current);
+      setStorageError((current) => (
+        current?.code === "WRITE_FAILED" || current?.code === "QUOTA_EXCEEDED"
+          ? null
+          : current
+      ));
+    } catch (error) {
+      reportStorageError(error as StorageErrorState, {
+        conversation_id: conversation.id,
+      });
+    }
+  }, [refreshStats, reportStorageError]);
+
+  const flushPendingSave = useCallback(async () => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    if (pendingConvRef.current) {
-      const conv = pendingConvRef.current;
-      pendingConvRef.current = null;
-      const newIndex = storage.saveConversation(conv, indexRef.current);
-      setIndex(newIndex);
-      indexRef.current = newIndex;
-      refreshStats(newIndex);
-    }
-  }, [refreshStats]);
 
-  // Initialize on mount — setState is intentional for one-time hydration from localStorage
-  /* eslint-disable react-hooks/set-state-in-effect */
+    if (pendingConvRef.current) {
+      const conversation = pendingConvRef.current;
+      pendingConvRef.current = null;
+      await persistConversation(conversation);
+    }
+  }, [persistConversation]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    storage.ensureMigrated();
-    const idx = storage.loadIndex();
-    setIndex(idx);
-    indexRef.current = idx;
-    refreshStats(idx);
+    let cancelled = false;
 
-    // Don't auto-load any conversation - start fresh
-    setActiveIdState(null);
-    setActiveConvState(null);
+    void (async () => {
+      const migrationError = await storage.migrateLegacyStorage();
+      if (cancelled) return;
+
+      if (migrationError) {
+        reportStorageError(migrationError);
+      }
+
+      try {
+        const nextIndex = await storage.listConversationMeta();
+        if (cancelled) return;
+
+        setIndex(nextIndex);
+        indexRef.current = nextIndex;
+        await refreshStats(nextIndex);
+
+        const persistedActiveId = storage.getPersistedActiveConversationId();
+        const initialActiveId = persistedActiveId && nextIndex.some((item) => item.id === persistedActiveId)
+          ? persistedActiveId
+          : sortByUpdatedAt(nextIndex)[0]?.id ?? null;
+
+        if (initialActiveId) {
+          const conversation = await storage.loadConversation(initialActiveId);
+          if (cancelled) return;
+
+          setActiveIdState(initialActiveId);
+          setActiveConvState(conversation);
+          storage.setPersistedActiveConversationId(initialActiveId);
+        }
+
+        setReady(true);
+      } catch (error) {
+        if (cancelled) return;
+        reportStorageError(error as StorageErrorState);
+        setReady(true);
+      }
+    })();
 
     return () => {
-      // Flush on unmount
+      cancelled = true;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (pendingConvRef.current) {
-        storage.saveConversation(pendingConvRef.current, indexRef.current);
-      }
+      void flushPendingSave();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [flushPendingSave, refreshStats, reportStorageError]);
 
-  const setActiveConversation = useCallback(
-    (id: string) => {
-      // Flush any pending save for the previous conversation
-      flushPendingSave();
+  const setActiveConversation = useCallback((id: string) => {
+    void (async () => {
+      await flushPendingSave();
 
-      const conv = storage.loadConversation(id);
-      if (conv) {
+      try {
+        const conversation = await storage.loadConversation(id);
+        if (!conversation) return;
         setActiveIdState(id);
-        setActiveConvState(conv);
+        setActiveConvState(conversation);
+        storage.setPersistedActiveConversationId(id);
+      } catch (error) {
+        reportStorageError(error as StorageErrorState, { conversation_id: id });
       }
-    },
-    [flushPendingSave]
-  );
+    })();
+  }, [flushPendingSave, reportStorageError]);
 
-  const createConversation = useCallback((modelId?: string): Conversation => {
-    // Flush any pending save
-    flushPendingSave();
+  const createConversation = useCallback((model?: string | ModelSelection): Conversation => {
+    const conversation = createConversationRecord(model);
+    const meta = storage.buildMeta(conversation);
+    const nextIndex = indexRef.current.filter((item) => item.id !== conversation.id);
+    nextIndex.push(meta);
 
-    const conv: Conversation = {
-      id: crypto.randomUUID(),
-      title: "New chat",
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      modelId: modelId || "onnx-community/Qwen3.5-2B-ONNX",
-    };
+    setIndex(nextIndex);
+    indexRef.current = nextIndex;
+    setActiveIdState(conversation.id);
+    setActiveConvState(conversation);
+    storage.setPersistedActiveConversationId(conversation.id);
+    void refreshStats(nextIndex);
+    void persistConversation(conversation);
 
-    const newIndex = storage.saveConversation(conv, indexRef.current);
-    setIndex(newIndex);
-    indexRef.current = newIndex;
-    setActiveIdState(conv.id);
-    setActiveConvState(conv);
-    refreshStats(newIndex);
-    return conv;
-  }, [flushPendingSave, refreshStats]);
+    return conversation;
+  }, [persistConversation, refreshStats]);
 
-  const updateConversation = useCallback(
-    (conv: Conversation) => {
-      // Immediate in-memory update
-      setActiveConvState(conv);
-      pendingConvRef.current = conv;
+  const updateConversation = useCallback((conversation: Conversation) => {
+    setActiveConvState(conversation);
+    pendingConvRef.current = conversation;
 
-      // Update index immediately in memory for sidebar
-      setIndex((prev) => {
-        const serialized = JSON.stringify(conv);
-        const meta: ConversationMeta = {
-          id: conv.id,
-          title: conv.title,
-          createdAt: conv.createdAt,
-          updatedAt: conv.updatedAt,
-          modelId: conv.modelId,
-          messageCount: conv.messages.length,
-          sizeBytes: new Blob([serialized]).size,
-        };
-        const newIndex = prev.filter((m) => m.id !== conv.id);
-        newIndex.push(meta);
-        indexRef.current = newIndex;
-        return newIndex;
-      });
+    const meta = storage.buildMeta(conversation);
+    setIndex((current) => {
+      const next = current.filter((item) => item.id !== conversation.id);
+      next.push(meta);
+      indexRef.current = next;
+      return next;
+    });
+    storage.setPersistedActiveConversationId(conversation.id);
 
-      // Debounced localStorage write
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
-      saveTimerRef.current = setTimeout(() => {
-        saveTimerRef.current = null;
-        if (pendingConvRef.current) {
-          const pending = pendingConvRef.current;
-          pendingConvRef.current = null;
-          const newIndex = storage.saveConversation(pending, indexRef.current);
-          setIndex(newIndex);
-          indexRef.current = newIndex;
-          refreshStats(newIndex);
-        }
-      }, 300);
-    },
-    [refreshStats]
-  );
-
-  const deleteConversation = useCallback(
-    (id: string) => {
-      // Cancel pending save if it's for this conversation
-      if (pendingConvRef.current?.id === id) {
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-        pendingConvRef.current = null;
-      }
-
-      const newIndex = storage.deleteConversation(id, indexRef.current);
-      setIndex(newIndex);
-      indexRef.current = newIndex;
-      refreshStats(newIndex);
-
-      if (activeConversationId === id) {
-        if (newIndex.length > 0) {
-          const sorted = [...newIndex].sort((a, b) => b.updatedAt - a.updatedAt);
-          const conv = storage.loadConversation(sorted[0].id);
-          if (conv) {
-            setActiveIdState(sorted[0].id);
-            setActiveConvState(conv);
-            return sorted[0].modelId;
-          }
-        }
-        setActiveIdState(null);
-        setActiveConvState(null);
-      }
-      return null;
-    },
-    [activeConversationId, refreshStats]
-  );
-
-  const clearOldChats = useCallback(() => {
-    // Delete all except active conversation
-    const toDelete = index.filter((m) => m.id !== activeConversationId);
-    let currentIndex = indexRef.current;
-    for (const meta of toDelete) {
-      currentIndex = storage.deleteConversation(meta.id, currentIndex);
-    }
-    setIndex(currentIndex);
-    indexRef.current = currentIndex;
-    refreshStats(currentIndex);
-  }, [index, activeConversationId, refreshStats]);
-
-  const clearAllChats = useCallback((): string => {
-    // Cancel any pending save
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
+      if (pendingConvRef.current) {
+        const pendingConversation = pendingConvRef.current;
+        pendingConvRef.current = null;
+        void persistConversation(pendingConversation);
+      }
+    }, 300);
+  }, [persistConversation]);
+
+  const deleteConversation = useCallback((id: string) => {
+    setIndex((current) => {
+      const next = current.filter((item) => item.id !== id);
+      indexRef.current = next;
+      return next;
+    });
+
+    if (pendingConvRef.current?.id === id) {
+      pendingConvRef.current = null;
     }
-    pendingConvRef.current = null;
 
-    // Delete all conversations from storage
-    const currentIndex = indexRef.current;
-    for (const meta of currentIndex) {
-      storage.deleteConversation(meta.id, currentIndex);
+    void refreshStats(indexRef.current);
+    void storage.deleteConversation(id).catch((error) => {
+      reportStorageError(error as StorageErrorState, { conversation_id: id });
+    });
+
+    if (activeConversationIdRef.current === id) {
+      const fallbackId = sortByUpdatedAt(indexRef.current)[0]?.id ?? null;
+      if (fallbackId) {
+        setActiveConversation(fallbackId);
+      } else {
+        setActiveIdState(null);
+        setActiveConvState(null);
+        storage.setPersistedActiveConversationId(null);
+      }
     }
+  }, [refreshStats, reportStorageError, setActiveConversation]);
 
-    // Create a fresh conversation
-    const newConv: Conversation = {
-      id: crypto.randomUUID(),
-      title: "New chat",
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      modelId: "onnx-community/Qwen3.5-0.8B-ONNX",
-    };
+  const clearOldChats = useCallback(async () => {
+    const activeId = activeConversationIdRef.current;
+    const idsToDelete = indexRef.current
+      .filter((item) => item.id !== activeId)
+      .map((item) => item.id);
 
-    const newIndex = storage.saveConversation(newConv, []);
-    setIndex(newIndex);
-    indexRef.current = newIndex;
-    setActiveIdState(newConv.id);
-    setActiveConvState(newConv);
-    refreshStats(newIndex);
+    try {
+      await flushPendingSave();
+      await storage.deleteConversations(idsToDelete);
+      const nextIndex = indexRef.current.filter((item) => item.id === activeId);
+      setIndex(nextIndex);
+      indexRef.current = nextIndex;
+      await refreshStats(nextIndex);
+      setStorageError(null);
+    } catch (error) {
+      reportStorageError(error as StorageErrorState);
+    }
+  }, [flushPendingSave, refreshStats, reportStorageError]);
 
-    return newConv.id;
-  }, [refreshStats]);
+  const clearAllChats = useCallback(async (): Promise<string> => {
+    try {
+      await flushPendingSave();
+      await storage.clearAllConversations();
+      const newConversation = createConversationRecord(getModelSelection(DEFAULT_MODEL));
+      await storage.saveConversation(newConversation);
+      const nextIndex = [storage.buildMeta(newConversation)];
+      setIndex(nextIndex);
+      indexRef.current = nextIndex;
+      setActiveIdState(newConversation.id);
+      setActiveConvState(newConversation);
+      storage.setPersistedActiveConversationId(newConversation.id);
+      await refreshStats(nextIndex);
+      return newConversation.id;
+    } catch (error) {
+      reportStorageError(error as StorageErrorState);
+      return activeConversationIdRef.current ?? "";
+    }
+  }, [flushPendingSave, refreshStats, reportStorageError]);
 
+  const dismissStorageError = useCallback(() => {
+    setStorageError(null);
+  }, []);
+
+  const usageRatio = storageStats.quotaBytes > 0
+    ? storageStats.usedBytes / storageStats.quotaBytes
+    : 0;
   const storageWarning: StorageWarning =
-    storageStats.usedBytes / storageStats.quotaBytes > 0.95
+    usageRatio > 0.95
       ? "critical"
-      : storageStats.usedBytes / storageStats.quotaBytes > 0.8
+      : usageRatio > 0.8
         ? "warning"
         : "none";
 
@@ -245,6 +306,9 @@ export function useStorage() {
     clearAllChats,
     storageStats,
     storageWarning,
+    storageError,
+    dismissStorageError,
     flushPendingSave,
+    ready,
   };
 }

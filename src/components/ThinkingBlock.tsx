@@ -124,6 +124,7 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming 
     <div className="mb-3">
       <button
         onClick={() => !isThinkingInProgress && dispatch({ type: "set-user-expanded", value: !isExpanded })}
+        aria-expanded={isExpanded}
         className={`flex items-center gap-2 py-1 text-sm transition-colors ${
           isThinkingInProgress ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
         } ${isThinkingInProgress ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}

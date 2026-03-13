@@ -39,6 +39,9 @@
 - 🖼️ **Vision capable** — supports image input for visual question answering
 - 🎛️ **Tunable generation** — temperature, top-p, top-k, repetition penalty, max tokens
 - 📊 **Progress tracking** — live download progress overlay when loading models
+- 💾 **Durable chat storage** — conversations and image attachments persist in IndexedDB, with automatic migration from older `localStorage` installs
+- 🛟 **Recovery flows** — retry network loads, switch to WASM on resource issues, and fall back to the default preset when a model is unsupported or broken
+- 📈 **Production telemetry** — optional Sentry error reporting and product analytics without sending prompts, outputs, or images off-device
 - 🔒 **Private by design** — nothing leaves your browser, ever
 
 ## 🚀 Quick Start
@@ -50,7 +53,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — the Qwen3.5 0.8B model loads automatically.
+Open [http://localhost:3000](http://localhost:3000) — chats persist locally and the default curated preset is revision-pinned for deterministic production loads.
 
 ## 🏗️ Architecture
 
@@ -68,7 +71,7 @@ All inference runs in a dedicated Web Worker (`inference.worker.ts`) using `@hug
 
 ## 🎛️ Supported Models
 
-The dropdown ships with a few curated presets, and the in-app model browser can search additional LLM and VLM repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face, sort them by downloads or recency, and filter by type, size, and current-device fit.
+The dropdown ships with a few curated, revision-pinned presets. The in-app model browser can search additional LLM and VLM repos from the [ONNX Community](https://huggingface.co/onnx-community) on Hugging Face, sort them by downloads or recency, and filter by type, size, and current-device fit.
 
 | Preset | Size | Download |
 |--------|------|----------|
@@ -77,6 +80,8 @@ The dropdown ships with a few curated presets, and the in-app model browser can 
 | SmolLM3 3B | 3B params | ~2.1GB |
 
 For searched models, llame shows a best-effort compatibility badge based on the selected runtime, browser WebGPU support, reported device memory, CPU concurrency, and the model's inferred size. It is a heuristic, not a guarantee.
+
+Curated presets are the production-supported path. Community browser results are marked experimental and may fail even when the compatibility badge looks favorable.
 
 ## 💻 Requirements
 
@@ -95,6 +100,8 @@ The app is configured as a static export (`output: "export"`) with required `Cro
 
 For Google Analytics 4, set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the build environment. The root layout injects the GA script only when that variable is present, so local development works without analytics by default.
 
+For Sentry client-side error reporting, set `NEXT_PUBLIC_SENTRY_DSN`. Telemetry is enabled only in production builds and sends only metadata such as model id, revision, runtime, and error code.
+
 Deploy to Vercel:
 
 ```bash
@@ -102,6 +109,22 @@ npm run build
 ```
 
 The included `vercel.json` handles the required COOP/COEP headers automatically.
+
+It also ships a CSP, referrer policy, content-type protection, and a locked-down permissions policy suitable for the fully client-side deployment model.
+
+## ✅ Quality Gates
+
+```bash
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+npm run smoke
+```
+
+`npm run smoke` verifies the built static export and the required production headers in `vercel.json`.
+
+See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for the manual browser/device matrix and deployment checklist.
 
 ## 🛠️ Tech Stack
 

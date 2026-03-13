@@ -56,6 +56,7 @@ export function Sidebar({
           onClick={onToggle}
           className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Close sidebar"
+          aria-label="Close sidebar"
           disabled={isGenerating}
         >
           <PanelLeft size={20} />
@@ -64,6 +65,7 @@ export function Sidebar({
           onClick={onNewChat}
           className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="New chat"
+          aria-label="Start a new chat"
           disabled={isGenerating}
         >
           <SquarePen size={20} />
@@ -111,6 +113,7 @@ export function Sidebar({
                   disabled={isGenerating}
                   className="opacity-0 group-hover:opacity-100 rounded p-1 text-[#8e8e8e] hover:text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Delete conversation"
+                  aria-label={`Delete conversation ${conv.title}`}
                 >
                   <Trash2 size={14} />
                 </button>

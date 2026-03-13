@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2, Search, X } from "lucide-react";
 import { formatDownloadSizeLabel, getModelCardMeta } from "@/lib/constants";
+import { ModelSelection } from "@/types";
 import {
   assessModelCompatibility,
   CompatibilityContext,
@@ -14,7 +15,7 @@ import {
 interface ModelBrowserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectModel: (modelId: string) => void;
+  onSelectModel: (model: ModelSelection) => void;
   currentModelId: string;
   device: "webgpu" | "wasm";
   webgpuSupported: boolean | null;
@@ -317,12 +318,12 @@ export function ModelBrowserModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="mx-4 flex max-h-[88dvh] w-full max-w-4xl flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter">
+      <div className="mx-4 flex max-h-[88dvh] w-full max-w-4xl flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter" role="dialog" aria-modal="true" aria-labelledby="model-browser-title">
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-medium text-[#ececec]">Browse ONNX Community LLMs and VLMs</h2>
+            <h2 id="model-browser-title" className="text-lg font-medium text-[#ececec]">Browse ONNX Community LLMs and VLMs</h2>
             <p className="text-sm text-[#8e8e8e]">
-              Search Hugging Face for chat-capable ONNX models and use the compatibility badge as a browser-side estimate, not a guarantee.
+              Search Hugging Face for chat-capable ONNX models. Community results are best-effort and not part of the production-supported preset set.
             </p>
             <BrowserProfileLine device={device} webgpuSupported={webgpuSupported} profile={profile} />
           </div>
@@ -380,15 +381,24 @@ export function ModelBrowserModal({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-thin">
           {initialLoading && (
-            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-4 text-sm text-[#b4b4b4]">
+            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-4 text-sm text-[#b4b4b4]" role="status" aria-live="polite">
               <Loader2 size={16} className="animate-spin text-[#10a37f]" />
               <span>Searching ONNX Community…</span>
             </div>
           )}
 
           {!initialLoading && error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {error}
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+              <div>{error}</div>
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => void fetchModels(debouncedQuery, null, false, sortBy)}
+                  className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
+                >
+                  Retry search
+                </button>
+              </div>
             </div>
           )}
 
@@ -421,6 +431,9 @@ export function ModelBrowserModal({
                       <h3 className="text-sm font-medium text-[#ececec]">{model.name}</h3>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
                         {compatibility.label}
+                      </span>
+                      <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
+                        Experimental
                       </span>
                       {active && (
                         <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]">
@@ -471,7 +484,13 @@ export function ModelBrowserModal({
                       <ExternalLink size={14} />
                     </a>
                     <button
-                      onClick={() => onSelectModel(model.id)}
+                      onClick={() => onSelectModel({
+                        id: model.id,
+                        revision: model.revision,
+                        supportsImages: model.isVisionModel,
+                        recommendedDevice: device,
+                        supportTier: "experimental",
+                      })}
                       disabled={disabled || active}
                       className="rounded-lg bg-[#10a37f] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
                     >

@@ -42,11 +42,16 @@ export function ChatMessage({
             {hasImages && (
               <div className="flex gap-2 mb-2 flex-wrap justify-end">
                 {message.images!.map((img, idx) => (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={idx}
                     src={img}
                     alt={`Attachment ${idx + 1}`}
                     onClick={() => setSelectedImage(img)}
+                    loading="lazy"
+                    decoding="async"
+                    width={200}
+                    height={150}
                     className="max-w-[160px] max-h-[120px] sm:max-w-[200px] sm:max-h-[150px] object-cover rounded-2xl border border-white/[0.08] cursor-pointer hover:opacity-80 transition-opacity"
                   />
                 ))}
@@ -208,11 +213,25 @@ function ImageLightboxInline({ src, onClose }: { src: string; onClose: () => voi
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#212121]/90 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <button onClick={onClose} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#2f2f2f] text-white transition-colors hover:bg-[#3f3f3f]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#212121]/90 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image preview"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <button onClick={onClose} aria-label="Close image preview" className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#2f2f2f] text-white transition-colors hover:bg-[#3f3f3f]">
         <X size={20} />
       </button>
-      <img src={src} alt="Fullscreen image" className="max-h-full max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Fullscreen image"
+        className="max-h-full max-w-full rounded-lg object-contain"
+        onClick={(e) => e.stopPropagation()}
+        loading="eager"
+        decoding="async"
+      />
     </div>
   );
 }

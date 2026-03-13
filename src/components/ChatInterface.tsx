@@ -27,7 +27,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   loadingProgress: Map<string, ProgressInfo>;
   loadingMessage: string;
-  onSend: (content: string, images?: string[]) => void;
+  onSend: (content: string, images?: string[]) => void | Promise<void>;
   onStop: () => void;
   tps: number;
   numTokens: number;
@@ -259,7 +259,7 @@ export function ChatInterface({
       {/* Drag overlay */}
       {allowImageInputs && isDragging && (
         <div className="absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-[#10a37f] bg-[#10a37f]/10 pointer-events-none">
-          <p className="text-[#10a37f] text-lg font-medium">
+          <p className="text-[#10a37f] text-lg font-medium" role="status" aria-live="polite">
             Drop images here
           </p>
         </div>
@@ -333,7 +333,7 @@ export function ChatInterface({
                 <div className="mt-1 flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-[#10a37f]">
                   <Sparkles size={14} className="text-white" />
                 </div>
-                <div className="flex items-center gap-2 py-3 text-sm text-[#b4b4b4]">
+                <div className="flex items-center gap-2 py-3 text-sm text-[#b4b4b4]" role="status" aria-live="polite">
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#b4b4b4] border-t-transparent" />
                   <span>{processingMessage}</span>
                 </div>
@@ -352,13 +352,19 @@ export function ChatInterface({
             <div className="mb-2 flex flex-wrap gap-2">
               {activePendingImages.map((img) => (
                 <div key={img.id} className="group relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={img.dataUrl}
                     alt="Preview"
+                    width={64}
+                    height={64}
+                    loading="lazy"
+                    decoding="async"
                     className="h-16 w-16 rounded-xl border border-white/[0.08] object-cover"
                   />
                   <button
                     onClick={() => removeImage(img.id)}
+                    aria-label="Remove image"
                     className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#424242] text-white opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X size={12} />
@@ -385,6 +391,7 @@ export function ChatInterface({
                 disabled={needsLoad || activePendingImages.length >= 5 || isGenerating}
                 className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
                 title={needsLoad ? "Load model first to use images" : "Upload images"}
+                aria-label="Upload images"
               >
                 <ImagePlus size={20} />
               </button>
@@ -398,6 +405,7 @@ export function ChatInterface({
                   thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
                 }`}
                 title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}
+                aria-label={thinkingEnabled ? "Disable thinking mode" : "Enable thinking mode"}
               >
                 <Brain size={20} />
               </button>
@@ -420,6 +428,7 @@ export function ChatInterface({
             {isGenerating ? (
               <button
                 onClick={onStop}
+                aria-label="Stop generation"
                 className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200"
               >
                 <Square size={14} className="text-[#212121]" fill="#212121" />
@@ -428,6 +437,7 @@ export function ChatInterface({
               <button
                 onClick={handleSend}
                 disabled={!input.trim() && activePendingImages.length === 0}
+                aria-label="Send message"
                 className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
               >
                 <ArrowUp size={18} className="text-[#212121]" />

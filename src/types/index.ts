@@ -3,6 +3,16 @@ export interface MessageDebugData {
   rawOutput?: string;
 }
 
+export type ModelSupportTier = "curated" | "experimental";
+
+export interface ModelSelection {
+  id: string;
+  revision?: string | null;
+  supportsImages?: boolean | null;
+  recommendedDevice?: "webgpu" | "wasm";
+  supportTier?: ModelSupportTier;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -19,6 +29,10 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   modelId: string;
+  modelRevision?: string | null;
+  modelSupportsImages?: boolean | null;
+  recommendedDevice?: "webgpu" | "wasm";
+  supportTier?: ModelSupportTier;
 }
 
 export interface ConversationMeta {
@@ -27,6 +41,10 @@ export interface ConversationMeta {
   createdAt: number;
   updatedAt: number;
   modelId: string;
+  modelRevision?: string | null;
+  modelSupportsImages?: boolean | null;
+  recommendedDevice?: "webgpu" | "wasm";
+  supportTier?: ModelSupportTier;
   messageCount: number;
   sizeBytes: number;
 }
@@ -60,12 +78,36 @@ export interface AdapterInfo {
   description: string;
 }
 
+export type StorageErrorCode =
+  | "IDB_UNAVAILABLE"
+  | "MIGRATION_FAILED"
+  | "WRITE_FAILED"
+  | "READ_FAILED"
+  | "DELETE_FAILED"
+  | "QUOTA_EXCEEDED";
+
+export interface StorageErrorState {
+  code: StorageErrorCode;
+  message: string;
+}
+
+export type WorkerErrorCode =
+  | "NETWORK_ERROR"
+  | "UNSUPPORTED_MODEL"
+  | "INSUFFICIENT_RESOURCES"
+  | "MODEL_ARTIFACT_ERROR"
+  | "GENERATION_ERROR"
+  | "NO_MODEL_LOADED"
+  | "UNKNOWN_ERROR";
+
+export type WorkerErrorStage = "load" | "generate";
+
 // Worker -> Main thread messages
 export type WorkerResponse =
   | { status: "ready" }
   | { status: "loading"; message: string }
   | { status: "progress"; progress: ProgressInfo }
-  | { status: "loaded"; modelId: string; device: string; precision: string; supportsImages: boolean }
+  | { status: "loaded"; modelId: string; revision?: string | null; device: string; precision: string; supportsImages: boolean }
   | { status: "processing"; message: string }
   | { status: "generating" }
   | { status: "prompt"; inputText: string }
@@ -73,12 +115,20 @@ export type WorkerResponse =
   | { status: "update"; token: string; tps: number; numTokens: number; inputTokens?: number; isThinking?: boolean }
   | { status: "thinking_complete"; thinking: string }
   | { status: "complete"; tps: number; numTokens: number }
-  | { status: "error"; error: string }
+  | {
+      status: "error";
+      error: string;
+      code: WorkerErrorCode;
+      stage: WorkerErrorStage;
+      modelId?: string | null;
+      revision?: string | null;
+      device?: "webgpu" | "wasm" | null;
+    }
   | { status: "unloaded" };
 
 // Main thread -> Worker messages
 export type WorkerRequest =
-  | { type: "load"; modelId: string; device: "webgpu" | "wasm" }
+  | { type: "load"; modelId: string; revision?: string | null; device: "webgpu" | "wasm" }
   | { type: "generate"; messages: ChatMessage[]; params: GenerationParams }
   | { type: "interrupt" }
   | { type: "reset" };

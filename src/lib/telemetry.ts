@@ -7,6 +7,10 @@ type TelemetryContext = Record<string, string | number | boolean | null | undefi
 
 let initialized = false;
 
+function isVercelInsightsEnabled() {
+  return process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
+}
+
 function isProductionTelemetryEnabled() {
   return process.env.NODE_ENV === "production";
 }
@@ -66,10 +70,12 @@ declare global {
 export function trackProductEvent(name: string, payload: TelemetryContext = {}) {
   if (!isProductionTelemetryEnabled()) return;
 
-  try {
-    vercelTrack(name, payload);
-  } catch {
-    // Ignore analytics transport failures.
+  if (isVercelInsightsEnabled()) {
+    try {
+      vercelTrack(name, payload);
+    } catch {
+      // Ignore analytics transport failures.
+    }
   }
 
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

@@ -27,6 +27,19 @@ function createConversationRecord(model?: string | ModelSelection): Conversation
   };
 }
 
+function getConversationSelection(conversation: Conversation | null): ModelSelection {
+  if (!conversation) {
+    return getModelSelection(DEFAULT_MODEL);
+  }
+
+  return getModelSelection(conversation.modelId, {
+    revision: conversation.modelRevision ?? null,
+    supportsImages: conversation.modelSupportsImages ?? null,
+    recommendedDevice: conversation.recommendedDevice,
+    supportTier: conversation.supportTier,
+  });
+}
+
 function sortByUpdatedAt(conversations: ConversationMeta[]) {
   return [...conversations].sort((left, right) => right.updatedAt - left.updatedAt);
 }
@@ -214,32 +227,35 @@ export function useStorage() {
   }, [persistConversation]);
 
   const deleteConversation = useCallback((id: string) => {
-    setIndex((current) => {
-      const next = current.filter((item) => item.id !== id);
-      indexRef.current = next;
-      return next;
-    });
+    const isActiveConversation = activeConversationIdRef.current === id;
 
     if (pendingConvRef.current?.id === id) {
       pendingConvRef.current = null;
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
     }
 
-    void refreshStats(indexRef.current);
+    const nextIndex = indexRef.current.filter((item) => item.id !== id);
+
+    if (isActiveConversation) {
+      const replacementConversation = createConversationRecord(getConversationSelection(activeConversation));
+      nextIndex.push(storage.buildMeta(replacementConversation));
+      setActiveIdState(replacementConversation.id);
+      setActiveConvState(replacementConversation);
+      storage.setPersistedActiveConversationId(replacementConversation.id);
+      void persistConversation(replacementConversation);
+    }
+
+    setIndex(nextIndex);
+    indexRef.current = nextIndex;
+    void refreshStats(nextIndex);
+
     void storage.deleteConversation(id).catch((error) => {
       reportStorageError(error as StorageErrorState, { conversation_id: id });
     });
-
-    if (activeConversationIdRef.current === id) {
-      const fallbackId = sortByUpdatedAt(indexRef.current)[0]?.id ?? null;
-      if (fallbackId) {
-        setActiveConversation(fallbackId);
-      } else {
-        setActiveIdState(null);
-        setActiveConvState(null);
-        storage.setPersistedActiveConversationId(null);
-      }
-    }
-  }, [refreshStats, reportStorageError, setActiveConversation]);
+  }, [activeConversation, persistConversation, refreshStats, reportStorageError]);
 
   const clearOldChats = useCallback(async () => {
     const activeId = activeConversationIdRef.current;

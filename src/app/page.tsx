@@ -581,6 +581,9 @@ export default function Home() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         onNewChat={createNewConversation}
         onOpenSettings={() => setSettingsOpen(true)}
+        onClearAllChats={() => {
+          void storage.clearAllChats();
+        }}
         conversations={storage.index}
         activeConversationId={storage.activeConversationId}
         onSwitchConversation={handleSwitchConversation}

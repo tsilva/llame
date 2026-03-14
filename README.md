@@ -103,6 +103,8 @@ ONNX Runtime's WASM loader is pinned to same-origin assets under `public/onnxrun
 
 For Google Analytics 4, set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the build environment. The root layout injects the GA script only when that variable is present, so local development works without analytics by default.
 
+Vercel Analytics and Speed Insights are disabled by default for this static custom-domain deployment to avoid `/_vercel/insights/*` console 404s. Enable them explicitly with `NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS=true` if you have the Vercel-side endpoint wiring in place.
+
 For Sentry client-side error reporting, set `NEXT_PUBLIC_SENTRY_DSN`. Telemetry is enabled only in production builds and sends only metadata such as model id, revision, runtime, and error code.
 
 Deploy to Vercel:

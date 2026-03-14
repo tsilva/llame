@@ -9,6 +9,7 @@ interface SidebarProps {
   onToggle: () => void;
   onNewChat: () => void;
   onOpenSettings: () => void;
+  onClearAllChats: () => void;
   conversations: ConversationMeta[];
   activeConversationId: string | null;
   onSwitchConversation: (id: string) => void;
@@ -23,6 +24,7 @@ export function Sidebar({
   onToggle,
   onNewChat,
   onOpenSettings,
+  onClearAllChats,
   conversations,
   activeConversationId,
   onSwitchConversation,
@@ -74,9 +76,22 @@ export function Sidebar({
 
       {/* Conversations list */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2">
-        <span className="px-2 text-[11px] font-semibold uppercase tracking-wider text-[#8e8e8e]">
-          History
-        </span>
+        <div className="flex items-center justify-between gap-2 px-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e8e]">
+            History
+          </span>
+          {sortedConversations.length > 0 && (
+            <button
+              onClick={onClearAllChats}
+              disabled={isGenerating}
+              className="rounded-md px-2 py-1 text-[11px] font-semibold text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={`Clear all history (${sortedConversations.length} conversations)`}
+              title={`Clear all history (${sortedConversations.length})`}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
         <div className="mt-2 space-y-0.5">
           {sortedConversations.length === 0 ? (
             <p className="px-3 py-2 text-sm text-[#8e8e8e]">

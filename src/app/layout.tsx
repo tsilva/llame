@@ -10,6 +10,9 @@ const SITE_URL = "https://llame.tsilva.eu";
 const SITE_TITLE = "llame | Run AI Models in Your Browser";
 const SITE_DESCRIPTION = "Run large language models (LLMs) directly in your browser with WebGPU acceleration. No server required - fully client-side AI inference. Supports multiple models including Qwen, Llama, and more. Free and private.";
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const SHOULD_RENDER_VERCEL_INSIGHTS =
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -128,8 +131,8 @@ export default function RootLayout({
             </Script>
           </>
         ) : null}
-        <Analytics />
-        <SpeedInsights />
+        {SHOULD_RENDER_VERCEL_INSIGHTS ? <Analytics /> : null}
+        {SHOULD_RENDER_VERCEL_INSIGHTS ? <SpeedInsights /> : null}
       </body>
     </html>
   );

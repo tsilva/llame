@@ -17,6 +17,7 @@ import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
 
 env.allowLocalModels = false;
+env.logLevel = 40;
 
 type OnnxBackendEnvironment = {
   wasm?: {

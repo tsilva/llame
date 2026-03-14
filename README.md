@@ -96,7 +96,7 @@ WebGPU is detected automatically. If unavailable, the app falls back to WASM wit
 
 ## 🌐 Deployment
 
-The app is configured as a static export (`output: "export"`) with required `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers for `SharedArrayBuffer` support.
+The app is configured as a static export (`output: "export"`) with required `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers for `SharedArrayBuffer` support. Its CSP also needs to allow both standard Hugging Face hosts and the newer `*.xethub.hf.co` bridge used for model asset downloads.
 
 For Google Analytics 4, set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the build environment. The root layout injects the GA script only when that variable is present, so local development works without analytics by default.
 
@@ -108,7 +108,7 @@ Deploy to Vercel:
 npm run build
 ```
 
-The included `vercel.json` handles the required COOP/COEP headers automatically.
+The included `vercel.json` handles the required COOP/COEP headers and Hugging Face download CSP allowances automatically.
 
 It also ships a CSP, referrer policy, content-type protection, and a locked-down permissions policy suitable for the fully client-side deployment model.
 

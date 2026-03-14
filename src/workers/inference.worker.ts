@@ -18,6 +18,70 @@ import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/wo
 
 env.allowLocalModels = false;
 
+type OnnxBackendEnvironment = {
+  wasm?: {
+    numThreads?: number;
+    wasmPaths?:
+      | string
+      | {
+          mjs: string;
+          wasm: string;
+        };
+  };
+};
+
+function configureOnnxWasmPaths() {
+  const onnxBackend = env.backends.onnx as OnnxBackendEnvironment | undefined;
+  const workerLocation = typeof self.location?.href === "string" ? self.location.href : null;
+  if (!onnxBackend?.wasm || !workerLocation) {
+    return;
+  }
+
+  const assetBaseUrl = new URL("/onnxruntime/", workerLocation);
+
+  // The worker bundle itself is loaded via a blob URL in production, which makes
+  // ORT/Transformers.js fall back to a blob-based module preload path. Forcing a
+  // same-origin prefix and single-threaded init avoids that bootstrap path.
+  env.useWasmCache = false;
+  onnxBackend.wasm.numThreads = 1;
+  onnxBackend.wasm.wasmPaths = assetBaseUrl.toString();
+}
+
+configureOnnxWasmPaths();
+
+env.fetch = async (input, init) => {
+  const requestLike = input as { url?: string; toString(): string };
+  const url = typeof input === "string" ? input : (requestLike.url ?? requestLike.toString());
+  const isHuggingFaceAsset =
+    /^https:\/\/(?:[^/]+\.)?(?:huggingface\.co|hf\.co|xethub\.hf\.co)\//.test(url);
+
+  const requestInit: RequestInit = isHuggingFaceAsset
+    ? {
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+      }
+    : {};
+
+  try {
+    return await fetch(input, {
+      ...requestInit,
+      ...init,
+    });
+  } catch (error) {
+    if (!isHuggingFaceAsset) {
+      throw error;
+    }
+
+    // Signed Hub/Xet redirects can go stale quickly, so force a fresh network lookup once.
+    return fetch(input, {
+      ...requestInit,
+      ...init,
+      cache: "reload",
+    });
+  }
+};
+
 let tokenizer: PreTrainedTokenizer | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let processor: any = null;

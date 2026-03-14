@@ -32,7 +32,7 @@
 ## ✨ Features
 
 - 🚀 **In-browser inference** — models run entirely on your device via Web Workers
-- ⚡ **WebGPU acceleration** — fp16 precision with automatic WASM fallback for unsupported browsers
+- ⚡ **WebGPU acceleration** — fp16 precision with automatic WASM fallback for unsupported browsers, including a smaller text-only fallback preset when WebGPU is unavailable
 - 🔎 **Model browser** — search ONNX Community LLMs and VLMs from the UI and inspect a local compatibility estimate before switching
 - 💬 **Chat interface** — real-time token streaming with tokens/second counter
 - 🧪 **Raw debug view** — toggle between formatted chat and exact model input/output for debugging
@@ -77,6 +77,7 @@ The dropdown ships with a few curated, revision-pinned presets. The in-app model
 |--------|------|----------|
 | Qwen3.5 0.8B | 0.8B params | ~850MB |
 | Qwen3.5 2B | 2B params | ~2GB |
+| Qwen2.5 0.5B | 0.5B params | ~538MB |
 | SmolLM3 3B | 3B params | ~2.1GB |
 
 For searched models, llame shows a best-effort compatibility badge based on the selected runtime, browser WebGPU support, reported device memory, CPU concurrency, and the model's inferred size. It is a heuristic, not a guarantee.
@@ -92,11 +93,13 @@ Curated presets are the production-supported path. Community browser results are
 | RAM | 4GB+ | 4GB+ |
 | Precision | fp16 | q4 (quantized) |
 
-WebGPU is detected automatically. If unavailable, the app falls back to WASM with quantized models.
+WebGPU is detected automatically. If unavailable, the app falls back to WASM with quantized models and defaults to the smaller Qwen2.5 0.5B text preset instead of the heavier vision preset.
 
 ## 🌐 Deployment
 
-The app is configured as a static export (`output: "export"`) with required `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers for `SharedArrayBuffer` support. Its CSP also needs to allow both standard Hugging Face hosts and the newer `*.xethub.hf.co` bridge used for model asset downloads.
+The app is configured as a static export (`output: "export"`) with `Cross-Origin-Embedder-Policy: credentialless` and `Cross-Origin-Opener-Policy: same-origin` for `SharedArrayBuffer` support. `credentialless` keeps the app cross-origin isolated while allowing public Hugging Face asset downloads that do not opt into CORP. Its CSP also needs to allow both standard Hugging Face hosts and the newer `*.xethub.hf.co` bridge used for model asset downloads.
+
+ONNX Runtime's WASM loader is pinned to same-origin assets under `public/onnxruntime/` so production CSP does not depend on jsDelivr for the `.mjs` and `.wasm` runtime bootstrap files. The CSP must also allow `blob:` in `script-src`, plus WebAssembly/eval bootstrap (`'wasm-unsafe-eval'` and `'unsafe-eval'` for worker compatibility), so ONNX Runtime can initialize in-browser.
 
 For Google Analytics 4, set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the build environment. The root layout injects the GA script only when that variable is present, so local development works without analytics by default.
 

@@ -12,6 +12,7 @@ import {
   DEFAULT_PARAMS,
   canToggleThinking,
   getEffectiveThinkingEnabled,
+  getDefaultModelSelectionForDevice,
   getModelSelection,
   isVlmModel,
 } from "@/lib/constants";
@@ -55,6 +56,10 @@ function buildModelSelectionFromConversation(conversation: Conversation | null):
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
   });
+}
+
+function shouldPreferWasmFallbackModel(model: ModelSelection) {
+  return model.supportsImages ?? isVlmModel(model.id);
 }
 
 export default function Home() {
@@ -102,6 +107,32 @@ export default function Home() {
       trackProductEvent("browser_webgpu_unavailable", {});
     }
   }, [webgpuSupported]);
+
+  useEffect(() => {
+    if (webgpuSupported !== false) return;
+
+    const fallbackModel = getDefaultModelSelectionForDevice("wasm");
+
+    setLastSelectedModel((current) => (
+      shouldPreferWasmFallbackModel(current) ? fallbackModel : current
+    ));
+
+    const conversation = storage.activeConversation;
+    if (!conversation || conversation.messages.length > 0) return;
+
+    const conversationModel = buildModelSelectionFromConversation(conversation);
+    if (!shouldPreferWasmFallbackModel(conversationModel)) return;
+
+    storage.updateConversation({
+      ...conversation,
+      modelId: fallbackModel.id,
+      modelRevision: fallbackModel.revision ?? null,
+      modelSupportsImages: fallbackModel.supportsImages ?? null,
+      recommendedDevice: fallbackModel.recommendedDevice,
+      supportTier: fallbackModel.supportTier,
+      updatedAt: Date.now(),
+    });
+  }, [storage, storage.activeConversation, webgpuSupported]);
 
   useEffect(() => {
     const savedThinking = localStorage.getItem("llame-thinking-enabled");
@@ -403,14 +434,6 @@ export default function Home() {
     setParams((current) => ({ ...current, thinkingEnabled: !current.thinkingEnabled }));
   }, [activeModel.id]);
 
-  const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
-    setDevice(nextDevice);
-    setDismissedWorkerErrorKey(null);
-    if (worker.loadedModel || storage.activeConversation) {
-      worker.loadModel(activeModel, nextDevice);
-    }
-  }, [activeModel, storage.activeConversation, worker]);
-
   const handleModelChange = useCallback((selection: ModelSelection) => {
     setLastSelectedModel(selection);
     setPendingGeneration(null);
@@ -433,6 +456,21 @@ export default function Home() {
       worker.reset();
     }
   }, [storage, worker]);
+
+  const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
+    const nextModel = nextDevice === "wasm" && shouldPreferWasmFallbackModel(activeModel)
+      ? getDefaultModelSelectionForDevice("wasm")
+      : activeModel;
+
+    setDevice(nextDevice);
+    setDismissedWorkerErrorKey(null);
+    if (nextModel.id !== activeModel.id || (nextModel.revision ?? null) !== (activeModel.revision ?? null)) {
+      handleModelChange(nextModel);
+    }
+    if (worker.loadedModel || storage.activeConversation) {
+      worker.loadModel(nextModel, nextDevice);
+    }
+  }, [activeModel, handleModelChange, storage.activeConversation, worker]);
 
   const handleSwitchConversation = useCallback((id: string) => {
     setPendingGeneration(null);
@@ -464,9 +502,9 @@ export default function Home() {
   }, [activeModel, device, pendingGeneration, worker]);
 
   const fallbackToDefaultModel = useCallback(() => {
-    const fallbackModel = getModelSelection(DEFAULT_MODEL);
-    handleModelChange(fallbackModel);
     const fallbackDevice = webgpuSupported === false ? "wasm" : device;
+    const fallbackModel = getDefaultModelSelectionForDevice(fallbackDevice);
+    handleModelChange(fallbackModel);
     setPendingGeneration((current) => (
       current
         ? { ...current, model: fallbackModel, device: fallbackDevice }
@@ -480,18 +518,26 @@ export default function Home() {
   }, [device, handleModelChange, webgpuSupported, worker]);
 
   const switchToWasmAndRetry = useCallback(() => {
+    const targetModel = pendingGeneration?.model ?? activeModel;
+    const nextModel = shouldPreferWasmFallbackModel(targetModel)
+      ? getDefaultModelSelectionForDevice("wasm")
+      : targetModel;
+
     setDevice("wasm");
     setDismissedWorkerErrorKey(null);
+    if (nextModel.id !== activeModel.id || (nextModel.revision ?? null) !== (activeModel.revision ?? null)) {
+      handleModelChange(nextModel);
+    }
     if (pendingGeneration) {
-      setPendingGeneration({ ...pendingGeneration, device: "wasm" });
-      worker.loadModel(pendingGeneration.model, "wasm");
+      setPendingGeneration({ ...pendingGeneration, model: nextModel, device: "wasm" });
+      worker.loadModel(nextModel, "wasm");
     } else {
-      worker.loadModel(activeModel, "wasm");
+      worker.loadModel(nextModel, "wasm");
     }
     trackProductEvent("recovery_switch_wasm", {
-      model_id: pendingGeneration?.model.id ?? activeModel.id,
+      model_id: nextModel.id,
     });
-  }, [activeModel, pendingGeneration, worker]);
+  }, [activeModel, handleModelChange, pendingGeneration, worker]);
 
   const retryLastPrompt = useCallback(() => {
     if (!storage.activeConversation) return;

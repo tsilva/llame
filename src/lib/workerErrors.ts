@@ -9,6 +9,18 @@ export function classifyWorkerLoadError(error: unknown): WorkerErrorCode {
   const message = error instanceof Error ? error.message : String(error ?? "");
 
   if (includesAny(message, [
+    "no available backend found",
+    "webgpu is not supported",
+    "out of memory",
+    "not enough memory",
+    "device lost",
+    "allocation",
+    "oom",
+  ])) {
+    return "INSUFFICIENT_RESOURCES";
+  }
+
+  if (includesAny(message, [
     "failed to fetch",
     "networkerror",
     "network error",
@@ -26,18 +38,6 @@ export function classifyWorkerLoadError(error: unknown): WorkerErrorCode {
     "not supported",
   ])) {
     return "UNSUPPORTED_MODEL";
-  }
-
-  if (includesAny(message, [
-    "out of memory",
-    "not enough memory",
-    "device lost",
-    "webgpu is not supported",
-    "no available backend found",
-    "allocation",
-    "oom",
-  ])) {
-    return "INSUFFICIENT_RESOURCES";
   }
 
   if (includesAny(message, [

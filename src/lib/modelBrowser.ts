@@ -12,6 +12,10 @@ export interface HubModelApiEntry {
   usedStorage?: number;
   config?: {
     model_type?: string;
+    tokenizer_config?: {
+      chat_template?: string;
+      chat_template_jinja?: string;
+    };
   };
 }
 
@@ -183,6 +187,13 @@ function isVisionModel(modelId: string, tags: string[], pipelineTag: string | nu
   );
 }
 
+function hasChatTemplate(entry: HubModelApiEntry) {
+  return Boolean(
+    entry.config?.tokenizer_config?.chat_template ||
+    entry.config?.tokenizer_config?.chat_template_jinja,
+  );
+}
+
 function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
@@ -195,6 +206,11 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
     (pipelineTag && !SUPPORTED_PIPELINE_TAGS.has(pipelineTag)) ||
     tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag))
   ) {
+    return false;
+  }
+
+  const looksLikeVisionModel = isVisionModel(entry.id, tags, pipelineTag, modelType);
+  if (looksLikeVisionModel && !tags.includes("conversational") && !hasChatTemplate(entry)) {
     return false;
   }
 

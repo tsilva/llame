@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { searchOnnxCommunityModels } from "@/lib/modelBrowser";
+import { assessModelCompatibility, searchOnnxCommunityModels } from "@/lib/modelBrowser";
 
 describe("model browser search", () => {
   afterEach(() => {
@@ -88,6 +88,106 @@ describe("model browser search", () => {
     });
   });
 
+  it("hides models that only ship a generic onnx/model.onnx artifact", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "onnx-community/tiny-random-jais",
+              sha: "jais-rev",
+              tags: ["onnx", "jais"],
+              config: { model_type: "jais" },
+              siblings: [{ rfilename: "onnx/model.onnx" }],
+            },
+            {
+              id: "onnx-community/Llama-3.2-1B-Instruct-ONNX",
+              sha: "llama-rev",
+              tags: ["onnx", "llama", "text-generation", "conversational"],
+              pipeline_tag: "text-generation",
+              config: {
+                model_type: "llama",
+                tokenizer_config: {
+                  chat_template: "<|begin_of_text|>{{ message }}",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/model.onnx" },
+                { rfilename: "onnx/model_fp16.onnx" },
+                { rfilename: "onnx/model_q4.onnx" },
+              ],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchOnnxCommunityModels("");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "onnx-community/Llama-3.2-1B-Instruct-ONNX",
+      isVisionModel: false,
+    });
+  });
+
+  it("hides tiny-random checkpoints even when they look structurally compatible", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "onnx-community/tiny-random-LlamaForCausalLM-ONNX",
+              sha: "llama-rev",
+              tags: ["onnx", "llama", "text-generation", "conversational"],
+              pipeline_tag: "text-generation",
+              config: {
+                model_type: "llama",
+                tokenizer_config: {
+                  chat_template: "<|begin_of_text|>{{ message }}",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/model.onnx" },
+                { rfilename: "onnx/model_fp16.onnx" },
+                { rfilename: "onnx/model_q4.onnx" },
+              ],
+            },
+            {
+              id: "onnx-community/Llama-3.2-1B-Instruct-ONNX",
+              sha: "llama-instruct-rev",
+              tags: ["onnx", "llama", "text-generation", "conversational"],
+              pipeline_tag: "text-generation",
+              config: {
+                model_type: "llama",
+                tokenizer_config: {
+                  chat_template: "<|begin_of_text|>{{ message }}",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/model.onnx" },
+                { rfilename: "onnx/model_fp16.onnx" },
+                { rfilename: "onnx/model_q4.onnx" },
+              ],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchOnnxCommunityModels("");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "onnx-community/Llama-3.2-1B-Instruct-ONNX",
+      isVisionModel: false,
+    });
+  });
+
   it("hides vision models that are task-specific rather than conversational", async () => {
     vi.stubGlobal(
       "fetch",
@@ -116,6 +216,23 @@ describe("model browser search", () => {
                 },
               },
             },
+            {
+              id: "onnx-community/Qwen3.5-0.8B-ONNX",
+              sha: "qwen-rev",
+              tags: ["onnx", "qwen3_5", "image-text-to-text", "vision", "conversational"],
+              pipeline_tag: "image-text-to-text",
+              config: {
+                model_type: "qwen3_5",
+                tokenizer_config: {
+                  chat_template: "<|im_start|>user\n{{ message }}<|im_end|>",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/embed_tokens_q4.onnx" },
+                { rfilename: "onnx/vision_encoder_fp16.onnx" },
+                { rfilename: "onnx/decoder_model_merged_q4.onnx" },
+              ],
+            },
           ]),
           { status: 200 },
         ),
@@ -126,8 +243,35 @@ describe("model browser search", () => {
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
-      id: "onnx-community/granite-docling-258M-ONNX",
+      id: "onnx-community/Qwen3.5-0.8B-ONNX",
       isVisionModel: true,
     });
+  });
+
+  it("downgrades larger Qwen2 WebGPU models on 8 GB devices", () => {
+    const compatibility = assessModelCompatibility(
+      {
+        id: "onnx-community/Qwen2.5-1.5B-Instruct",
+        revision: null,
+        name: "Qwen2.5-1.5B-Instruct",
+        downloads: 1028,
+        likes: 6,
+        tags: ["onnx", "qwen2", "text-generation", "conversational"],
+        pipelineTag: "text-generation",
+        lastModified: "2025-03-06T17:18:53.000Z",
+        parameterCountB: 1.5,
+        estimatedDownloadGb: 1.4,
+        isVisionModel: false,
+      },
+      {
+        device: "webgpu",
+        webgpuSupported: true,
+        deviceMemoryGb: 8,
+        hardwareConcurrency: 8,
+      },
+    );
+
+    expect(compatibility.label).toBe("Maybe");
+    expect(compatibility.summary).toContain("Borderline");
   });
 });

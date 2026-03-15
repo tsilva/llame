@@ -17,6 +17,9 @@ export interface HubModelApiEntry {
       chat_template_jinja?: string;
     };
   };
+  siblings?: Array<{
+    rfilename?: string;
+  }>;
 }
 
 export interface DiscoveredModel {
@@ -62,7 +65,8 @@ const UNSUPPORTED_TASK_TAGS = new Set([
   "sentence-similarity",
   "text-embeddings-inference",
 ]);
-const UNSUPPORTED_MODEL_NAME_PATTERN = /(?:^|[-_/])(embedding|embeddings|rerank|reranker)(?:$|[-_/])/i;
+const UNSUPPORTED_MODEL_NAME_PATTERN = /(?:^|[-_/])(embedding|embeddings|rerank|reranker|docling)(?:$|[-_/])/i;
+const UNSUPPORTED_MODEL_ID_PATTERN = /(?:^|[-_/])tiny-random(?:$|[-_/])/i;
 const SUPPORTED_TEXT_MODEL_TYPES = new Set([
   "afmoe",
   "apertus",
@@ -194,17 +198,41 @@ function hasChatTemplate(entry: HubModelApiEntry) {
   );
 }
 
+function hasUsableOnnxArtifacts(entry: HubModelApiEntry) {
+  const filenames = entry.siblings
+    ?.map((sibling) => sibling.rfilename)
+    .filter((name): name is string => Boolean(name)) ?? [];
+
+  if (filenames.length === 0) {
+    return true;
+  }
+
+  const onnxFiles = filenames.filter((name) => name.startsWith("onnx/"));
+  if (onnxFiles.length === 0) {
+    return true;
+  }
+
+  return onnxFiles.some((name) => (
+    name.startsWith("onnx/model_") ||
+    name.startsWith("onnx/decoder_model") ||
+    name.startsWith("onnx/embed_tokens") ||
+    name.startsWith("onnx/vision_encoder")
+  ));
+}
+
 function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
-  const hasUnsupportedName = UNSUPPORTED_MODEL_NAME_PATTERN.test(entry.id) ||
+  const hasUnsupportedName = UNSUPPORTED_MODEL_ID_PATTERN.test(entry.id) ||
+    UNSUPPORTED_MODEL_NAME_PATTERN.test(entry.id) ||
     tags.some((tag) => UNSUPPORTED_MODEL_NAME_PATTERN.test(tag));
 
   if (
     hasUnsupportedName ||
     (pipelineTag && !SUPPORTED_PIPELINE_TAGS.has(pipelineTag)) ||
-    tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag))
+    tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag)) ||
+    !hasUsableOnnxArtifacts(entry)
   ) {
     return false;
   }
@@ -423,6 +451,16 @@ export function assessModelCompatibility(model: DiscoveredModel, context: Compat
 
   if (model.isVisionModel) {
     score -= 10;
+  }
+
+  const isLargeQwen2TextModel =
+    context.device === "webgpu" &&
+    !model.isVisionModel &&
+    (size ?? 0) > 1 &&
+    /(?:^|\/)Qwen2(?:\.5)?-/i.test(model.id);
+
+  if (isLargeQwen2TextModel) {
+    score -= context.deviceMemoryGb !== null && context.deviceMemoryGb <= 8 ? 28 : 12;
   }
 
   if (context.device === "wasm" && size !== null) {

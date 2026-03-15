@@ -12,6 +12,7 @@ import {
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
+import { pickDtypeForModel } from "@/lib/modelDtype";
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
@@ -132,13 +133,6 @@ async function dispose() {
   currentSupportsImages = false;
 }
 
-function pickDtype(modelId: string, device: "webgpu" | "wasm"): string {
-  if (device !== "webgpu") return "q4";
-  const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
-  if (match && Number.parseFloat(match[1]) >= 1.0) return "q4f16";
-  return "fp16";
-}
-
 function supportsModelType(autoModelClass: { supports?: (modelType: string) => boolean }, modelType: string) {
   return autoModelClass.supports?.(modelType) ?? false;
 }
@@ -215,7 +209,7 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
             vision_encoder: "fp16",
             decoder_model_merged: "q4",
           }
-        : pickDtype(modelId, device);
+        : pickDtypeForModel(modelId, device);
       currentPrecision = typeof dtype === "string" ? dtype : "q4";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
@@ -229,7 +223,7 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
 
       post({ status: "loading", message: "Loading model..." });
 
-      const dtype = pickDtype(modelId, device);
+      const dtype = pickDtypeForModel(modelId, device);
       currentPrecision = dtype;
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {
@@ -372,6 +366,8 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
             if (result.thinkingComplete) {
               post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
             }
+          } else {
+            post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
           }
         } else if (result.type === "content" && result.content) {
           post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
@@ -397,6 +393,8 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         if (thinkingEnabled) {
           post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: true });
           post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+        } else {
+          post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: false });
         }
       } else {
         post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: false });

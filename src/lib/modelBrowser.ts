@@ -191,7 +191,7 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
   }
 
   return (
-    isVisionModel(entry.id, tags, pipelineTag) ||
+    isVisionModel(entry.id, tags, pipelineTag, modelType) ||
     tags.some((tag) => SUPPORTED_TEXT_TAGS.has(tag))
   );
 }

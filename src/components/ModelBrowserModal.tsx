@@ -431,10 +431,8 @@ export function ModelBrowserModal({
             const compatibility = assessModelCompatibility(model, compatibilityContext);
             const updatedLabel = formatDateLabel(model.lastModified);
             const quantizationLabel = getModelQuantizationLabel(model.id, model.isVisionModel);
-            const metaLine = [
-              model.parameterCountB !== null ? `${model.parameterCountB}B` : null,
-              formatDownloadSizeLabel(model.estimatedDownloadGb),
-            ].filter((part): part is string => Boolean(part)).join(" · ");
+            const parameterCountLabel = model.parameterCountB !== null ? `${model.parameterCountB}B` : null;
+            const downloadSizeLabel = formatDownloadSizeLabel(model.estimatedDownloadGb);
             const active = model.id === currentModelId;
 
             return (
@@ -458,6 +456,16 @@ export function ModelBrowserModal({
                         <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
                           {quantizationLabel}
                         </span>
+                        {parameterCountLabel && (
+                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                            {parameterCountLabel}
+                          </span>
+                        )}
+                        {downloadSizeLabel && (
+                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                            {downloadSizeLabel}
+                          </span>
+                        )}
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
                           {compatibility.label}
                         </span>
@@ -474,7 +482,7 @@ export function ModelBrowserModal({
                       <p className="truncate text-[11px] text-[#6f6f6f]">{model.id}</p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5 self-start">
+                    <div className="flex shrink-0 items-center gap-1.5 self-center">
                       <button
                         onClick={() => onSelectModel({
                           id: model.id,
@@ -492,11 +500,6 @@ export function ModelBrowserModal({
                   </div>
 
                   <div className="min-w-0 space-y-1.5">
-                    {metaLine && (
-                      <p className="text-[10px] text-[#8e8e8e]">{metaLine}</p>
-                    )}
-                    <p className="text-[11px] leading-4 text-[#b4b4b4]">{compatibility.summary}</p>
-
                     <div className="flex flex-wrap gap-1 text-[10px] text-[#8e8e8e]">
                       <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                         {model.isVisionModel ? "Vision" : "Text"}

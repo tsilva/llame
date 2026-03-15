@@ -15,6 +15,7 @@ import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
+import { getOnnxWasmAssetBaseUrl } from "@/lib/workerBootstrap";
 
 env.allowLocalModels = false;
 env.logLevel = 40;
@@ -33,19 +34,21 @@ type OnnxBackendEnvironment = {
 
 function configureOnnxWasmPaths() {
   const onnxBackend = env.backends.onnx as OnnxBackendEnvironment | undefined;
-  const workerLocation = typeof self.location?.href === "string" ? self.location.href : null;
-  if (!onnxBackend?.wasm || !workerLocation) {
+  if (!onnxBackend?.wasm) {
     return;
   }
 
-  const assetBaseUrl = new URL("/onnxruntime/", workerLocation);
+  const assetBaseUrl = getOnnxWasmAssetBaseUrl(self.location);
+  if (!assetBaseUrl) {
+    return;
+  }
 
   // The worker bundle itself is loaded via a blob URL in production, which makes
   // ORT/Transformers.js fall back to a blob-based module preload path. Forcing a
   // same-origin prefix and single-threaded init avoids that bootstrap path.
   env.useWasmCache = false;
   onnxBackend.wasm.numThreads = 1;
-  onnxBackend.wasm.wasmPaths = assetBaseUrl.toString();
+  onnxBackend.wasm.wasmPaths = assetBaseUrl;
 }
 
 configureOnnxWasmPaths();

@@ -45,6 +45,22 @@ function createAssistantMessage(): ChatMessageType {
   };
 }
 
+function getConversationTitle(content: string, images?: string[]) {
+  const trimmed = content.trim();
+
+  if (trimmed.length > 0) {
+    let title = trimmed.slice(0, 50);
+    if (trimmed.length > 50) title += "...";
+    return title;
+  }
+
+  if ((images?.length ?? 0) > 0) {
+    return images.length === 1 ? "Image analysis" : `Image analysis (${images.length})`;
+  }
+
+  return "New chat";
+}
+
 function buildModelSelectionFromConversation(conversation: Conversation | null): ModelSelection {
   if (!conversation) {
     return getModelSelection(DEFAULT_MODEL);
@@ -370,8 +386,7 @@ export default function Home() {
     const updatedMessages = [...conversation.messages, userMessage];
     let title = conversation.title;
     if (title === "New chat") {
-      title = content.slice(0, 50) || "New chat";
-      if (content.length > 50) title += "...";
+      title = getConversationTitle(content, images);
     }
 
     const updatedConversation: Conversation = {
@@ -594,7 +609,7 @@ export default function Home() {
 
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2">
-          {(!sidebarOpen || isMobile) && (
+          {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}
               disabled={isGenerating}

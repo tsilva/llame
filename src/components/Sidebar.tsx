@@ -168,8 +168,10 @@ export function Sidebar({
         )}
         {/* Drawer */}
         <div
+          aria-hidden={!isOpen}
+          inert={!isOpen || undefined}
           className={`fixed inset-y-0 left-0 z-50 bg-[#171717] transition-transform duration-300 ${
-            isOpen ? "translate-x-0" : "-translate-x-full"
+            isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
           }`}
         >
           {sidebarContent}

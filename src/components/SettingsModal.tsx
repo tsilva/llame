@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { GenerationParams, StorageStats } from "@/types";
 import { DEFAULT_PARAMS, PARAM_RANGES, SLIDER_CONFIGS } from "@/lib/constants";
 import { X, Cpu, RotateCcw, HardDrive } from "lucide-react";
@@ -88,6 +89,19 @@ export function SettingsModal({
   storageStats,
   isGenerating,
 }: SettingsModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const update = (key: keyof GenerationParams, value: number | boolean) => {

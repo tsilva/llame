@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2, Search, X } from "lucide-react";
-import { formatDownloadSizeLabel, getModelCardMeta } from "@/lib/constants";
+import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
 import { ModelSelection } from "@/types";
 import {
   assessModelCompatibility,
@@ -430,11 +430,11 @@ export function ModelBrowserModal({
           {!initialLoading && displayedResults.map((model) => {
             const compatibility = assessModelCompatibility(model, compatibilityContext);
             const updatedLabel = formatDateLabel(model.lastModified);
-            const metaLine = getModelCardMeta(model.id, {
-              parameterCountLabel: model.parameterCountB !== null ? `${model.parameterCountB}B` : null,
-              downloadSizeLabel: formatDownloadSizeLabel(model.estimatedDownloadGb),
-              isVisionModel: model.isVisionModel,
-            }).join(" · ");
+            const quantizationLabel = getModelQuantizationLabel(model.id, model.isVisionModel);
+            const metaLine = [
+              model.parameterCountB !== null ? `${model.parameterCountB}B` : null,
+              formatDownloadSizeLabel(model.estimatedDownloadGb),
+            ].filter((part): part is string => Boolean(part)).join(" · ");
             const active = model.id === currentModelId;
 
             return (
@@ -446,7 +446,18 @@ export function ModelBrowserModal({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <h3 className="text-sm font-medium text-[#ececec]">{model.name}</h3>
+                        <a
+                          href={`https://huggingface.co/${model.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-w-0 items-center gap-1 text-sm font-medium text-[#ececec] transition-colors hover:text-white"
+                        >
+                          <span className="truncate">{model.name}</span>
+                          <ExternalLink size={12} className="shrink-0" />
+                        </a>
+                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                          {quantizationLabel}
+                        </span>
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
                           {compatibility.label}
                         </span>
@@ -464,15 +475,6 @@ export function ModelBrowserModal({
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5 self-start">
-                      <a
-                        href={`https://huggingface.co/${model.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
-                      >
-                        <span>View</span>
-                        <ExternalLink size={13} />
-                      </a>
                       <button
                         onClick={() => onSelectModel({
                           id: model.id,

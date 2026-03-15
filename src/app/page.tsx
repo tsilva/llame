@@ -47,6 +47,7 @@ function createAssistantMessage(): ChatMessageType {
 
 function getConversationTitle(content: string, images?: string[]) {
   const trimmed = content.trim();
+  const imageCount = images?.length ?? 0;
 
   if (trimmed.length > 0) {
     let title = trimmed.slice(0, 50);
@@ -54,8 +55,8 @@ function getConversationTitle(content: string, images?: string[]) {
     return title;
   }
 
-  if ((images?.length ?? 0) > 0) {
-    return images.length === 1 ? "Image analysis" : `Image analysis (${images.length})`;
+  if (imageCount > 0) {
+    return imageCount === 1 ? "Image analysis" : `Image analysis (${imageCount})`;
   }
 
   return "New chat";

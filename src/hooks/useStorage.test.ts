@@ -98,4 +98,32 @@ describe("useStorage", () => {
     await waitFor(() => expect(result.current.activeConversationId).not.toBe(deletedId));
     await expect(loadConversation(deletedId)).resolves.toBeNull();
   });
+
+  it("preserves the current model when clearing all chats", async () => {
+    const { result } = renderHook(() => useStorage());
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => {
+      result.current.createConversation({
+        id: "onnx-community/Qwen2.5-0.5B-Instruct",
+        revision: "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0",
+        supportsImages: false,
+        recommendedDevice: "wasm",
+        supportTier: "curated",
+      });
+    });
+
+    await waitFor(() => expect(result.current.activeConversation?.modelId).toBe("onnx-community/Qwen2.5-0.5B-Instruct"));
+
+    await act(async () => {
+      await result.current.clearAllChats();
+    });
+
+    expect(result.current.index).toHaveLength(1);
+    expect(result.current.activeConversation?.title).toBe("New chat");
+    expect(result.current.activeConversation?.modelId).toBe("onnx-community/Qwen2.5-0.5B-Instruct");
+    expect(result.current.activeConversation?.recommendedDevice).toBe("wasm");
+    expect(result.current.activeConversation?.supportTier).toBe("curated");
+  });
 });

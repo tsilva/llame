@@ -280,7 +280,7 @@ export function useStorage() {
     try {
       await flushPendingSave();
       await storage.clearAllConversations();
-      const newConversation = createConversationRecord(getModelSelection(DEFAULT_MODEL));
+      const newConversation = createConversationRecord(getConversationSelection(activeConversation));
       await storage.saveConversation(newConversation);
       const nextIndex = [storage.buildMeta(newConversation)];
       setIndex(nextIndex);
@@ -294,7 +294,7 @@ export function useStorage() {
       reportStorageError(error as StorageErrorState);
       return activeConversationIdRef.current ?? "";
     }
-  }, [flushPendingSave, refreshStats, reportStorageError]);
+  }, [activeConversation, flushPendingSave, refreshStats, reportStorageError]);
 
   const dismissStorageError = useCallback(() => {
     setStorageError(null);

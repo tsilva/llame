@@ -19,16 +19,15 @@ export function ModelLoadingCard({
 }: ModelLoadingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const entries = Array.from(progress.values());
-  // Use pre-computed progress values from worker (normalize to 0-100 if needed)
   const normalizedProgress = entries.map(p => ({
     ...p,
-    progress: p.progress <= 1 ? p.progress * 100 : p.progress
+    progress: p.total > 0
+      ? (p.loaded / p.total) * 100
+      : (p.progress <= 1 ? p.progress * 100 : p.progress),
   }));
   const loadedBytes = totalProgress?.loaded ?? entries.reduce((sum, p) => sum + p.loaded, 0);
   const totalBytes = totalProgress?.total ?? entries.reduce((sum, p) => sum + p.total, 0);
-  const overallPercent = totalProgress
-    ? (totalProgress.progress <= 1 ? totalProgress.progress * 100 : totalProgress.progress)
-    : totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
+  const overallPercent = totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
 
   const displayModelName = modelName.split("/").pop() || modelName;
 

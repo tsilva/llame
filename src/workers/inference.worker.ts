@@ -12,6 +12,7 @@ import {
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
+import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { pickDtypeForModel } from "@/lib/modelDtype";
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { withRetry } from "@/lib/network";
@@ -178,6 +179,15 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
           total: progress.total,
         },
       });
+    } else if (progress.status === "progress_total") {
+      post({
+        status: "progress_total",
+        progress: {
+          progress: progress.progress,
+          loaded: progress.loaded,
+          total: progress.total,
+        },
+      });
     }
   };
 
@@ -318,11 +328,16 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
             add_generation_prompt: true,
             ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
           })
-        : tokenizer.apply_chat_template(chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0], {
-            tokenize: false,
-            add_generation_prompt: true,
-            ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
-          })
+        : hasTokenizerChatTemplate(tokenizer as unknown as { chat_template?: string | null })
+          ? tokenizer.apply_chat_template(
+            chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0],
+            {
+              tokenize: false,
+              add_generation_prompt: true,
+              ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
+            },
+          )
+          : buildFallbackTextPrompt(messages)
     ) as string;
     post({ status: "prompt", inputText });
 

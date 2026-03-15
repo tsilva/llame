@@ -7,6 +7,7 @@ import {
   ChatMessage,
   GenerationParams,
   ProgressInfo,
+  TotalProgressInfo,
   ModelSelection,
   WorkerErrorCode,
   WorkerErrorStage,
@@ -47,6 +48,7 @@ interface InferenceState {
   loadingMessage: string;
   processingMessage: string;
   progress: Map<string, ProgressInfo>;
+  totalProgress: TotalProgressInfo | null;
   error: WorkerErrorState | null;
   loadedModel: string | null;
   loadedRevision: string | null;
@@ -77,6 +79,7 @@ const INITIAL_STATE: InferenceState = {
   loadingMessage: "",
   processingMessage: "",
   progress: new Map(),
+  totalProgress: null,
   error: null,
   loadedModel: null,
   loadedRevision: null,
@@ -117,7 +120,6 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           ...current,
           status: "loading",
           loadingMessage: response.message,
-          progress: new Map(),
           error: null,
         }));
       } else if (response.status === "progress") {
@@ -126,6 +128,8 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           progress.set(response.progress.file, response.progress);
           return { ...current, progress };
         });
+      } else if (response.status === "progress_total") {
+        setState((current) => ({ ...current, totalProgress: response.progress }));
       } else if (response.status === "loaded") {
         setState((current) => ({
           ...current,
@@ -136,6 +140,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           loadedPrecision: response.precision,
           loadedSupportsImages: response.supportsImages,
           progress: new Map(),
+          totalProgress: null,
           error: null,
         }));
       } else if (response.status === "processing") {
@@ -249,12 +254,23 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
 
     if (needsFreshWorker) {
       const worker = replaceWorker();
-      setState((currentState) => ({ ...currentState, progress: new Map(), error: null, status: "loading" }));
+      setState((currentState) => ({
+        ...currentState,
+        progress: new Map(),
+        totalProgress: null,
+        error: null,
+        status: "loading",
+      }));
       worker.postMessage(message);
       return;
     }
 
-    setState((currentState) => ({ ...currentState, progress: new Map(), error: null }));
+    setState((currentState) => ({
+      ...currentState,
+      progress: new Map(),
+      totalProgress: null,
+      error: null,
+    }));
     postMessage(message);
   }, [postMessage, replaceWorker]);
 

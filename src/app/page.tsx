@@ -741,6 +741,7 @@ export default function Home() {
           modelId={activeModel.id}
           isLoading={isLoading}
           loadingProgress={worker.progress}
+          loadingTotalProgress={worker.totalProgress}
           loadingMessage={worker.loadingMessage}
           onSend={handleSend}
           onStop={handleStop}

@@ -9,7 +9,7 @@ import {
   DragEvent,
   ChangeEvent,
 } from "react";
-import { ChatMessage as ChatMessageType, ProgressInfo } from "@/types";
+import { ChatMessage as ChatMessageType, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
 import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
@@ -26,6 +26,7 @@ interface ChatInterfaceProps {
   modelId: string;
   isLoading: boolean;
   loadingProgress: Map<string, ProgressInfo>;
+  loadingTotalProgress: TotalProgressInfo | null;
   loadingMessage: string;
   onSend: (content: string, images?: string[]) => void | Promise<void>;
   onStop: () => void;
@@ -51,6 +52,7 @@ import bookPageImage from "../../assets/book_page.png";
 
 interface Suggestion {
   text: string;
+  prompt?: string;
   image?: string;
 }
 
@@ -58,7 +60,11 @@ const STATIC_SUGGESTIONS: Suggestion[] = [
   { text: "Explain quantum computing in simple terms" },
   { text: "Code bubble sort in Python" },
   { text: "What is the meaning of life?" },
-  { text: "Transcribe image to plain text", image: bookPageImage.src },
+  {
+    text: "Transcribe image to plain text",
+    prompt: "Extract all visible text from this image as plain text only. Preserve line breaks and paragraphs when possible. Do not add commentary, HTML, markdown, or code fences.",
+    image: bookPageImage.src,
+  },
 ];
 
 export function ChatInterface({
@@ -71,6 +77,7 @@ export function ChatInterface({
   modelId,
   isLoading,
   loadingProgress,
+  loadingTotalProgress,
   loadingMessage,
   onSend,
   onStop,
@@ -138,8 +145,8 @@ export function ChatInterface({
         const response = await fetch(bookPageImage.src);
         const blob = await response.blob();
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
+        reader.onloadend = async () => {
+          const dataUrl = await compressImage(reader.result as string);
           setImageSuggestions((prev) =>
             prev.map((s) =>
               s.text === "Transcribe image to plain text" ? { ...s, image: dataUrl } : s
@@ -286,14 +293,14 @@ export function ChatInterface({
             )}
             <div className="grid max-w-[500px] grid-cols-1 sm:grid-cols-2 gap-2">
               {suggestions.map((s: Suggestion) => (
-            <button
-              key={s.text}
-              onClick={() => onSend(s.text, s.image ? [s.image] : undefined)}
-              disabled={isGenerating}
-              className="rounded-xl border border-white/[0.08] px-4 py-3 text-left text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {s.text}
-            </button>
+                <button
+                  key={s.text}
+                  onClick={() => onSend(s.prompt ?? s.text, s.image ? [s.image] : undefined)}
+                  disabled={isGenerating}
+                  className="rounded-xl border border-white/[0.08] px-4 py-3 text-left text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {s.text}
+                </button>
               ))}
             </div>
           </div>
@@ -323,6 +330,7 @@ export function ChatInterface({
             {isLoading && (
               <ModelLoadingCard
                 progress={loadingProgress}
+                totalProgress={loadingTotalProgress}
                 message={loadingMessage}
                 modelName={modelName}
               />

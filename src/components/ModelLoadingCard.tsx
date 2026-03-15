@@ -1,17 +1,19 @@
 "use client";
 
-import { ProgressInfo } from "@/types";
+import { ProgressInfo, TotalProgressInfo } from "@/types";
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 interface ModelLoadingCardProps {
   progress: Map<string, ProgressInfo>;
+  totalProgress: TotalProgressInfo | null;
   message: string;
   modelName: string;
 }
 
 export function ModelLoadingCard({
   progress,
+  totalProgress,
   message,
   modelName,
 }: ModelLoadingCardProps) {
@@ -22,9 +24,11 @@ export function ModelLoadingCard({
     ...p,
     progress: p.progress <= 1 ? p.progress * 100 : p.progress
   }));
-  const loadedBytes = entries.reduce((sum, p) => sum + p.loaded, 0);
-  const totalBytes = entries.reduce((sum, p) => sum + p.total, 0);
-  const overallPercent = totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
+  const loadedBytes = totalProgress?.loaded ?? entries.reduce((sum, p) => sum + p.loaded, 0);
+  const totalBytes = totalProgress?.total ?? entries.reduce((sum, p) => sum + p.total, 0);
+  const overallPercent = totalProgress
+    ? (totalProgress.progress <= 1 ? totalProgress.progress * 100 : totalProgress.progress)
+    : totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
 
   const displayModelName = modelName.split("/").pop() || modelName;
 

@@ -72,6 +72,12 @@ export interface ProgressInfo {
   total: number;
 }
 
+export interface TotalProgressInfo {
+  progress: number;
+  loaded: number;
+  total: number;
+}
+
 export interface AdapterInfo {
   vendor: string;
   architecture: string;
@@ -107,6 +113,7 @@ export type WorkerResponse =
   | { status: "ready" }
   | { status: "loading"; message: string }
   | { status: "progress"; progress: ProgressInfo }
+  | { status: "progress_total"; progress: TotalProgressInfo }
   | { status: "loaded"; modelId: string; revision?: string | null; device: string; precision: string; supportsImages: boolean }
   | { status: "processing"; message: string }
   | { status: "generating" }

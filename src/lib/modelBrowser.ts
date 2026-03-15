@@ -58,6 +58,7 @@ const UNSUPPORTED_TASK_TAGS = new Set([
   "sentence-similarity",
   "text-embeddings-inference",
 ]);
+const UNSUPPORTED_MODEL_NAME_PATTERN = /(?:^|[-_/])(embedding|embeddings|rerank|reranker)(?:$|[-_/])/i;
 const SUPPORTED_TEXT_MODEL_TYPES = new Set([
   "afmoe",
   "apertus",
@@ -186,8 +187,14 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
+  const hasUnsupportedName = UNSUPPORTED_MODEL_NAME_PATTERN.test(entry.id) ||
+    tags.some((tag) => UNSUPPORTED_MODEL_NAME_PATTERN.test(tag));
 
-  if ((pipelineTag && !SUPPORTED_PIPELINE_TAGS.has(pipelineTag)) || tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag))) {
+  if (
+    hasUnsupportedName ||
+    (pipelineTag && !SUPPORTED_PIPELINE_TAGS.has(pipelineTag)) ||
+    tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag))
+  ) {
     return false;
   }
 

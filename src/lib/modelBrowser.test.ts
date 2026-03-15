@@ -56,6 +56,12 @@ describe("model browser search", () => {
               config: { model_type: "qwen3" },
             },
             {
+              id: "onnx-community/ONNX_Qwen3-Embedding-0.6B",
+              sha: "embed-name-rev",
+              tags: ["onnx", "qwen3", "region:us"],
+              config: { model_type: "qwen3" },
+            },
+            {
               id: "onnx-community/Qwen2.5-0.5B-Instruct",
               sha: "chat-rev",
               tags: ["onnx", "qwen2", "text-generation"],

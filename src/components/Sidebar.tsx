@@ -128,7 +128,7 @@ export function Sidebar({
                         onDeleteConversation(conv.id);
                       }}
                       disabled={isGenerating}
-                      className="opacity-0 group-hover:opacity-100 rounded p-1 text-[#8e8e8e] hover:text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded p-1 text-[#8e8e8e] transition-all hover:text-red-400 focus-visible:opacity-100 focus-visible:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                       title="Delete conversation"
                       aria-label={`Delete conversation ${conv.title}`}
                     >

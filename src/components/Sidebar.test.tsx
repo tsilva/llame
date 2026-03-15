@@ -57,4 +57,20 @@ describe("Sidebar", () => {
 
     expect(screen.getByLabelText("Delete conversation Hello world")).toBeInTheDocument();
   });
+
+  it("keeps the delete button visible on touch layouts while preserving desktop hover behavior", () => {
+    renderSidebar([
+      buildConversation({
+        id: "conv-3",
+        title: "Touch chat",
+        messageCount: 2,
+      }),
+    ]);
+
+    expect(screen.getByLabelText("Delete conversation Touch chat")).toHaveClass(
+      "opacity-100",
+      "md:opacity-0",
+      "md:group-hover:opacity-100",
+    );
+  });
 });

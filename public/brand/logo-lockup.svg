@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" fill="none">
+  <rect width="1200" height="360" rx="36" fill="#FFFFFF"/>
+
+  <defs>
+    <linearGradient id="logo-bg" x1="72" y1="56" x2="296" y2="304" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07110F"/>
+      <stop offset="0.6" stop-color="#0B1715"/>
+      <stop offset="1" stop-color="#14342C"/>
+    </linearGradient>
+    <radialGradient id="logo-glow" cx="0" cy="0" r="1" gradientTransform="translate(246 102) rotate(127) scale(134 118)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1FE2A8" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#1FE2A8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="72" y="56" width="224" height="224" rx="56" fill="url(#logo-bg)"/>
+  <rect x="84" y="68" width="200" height="200" rx="44" stroke="#E8EFEC" stroke-opacity="0.1" stroke-width="4"/>
+  <circle cx="246" cy="102" r="74" fill="url(#logo-glow)"/>
+
+  <rect x="112" y="126" width="28" height="100" rx="14" fill="#F7F7F2"/>
+  <rect x="156" y="120" width="28" height="106" rx="14" fill="#F7F7F2"/>
+  <path d="M206 226V162C206 153 210 145 217 139L231 128C241 120 246 110 246 99V94" stroke="#F7F7F2" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M127 175C145 186 165 189 185 186" stroke="#1FE2A8" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="243" cy="124" r="10" fill="#1FE2A8"/>
+  <circle cx="243" cy="124" r="4" fill="#07110F"/>
+
+  <text x="344" y="144" fill="#86A59A" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="6">PRIVATE BROWSER AI</text>
+  <text x="344" y="210" fill="#081210" font-family="Helvetica, Arial, sans-serif" font-size="88" font-weight="700">llame</text>
+  <text x="344" y="254" fill="#4A5E57" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="500">Local LLM chat with WebGPU and on-device prompts.</text>
+</svg>

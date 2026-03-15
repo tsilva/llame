@@ -1,19 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Llama silhouette (side profile, facing right) -->
-  <path fill="#000" d="
-    M18 4 L16 14 L20 10 L22 4 L26 14
-    L26 18
-    L30 24
-    L46 26
-    Q54 28 52 36
-    L50 58 L46 58 L46 40
-    L42 40 L42 58 L38 58 L38 40
-    L26 42
-    L26 58 L22 58 L22 40
-    L18 40 L18 58 L14 58 L14 38
-    L12 28
-    L14 18
-    L12 14
-    Z
-  "/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="icon-bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07110F"/>
+      <stop offset="0.55" stop-color="#0C1A17"/>
+      <stop offset="1" stop-color="#15352D"/>
+    </linearGradient>
+    <radialGradient id="icon-glow" cx="0" cy="0" r="1" gradientTransform="translate(372 128) rotate(127) scale(210 196)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1FE2A8" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#1FE2A8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark-fill" x1="112" y1="118" x2="382" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F7F2"/>
+      <stop offset="1" stop-color="#DDF7EE"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="128" fill="url(#icon-bg)"/>
+  <rect x="24" y="24" width="464" height="464" rx="104" stroke="#E9F1EE" stroke-opacity="0.1" stroke-width="8"/>
+  <circle cx="372" cy="128" r="120" fill="url(#icon-glow)"/>
+
+  <rect x="116" y="136" width="56" height="224" rx="28" fill="url(#mark-fill)"/>
+  <rect x="204" y="124" width="56" height="236" rx="28" fill="url(#mark-fill)"/>
+  <path
+    d="M308 360V216C308 199 315 183 328 172L354 150C373 135 384 112 384 88V76"
+    stroke="url(#mark-fill)"
+    stroke-width="56"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M148 248C182 270 224 278 266 272"
+    stroke="#1FE2A8"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <circle cx="386" cy="144" r="20" fill="#1FE2A8"/>
+  <circle cx="386" cy="144" r="8" fill="#07110F"/>
 </svg>

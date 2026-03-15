@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07110F"/>
+      <stop offset="0.48" stop-color="#0A1614"/>
+      <stop offset="1" stop-color="#14362E"/>
+    </linearGradient>
+    <radialGradient id="glow-top" cx="0" cy="0" r="1" gradientTransform="translate(1024 88) rotate(133) scale(386 282)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1FE2A8" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#1FE2A8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-bottom" cx="0" cy="0" r="1" gradientTransform="translate(162 566) rotate(-20) scale(360 192)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E8A6B" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#0E8A6B" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="preview-clip">
+      <rect x="748" y="74" width="384" height="482" rx="34"/>
+    </clipPath>
+    <linearGradient id="surface-stroke" x1="748" y1="74" x2="1112" y2="556" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E7F0ED" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#E7F0ED" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" rx="44" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="44" fill="url(#glow-top)"/>
+  <rect width="1200" height="630" rx="44" fill="url(#glow-bottom)"/>
+
+  <g opacity="0.09">
+    <path d="M0 126H1200M0 220H1200M0 314H1200M0 408H1200M0 502H1200" stroke="#D9F6EC" stroke-width="1"/>
+    <path d="M150 0V630M300 0V630M450 0V630M600 0V630M750 0V630M900 0V630M1050 0V630" stroke="#D9F6EC" stroke-width="1"/>
+  </g>
+
+  <g>
+    <rect x="74" y="74" width="136" height="136" rx="36" fill="#0B1714" stroke="#E7F0ED" stroke-opacity="0.12" stroke-width="4"/>
+    <circle cx="168" cy="120" r="68" fill="#1FE2A8" fill-opacity="0.18"/>
+    <rect x="106" y="120" width="30" height="108" rx="15" fill="#F7F7F2"/>
+    <rect x="154" y="112" width="30" height="116" rx="15" fill="#F7F7F2"/>
+    <path d="M210 228V158C210 148 214 139 222 132L236 121C246 113 252 101 252 88V82" stroke="#F7F7F2" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M124 174C143 186 166 191 189 187" stroke="#1FE2A8" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="246" cy="126" r="11" fill="#1FE2A8"/>
+    <circle cx="246" cy="126" r="4" fill="#07110F"/>
+  </g>
+
+  <text x="238" y="118" fill="#B8C9C2" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="6">PRIVATE BROWSER AI</text>
+  <text x="238" y="160" fill="#F7F7F2" font-family="Helvetica, Arial, sans-serif" font-size="50" font-weight="700">llame</text>
+
+  <text x="74" y="292" fill="#F7F7F2" font-family="Helvetica, Arial, sans-serif" font-size="72" font-weight="700">
+    <tspan x="74" dy="0">Private AI chat</tspan>
+    <tspan x="74" dy="82">that runs locally.</tspan>
+  </text>
+
+  <text x="74" y="430" fill="#C5D3CE" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="500">
+    <tspan x="74" dy="0">Qwen, Llama, and ONNX models in your browser,</tspan>
+    <tspan x="74" dy="40">with WebGPU acceleration and a WASM fallback.</tspan>
+  </text>
+
+  <g>
+    <rect x="74" y="528" width="186" height="46" rx="23" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+    <text x="167" y="557" text-anchor="middle" fill="#EEF4F1" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="700">WebGPU + WASM</text>
+    <rect x="276" y="528" width="166" height="46" rx="23" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+    <text x="359" y="557" text-anchor="middle" fill="#EEF4F1" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="700">ONNX models</text>
+    <rect x="458" y="528" width="198" height="46" rx="23" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+    <text x="557" y="557" text-anchor="middle" fill="#EEF4F1" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="700">On-device prompts</text>
+  </g>
+
+  <g>
+    <rect x="748" y="74" width="384" height="482" rx="34" fill="#081210" stroke="url(#surface-stroke)" stroke-width="2"/>
+    <image href="social-atmosphere.png" x="748" y="74" width="384" height="482" preserveAspectRatio="xMidYMid slice" opacity="0.38" clip-path="url(#preview-clip)"/>
+    <rect x="748" y="74" width="384" height="482" rx="34" fill="#081210" fill-opacity="0.46"/>
+    <rect x="748" y="74" width="384" height="68" rx="34" fill="#FFFFFF" fill-opacity="0.04"/>
+    <circle cx="790" cy="108" r="8" fill="#F57C73"/>
+    <circle cx="818" cy="108" r="8" fill="#F1C15C"/>
+    <circle cx="846" cy="108" r="8" fill="#4ED58A"/>
+    <rect x="884" y="92" width="196" height="30" rx="15" fill="#FFFFFF" fill-opacity="0.08"/>
+    <text x="982" y="112" text-anchor="middle" fill="#D9E3DF" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600">browser workspace</text>
+
+    <rect x="782" y="180" width="140" height="108" rx="26" fill="#0E1E1A" fill-opacity="0.88" stroke="#1FE2A8" stroke-opacity="0.3" stroke-width="2"/>
+    <text x="810" y="216" fill="#9CB5AE" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">RUNTIME</text>
+    <text x="810" y="264" fill="#F7F7F2" font-family="Helvetica, Arial, sans-serif" font-size="32" font-weight="700">WebGPU</text>
+    <text x="810" y="290" fill="#B8C8C2" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="500">fp16 fast path</text>
+
+    <rect x="954" y="180" width="144" height="108" rx="26" fill="#111B19" fill-opacity="0.84" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+    <text x="982" y="216" fill="#9CB5AE" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">MODELS</text>
+    <text x="982" y="258" fill="#F7F7F2" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700">Qwen</text>
+    <text x="982" y="288" fill="#B8C8C2" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="500">Llama + ONNX</text>
+
+    <rect x="782" y="334" width="316" height="96" rx="28" fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+    <text x="810" y="370" fill="#9CB5AE" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">PRIVACY</text>
+    <text x="810" y="410" fill="#F7F7F2" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700">Prompts stay on-device</text>
+
+    <rect x="782" y="454" width="316" height="58" rx="29" fill="#1FE2A8" fill-opacity="0.14" stroke="#1FE2A8" stroke-opacity="0.42" stroke-width="2"/>
+    <text x="940" y="490" text-anchor="middle" fill="#EAF8F3" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700">No cloud required</text>
+  </g>
+</svg>

@@ -4,11 +4,17 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { ClientTelemetry } from "@/components/ClientTelemetry";
+import {
+  siteDescription,
+  siteKeywords,
+  socialImage,
+  siteName,
+  siteTagline,
+  siteTitle,
+  siteUrl,
+  webApplicationJsonLd,
+} from "@/lib/siteMetadata";
 import "./globals.css";
-
-const SITE_URL = "https://llame.tsilva.eu";
-const SITE_TITLE = "llame | Run AI Models in Your Browser";
-const SITE_DESCRIPTION = "Run large language models (LLMs) directly in your browser with WebGPU acceleration. No server required - fully client-side AI inference. Supports multiple models including Qwen, Llama, and more. Free and private.";
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const SHOULD_RENDER_VERCEL_INSIGHTS =
   process.env.NODE_ENV === "production" &&
@@ -27,52 +33,66 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#081412",
+  colorScheme: "dark",
 };
 
 export const metadata: Metadata = {
-  title: SITE_TITLE,
-  description: SITE_DESCRIPTION,
-  applicationName: "llame",
-  keywords: [
-    "browser AI",
-    "WebGPU",
-    "local LLM",
-    "in-browser AI",
-    "AI inference",
-    "language models",
-    "client-side AI",
-    "ONNX",
-    "transformers.js",
-    "privacy AI",
-    "offline AI",
-    "Qwen",
-    "Llama",
-    "Hugging Face",
-  ],
+  title: {
+    default: siteTitle,
+    template: "%s | llame",
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  keywords: siteKeywords,
   authors: [{ name: "Tiago Silva" }],
   creator: "Tiago Silva",
-  metadataBase: new URL(SITE_URL),
+  publisher: "Tiago Silva",
+  metadataBase: new URL(siteUrl),
+  manifest: "/site.webmanifest",
   alternates: {
     canonical: "/",
     languages: {
       "en-US": "/",
     },
   },
-  referrer: "origin-when-cross-origin",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.ico"],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: siteName,
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  referrer: "strict-origin-when-cross-origin",
   category: "technology",
   openGraph: {
-    title: SITE_TITLE,
-    description: "Run AI models directly in your browser with WebGPU. Fully client-side, private, and free. No server required.",
+    title: "llame | Private Browser AI",
+    description: siteTagline,
     type: "website",
-    url: SITE_URL,
-    siteName: "llame",
+    url: siteUrl,
+    siteName,
     locale: "en_US",
+    images: [socialImage],
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_TITLE,
-    description: "Run AI models in your browser with WebGPU. Client-side, private, and free AI inference.",
+    title: "llame | Private Browser AI",
+    description: siteTagline,
     creator: "@tiagosilva",
+    site: "@tiagosilva",
+    images: [socialImage.url],
   },
   robots: {
     index: true,
@@ -80,35 +100,10 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
     },
-  },
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "llame",
-  url: SITE_URL,
-  description: SITE_DESCRIPTION,
-  applicationCategory: "BrowserApplication",
-  operatingSystem: "Any",
-  browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
-  isAccessibleForFree: true,
-  featureList: [
-    "Run ONNX large language models locally in the browser",
-    "Use WebGPU acceleration with WASM fallback",
-    "Switch between Qwen, Llama, and other compatible models",
-    "Keep prompts and responses on the user's device",
-  ],
-  creator: {
-    "@type": "Person",
-    name: "Tiago Silva",
-    url: "https://www.tsilva.eu",
-  },
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
   },
 };
 
@@ -122,7 +117,7 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationJsonLd) }}
         />
       </head>
       <body

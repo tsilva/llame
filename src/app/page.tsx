@@ -766,10 +766,6 @@ export default function Home() {
         onDeviceChange={handleDeviceChange}
         webgpuAvailable={webgpuSupported ?? false}
         storageStats={storage.storageStats}
-        conversationsCount={storage.index.length}
-        onClearAllChats={() => {
-          void storage.clearAllChats();
-        }}
         isGenerating={isGenerating}
       />
 

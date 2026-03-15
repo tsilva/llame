@@ -2,7 +2,7 @@
 
 import { GenerationParams, StorageStats } from "@/types";
 import { DEFAULT_PARAMS, PARAM_RANGES, SLIDER_CONFIGS } from "@/lib/constants";
-import { X, Trash, Cpu, RotateCcw, HardDrive } from "lucide-react";
+import { X, Cpu, RotateCcw, HardDrive } from "lucide-react";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,8 +13,6 @@ interface SettingsModalProps {
   onDeviceChange: (device: "webgpu" | "wasm") => void;
   webgpuAvailable: boolean;
   storageStats: StorageStats;
-  conversationsCount: number;
-  onClearAllChats: () => void;
   isGenerating: boolean;
 }
 
@@ -88,8 +86,6 @@ export function SettingsModal({
   onDeviceChange,
   webgpuAvailable,
   storageStats,
-  conversationsCount,
-  onClearAllChats,
   isGenerating,
 }: SettingsModalProps) {
   if (!isOpen) return null;
@@ -257,19 +253,6 @@ export function SettingsModal({
               );
             })()}
 
-            {/* Clear all history button */}
-            {conversationsCount > 0 && (
-              <button
-                onClick={() => {
-                  onClearAllChats();
-                }}
-                disabled={isGenerating}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash size={14} />
-                Clear all history ({conversationsCount})
-              </button>
-            )}
           </div>
 
           {/* Footer */}

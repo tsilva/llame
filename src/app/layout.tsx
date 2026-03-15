@@ -32,6 +32,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
+  applicationName: "llame",
   keywords: [
     "browser AI",
     "WebGPU",
@@ -53,7 +54,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
+    languages: {
+      "en-US": "/",
+    },
   },
+  referrer: "origin-when-cross-origin",
+  category: "technology",
   openGraph: {
     title: SITE_TITLE,
     description: "Run AI models directly in your browser with WebGPU. Fully client-side, private, and free. No server required.",
@@ -80,16 +86,25 @@ export const metadata: Metadata = {
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
+  "@type": "WebApplication",
   name: "llame",
   url: SITE_URL,
   description: SITE_DESCRIPTION,
-  author: {
+  applicationCategory: "BrowserApplication",
+  operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
+  isAccessibleForFree: true,
+  featureList: [
+    "Run ONNX large language models locally in the browser",
+    "Use WebGPU acceleration with WASM fallback",
+    "Switch between Qwen, Llama, and other compatible models",
+    "Keep prompts and responses on the user's device",
+  ],
+  creator: {
     "@type": "Person",
     name: "Tiago Silva",
     url: "https://www.tsilva.eu",
   },
-  applicationCategory: "AIApplication",
   offers: {
     "@type": "Offer",
     price: "0",

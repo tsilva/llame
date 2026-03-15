@@ -608,7 +608,7 @@ export default function Home() {
         isGenerating={isGenerating}
       />
 
-      <div className="relative flex flex-1 flex-col overflow-hidden">
+      <main className="relative flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2">
           {!sidebarOpen && (
             <button
@@ -772,7 +772,7 @@ export default function Home() {
           onToggleThinking={handleToggleThinking}
           showRawConversation={showRawConversation}
         />
-      </div>
+      </main>
 
       <SettingsModal
         isOpen={settingsOpen}

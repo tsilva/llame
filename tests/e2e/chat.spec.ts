@@ -42,9 +42,11 @@ test.beforeEach(async ({ page }) => {
           this.emit({ status: "generating" });
           this.emit({ status: "prompt", inputText: "mock prompt" });
 
-          const reply = message.messages.at(-1)?.content?.includes("slow")
+          const isSlowReply = message.messages.at(-1)?.content?.includes("slow");
+          const reply = isSlowReply
             ? ["Mock", " reply", " streaming"]
             : ["Mock", " reply"];
+          const tokenDelayMs = isSlowReply ? 200 : 40;
 
           reply.forEach((token, index) => {
             const handle = setTimeout(() => {
@@ -60,7 +62,7 @@ test.beforeEach(async ({ page }) => {
               if (index === reply.length - 1) {
                 this.emit({ status: "complete", tps: 12, numTokens: reply.length });
               }
-            }, 40 * (index + 1));
+            }, tokenDelayMs * (index + 1));
             this.timeouts.push(handle);
           });
           return;
@@ -137,4 +139,47 @@ test("switches model presets and handles a stop action", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Stop generation" })).toBeVisible();
   await page.getByRole("button", { name: "Stop generation" }).click();
   await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
+});
+
+test("does not persist an empty assistant draft after stopping and reloading", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explain quantum computing in simple terms" }).click();
+  await expect(page.getByText("Mock reply")).toBeVisible();
+
+  const textarea = page.locator("textarea");
+  await textarea.fill("slow reply");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByRole("button", { name: "Stop generation" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop generation" }).click();
+  await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
+
+  const messagesBeforeReload = await page.evaluate(async () => {
+    const activeId = localStorage.getItem("llame-active-conversation");
+    if (!activeId) return [];
+
+    return await new Promise<Array<{ role: string; content: string }>>((resolve, reject) => {
+      const request = indexedDB.open("llame", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction("conversations", "readonly");
+        const getRequest = transaction.objectStore("conversations").get(activeId);
+        getRequest.onerror = () => reject(getRequest.error);
+        getRequest.onsuccess = () => {
+          const conversation = getRequest.result as { messages?: Array<{ role: string; content: string }> } | undefined;
+          resolve(conversation?.messages ?? []);
+        };
+      };
+    });
+  });
+
+  expect(messagesBeforeReload.map((message) => ({ role: message.role, content: message.content }))).toEqual([
+    { role: "user", content: "Explain quantum computing in simple terms" },
+    { role: "assistant", content: "Mock reply" },
+    { role: "user", content: "slow reply" },
+  ]);
+
+  await page.reload();
+  await expect(page.getByText("slow reply")).toBeVisible();
+  await expect(page.getByText("Mock reply")).toHaveCount(1);
 });

@@ -19,6 +19,7 @@ import {
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
 import { trackProductEvent, captureTelemetryError } from "@/lib/telemetry";
+import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelBrowserModal } from "@/components/ModelBrowserModal";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -357,15 +358,29 @@ export default function Home() {
     }
   }, [activeModel, storage.activeConversation]);
 
+  const interruptActiveGeneration = useCallback(() => {
+    worker.interrupt();
+
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
+
+    const nextConversation = removeEmptyTrailingAssistantMessage(conversation);
+    if (nextConversation !== conversation) {
+      storage.updateConversation(nextConversation);
+    }
+
+    void storage.flushPendingSave();
+  }, [storage, worker]);
+
   const createNewConversation = useCallback(() => {
     if (worker.status === "generating") {
-      worker.interrupt();
+      interruptActiveGeneration();
     }
     setPendingGeneration(null);
     const conversation = storage.createConversation(lastSelectedModel);
     if (isMobile) setSidebarOpen(false);
     return conversation;
-  }, [isMobile, lastSelectedModel, storage, worker]);
+  }, [interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
 
   const deleteConversation = useCallback((id: string) => {
     storage.deleteConversation(id);
@@ -439,11 +454,12 @@ export default function Home() {
   }, [activeModel, createNewConversation, device, params, storage, worker]);
 
   const handleStop = useCallback(() => {
-    worker.interrupt();
+    interruptActiveGeneration();
+    setPendingGeneration(null);
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
-  }, [worker]);
+  }, [interruptActiveGeneration]);
 
   const handleToggleThinking = useCallback(() => {
     if (!canToggleThinking(activeModel.id)) return;
@@ -491,7 +507,7 @@ export default function Home() {
   const handleSwitchConversation = useCallback((id: string) => {
     setPendingGeneration(null);
     if (worker.status === "generating") {
-      worker.interrupt();
+      interruptActiveGeneration();
     }
     storage.setActiveConversation(id);
     const conversationMeta = storage.index.find((conversation) => conversation.id === id);
@@ -504,7 +520,7 @@ export default function Home() {
       }));
     }
     if (isMobile) setSidebarOpen(false);
-  }, [isMobile, storage, worker]);
+  }, [interruptActiveGeneration, isMobile, storage, worker.status]);
 
   const retryLoad = useCallback(() => {
     const targetModel = pendingGeneration?.model ?? activeModel;

@@ -187,6 +187,8 @@ export function ModelBrowserModal({
     hardwareConcurrency: null,
   });
   const requestControllerRef = useRef<AbortController | null>(null);
+  const resultsContainerRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
   const fetchModels = useCallback(async (
     searchQuery: string,
@@ -291,6 +293,28 @@ export function ModelBrowserModal({
     setResults([]);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!nextCursor || initialLoading || loadingMore || error) return;
+
+    const root = resultsContainerRef.current;
+    const target = loadMoreTriggerRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (!entry?.isIntersecting) return;
+      observer.unobserve(target);
+      void fetchModels(debouncedQuery, nextCursor, true, sortBy);
+    }, {
+      root,
+      rootMargin: "0px 0px 240px 0px",
+    });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [debouncedQuery, error, fetchModels, initialLoading, isOpen, loadingMore, nextCursor, sortBy]);
+
   if (!isOpen) return null;
 
   const compatibilityContext: CompatibilityContext = {
@@ -303,10 +327,6 @@ export function ModelBrowserModal({
     .sort((left, right) => compareModels(sortBy, left, right))
     .filter((model) => matchesCompatibilityFilter(model, compatibilityFilter, compatibilityContext));
   const hasActiveFilters = compatibilityFilter !== "all";
-  const handleLoadMore = () => {
-    if (!nextCursor || loadingMore) return;
-    void fetchModels(debouncedQuery, nextCursor, true, sortBy);
-  };
   const clearFilters = () => {
     setCompatibilityFilter("all");
   };
@@ -322,9 +342,6 @@ export function ModelBrowserModal({
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
           <div className="space-y-1">
             <h2 id="model-browser-title" className="text-lg font-medium text-[#ececec]">Browse ONNX Community LLMs and VLMs</h2>
-            <p className="text-sm text-[#8e8e8e]">
-              Search Hugging Face for chat-capable ONNX models. Community results are best-effort and not part of the production-supported preset set.
-            </p>
             <BrowserProfileLine device={device} webgpuSupported={webgpuSupported} profile={profile} />
           </div>
           <button
@@ -379,7 +396,7 @@ export function ModelBrowserModal({
           </div>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-thin">
+        <div ref={resultsContainerRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-thin">
           {initialLoading && (
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-4 text-sm text-[#b4b4b4]" role="status" aria-live="polite">
               <Loader2 size={16} className="animate-spin text-[#10a37f]" />
@@ -423,96 +440,98 @@ export function ModelBrowserModal({
             return (
               <div
                 key={model.id}
-                className="rounded-xl border border-white/[0.08] bg-[#212121] px-3.5 py-3"
+                className="rounded-xl border border-white/[0.08] bg-[#212121] px-3 py-2.5"
               >
-                <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <h3 className="text-sm font-medium text-[#ececec]">{model.name}</h3>
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
-                        {compatibility.label}
-                      </span>
-                      <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
-                        Experimental
-                      </span>
-                      {active && (
-                        <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]">
-                          Current
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="text-sm font-medium text-[#ececec]">{model.name}</h3>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>
+                          {compatibility.label}
                         </span>
-                      )}
+                        <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
+                          Experimental
+                        </span>
+                        {active && (
+                          <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]">
+                            Current
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="truncate text-[11px] text-[#6f6f6f]">{model.id}</p>
                     </div>
 
-                    <p className="truncate text-xs text-[#6f6f6f]">{model.id}</p>
-                    {metaLine && (
-                      <p className="text-[11px] text-[#8e8e8e]">{metaLine}</p>
-                    )}
-                    <p className="text-xs leading-5 text-[#b4b4b4]">{compatibility.summary}</p>
+                    <div className="flex shrink-0 items-center gap-1.5 self-start">
+                      <a
+                        href={`https://huggingface.co/${model.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
+                      >
+                        <span>View</span>
+                        <ExternalLink size={13} />
+                      </a>
+                      <button
+                        onClick={() => onSelectModel({
+                          id: model.id,
+                          revision: model.revision,
+                          supportsImages: model.isVisionModel,
+                          recommendedDevice: device,
+                          supportTier: "experimental",
+                        })}
+                        disabled={disabled || active}
+                        className="rounded-lg bg-[#10a37f] px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {active ? "Selected" : "Use model"}
+                      </button>
+                    </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-1.5 text-[11px] text-[#8e8e8e]">
-                      <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                  <div className="min-w-0 space-y-1.5">
+                    {metaLine && (
+                      <p className="text-[10px] text-[#8e8e8e]">{metaLine}</p>
+                    )}
+                    <p className="text-[11px] leading-4 text-[#b4b4b4]">{compatibility.summary}</p>
+
+                    <div className="flex flex-wrap gap-1 text-[10px] text-[#8e8e8e]">
+                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                         {model.isVisionModel ? "Vision" : "Text"}
                       </span>
                       {model.pipelineTag && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                        <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                           {model.pipelineTag}
                         </span>
                       )}
-                      <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                         {formatCompactNumber(model.downloads)} downloads
                       </span>
                       {model.likes > 0 && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                        <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                           {formatCompactNumber(model.likes)} likes
                         </span>
                       )}
                       {updatedLabel && (
-                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                        <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                           Updated {updatedLabel}
                         </span>
                       )}
                     </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2 self-start lg:self-center">
-                    <a
-                      href={`https://huggingface.co/${model.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-xs text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
-                    >
-                      <span>View</span>
-                      <ExternalLink size={14} />
-                    </a>
-                    <button
-                      onClick={() => onSelectModel({
-                        id: model.id,
-                        revision: model.revision,
-                        supportsImages: model.isVisionModel,
-                        recommendedDevice: device,
-                        supportTier: "experimental",
-                      })}
-                      disabled={disabled || active}
-                      className="rounded-lg bg-[#10a37f] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {active ? "Selected" : "Use model"}
-                    </button>
                   </div>
                 </div>
               </div>
             );
           })}
 
-          {!initialLoading && results.length > 0 && nextCursor && (
-            <div className="flex justify-center pt-1">
-              <button
-                type="button"
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-[#212121] px-4 py-2.5 text-sm text-[#d0d0d0] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loadingMore && <Loader2 size={15} className="animate-spin text-[#10a37f]" />}
-                <span>{loadingMore ? "Loading more models…" : "Load more models"}</span>
-              </button>
+          {!initialLoading && results.length > 0 && (
+            <div ref={loadMoreTriggerRef} className="flex min-h-8 items-center justify-center pt-1">
+              {loadingMore && (
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-[#212121] px-3 py-2 text-xs text-[#d0d0d0]">
+                  <Loader2 size={14} className="animate-spin text-[#10a37f]" />
+                  <span>Loading more models…</span>
+                </div>
+              )}
             </div>
           )}
         </div>

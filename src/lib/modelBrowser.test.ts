@@ -41,4 +41,39 @@ describe("model browser search", () => {
       isVisionModel: true,
     });
   });
+
+  it("hides embedding models even when they reuse a supported decoder architecture", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "onnx-community/Qwen3-Embedding-0.6B-ONNX",
+              sha: "embed-rev",
+              tags: ["onnx", "qwen3", "text-generation", "feature-extraction"],
+              pipeline_tag: "feature-extraction",
+              config: { model_type: "qwen3" },
+            },
+            {
+              id: "onnx-community/Qwen2.5-0.5B-Instruct",
+              sha: "chat-rev",
+              tags: ["onnx", "qwen2", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: { model_type: "qwen2" },
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchOnnxCommunityModels("");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "onnx-community/Qwen2.5-0.5B-Instruct",
+      isVisionModel: false,
+    });
+  });
 });

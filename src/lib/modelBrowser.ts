@@ -53,6 +53,11 @@ export interface ModelCompatibility {
 const GIGABYTE = 1024 ** 3;
 const SUPPORTED_PIPELINE_TAGS = new Set(["text-generation", "image-text-to-text"]);
 const SUPPORTED_TEXT_TAGS = new Set(["text-generation", "conversational"]);
+const UNSUPPORTED_TASK_TAGS = new Set([
+  "feature-extraction",
+  "sentence-similarity",
+  "text-embeddings-inference",
+]);
 const SUPPORTED_TEXT_MODEL_TYPES = new Set([
   "afmoe",
   "apertus",
@@ -181,6 +186,10 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
+
+  if ((pipelineTag && !SUPPORTED_PIPELINE_TAGS.has(pipelineTag)) || tags.some((tag) => UNSUPPORTED_TASK_TAGS.has(tag))) {
+    return false;
+  }
 
   if (modelType) {
     return isSupportedModelType(modelType);

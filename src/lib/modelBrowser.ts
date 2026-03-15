@@ -1,5 +1,7 @@
 "use client";
 
+import { getCompatibilityScoreAdjustment, isModelExcludedFromBrowser } from "@/lib/modelPolicies";
+
 export interface HubModelApiEntry {
   id: string;
   sha?: string;
@@ -65,8 +67,6 @@ const UNSUPPORTED_TASK_TAGS = new Set([
   "sentence-similarity",
   "text-embeddings-inference",
 ]);
-const UNSUPPORTED_MODEL_NAME_PATTERN = /(?:^|[-_/])(embedding|embeddings|rerank|reranker|docling)(?:$|[-_/])/i;
-const UNSUPPORTED_MODEL_ID_PATTERN = /(?:^|[-_/])tiny-random(?:$|[-_/])/i;
 const SUPPORTED_TEXT_MODEL_TYPES = new Set([
   "afmoe",
   "apertus",
@@ -224,9 +224,10 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
-  const hasUnsupportedName = UNSUPPORTED_MODEL_ID_PATTERN.test(entry.id) ||
-    UNSUPPORTED_MODEL_NAME_PATTERN.test(entry.id) ||
-    tags.some((tag) => UNSUPPORTED_MODEL_NAME_PATTERN.test(tag));
+  const hasUnsupportedName = isModelExcludedFromBrowser({
+    id: entry.id,
+    tags,
+  });
 
   if (
     hasUnsupportedName ||
@@ -452,16 +453,13 @@ export function assessModelCompatibility(model: DiscoveredModel, context: Compat
   if (model.isVisionModel) {
     score -= 10;
   }
-
-  const isLargeQwen2TextModel =
-    context.device === "webgpu" &&
-    !model.isVisionModel &&
-    (size ?? 0) > 1 &&
-    /(?:^|\/)Qwen2(?:\.5)?-/i.test(model.id);
-
-  if (isLargeQwen2TextModel) {
-    score -= context.deviceMemoryGb !== null && context.deviceMemoryGb <= 8 ? 28 : 12;
-  }
+  score += getCompatibilityScoreAdjustment({
+    id: model.id,
+    parameterCountB: size,
+    isVisionModel: model.isVisionModel,
+    device: context.device,
+    deviceMemoryGb: context.deviceMemoryGb,
+  });
 
   if (context.device === "wasm" && size !== null) {
     if (size > 2) score -= 18;

@@ -10,6 +10,9 @@ export interface HubModelApiEntry {
   lastModified?: string;
   createdAt?: string;
   usedStorage?: number;
+  config?: {
+    model_type?: string;
+  };
 }
 
 export interface DiscoveredModel {
@@ -50,6 +53,93 @@ export interface ModelCompatibility {
 const GIGABYTE = 1024 ** 3;
 const SUPPORTED_PIPELINE_TAGS = new Set(["text-generation", "image-text-to-text"]);
 const SUPPORTED_TEXT_TAGS = new Set(["text-generation", "conversational"]);
+const SUPPORTED_TEXT_MODEL_TYPES = new Set([
+  "afmoe",
+  "apertus",
+  "arcee",
+  "bloom",
+  "codegen",
+  "cohere",
+  "cohere2",
+  "ernie4_5",
+  "exaone",
+  "falcon",
+  "falcon_h1",
+  "gemma",
+  "gemma2",
+  "glm",
+  "gpt2",
+  "gpt_bigcode",
+  "gpt_neo",
+  "gpt_neox",
+  "gpt_oss",
+  "gptj",
+  "granite",
+  "granitemoehybrid",
+  "helium",
+  "hunyuan_v1_dense",
+  "jais",
+  "lfm2",
+  "lfm2_moe",
+  "llama",
+  "llama4_text",
+  "mbart",
+  "mistral",
+  "ministral",
+  "ministral3",
+  "mobilellm",
+  "modernbert-decoder",
+  "mpt",
+  "nanochat",
+  "olmo",
+  "olmo2",
+  "olmo3",
+  "olmo_hybrid",
+  "openelm",
+  "opt",
+  "phi",
+  "phi3",
+  "phi3_v",
+  "qwen2",
+  "qwen2_moe",
+  "qwen3",
+  "qwen3_moe",
+  "qwen3_next",
+  "smollm3",
+  "stablelm",
+  "starcoder2",
+  "trocr",
+  "vaultgemma",
+  "youtu",
+]);
+const SUPPORTED_VISION_MODEL_TYPES = new Set([
+  "florence2",
+  "gemma3n",
+  "idefics3",
+  "llava",
+  "llava_onevision",
+  "llava_qwen2",
+  "mistral3",
+  "moondream1",
+  "paligemma",
+  "phi3_v",
+  "qwen2_5_vl",
+  "qwen2_vl",
+  "qwen3_5",
+  "qwen3_5_moe",
+  "qwen3_vl",
+  "qwen3_vl_moe",
+  "smolvlm",
+]);
+
+function getModelType(entry: HubModelApiEntry) {
+  return entry.config?.model_type ?? null;
+}
+
+function isSupportedModelType(modelType: string | null) {
+  if (!modelType) return false;
+  return SUPPORTED_TEXT_MODEL_TYPES.has(modelType) || SUPPORTED_VISION_MODEL_TYPES.has(modelType);
+}
 
 function parseParameterCountB(modelId: string, tags: string[]) {
   const haystacks = [modelId, ...tags];
@@ -78,9 +168,10 @@ function estimateDownloadGb(parameterCountB: number | null, usedStorage?: number
   return parameterCountB * 0.8;
 }
 
-function isVisionModel(modelId: string, tags: string[], pipelineTag: string | null) {
+function isVisionModel(modelId: string, tags: string[], pipelineTag: string | null, modelType: string | null) {
   return (
     pipelineTag === "image-text-to-text" ||
+    SUPPORTED_VISION_MODEL_TYPES.has(modelType ?? "") ||
     modelId.includes("Qwen3.5") ||
     tags.some((tag) => tag.includes("vision") || tag.includes("vlm"))
   );
@@ -89,6 +180,11 @@ function isVisionModel(modelId: string, tags: string[], pipelineTag: string | nu
 function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
+  const modelType = getModelType(entry);
+
+  if (modelType) {
+    return isSupportedModelType(modelType);
+  }
 
   if (pipelineTag) {
     return SUPPORTED_PIPELINE_TAGS.has(pipelineTag);
@@ -104,6 +200,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
   const tags = entry.tags ?? [];
   const parameterCountB = parseParameterCountB(entry.id, tags);
   const pipelineTag = entry.pipeline_tag ?? null;
+  const modelType = getModelType(entry);
 
   return {
     id: entry.id,
@@ -116,7 +213,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
     lastModified: entry.lastModified ?? entry.createdAt ?? null,
     parameterCountB,
     estimatedDownloadGb: estimateDownloadGb(parameterCountB, entry.usedStorage),
-    isVisionModel: isVisionModel(entry.id, tags, pipelineTag),
+    isVisionModel: isVisionModel(entry.id, tags, pipelineTag, modelType),
   };
 }
 

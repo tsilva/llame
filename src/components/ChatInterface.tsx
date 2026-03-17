@@ -284,12 +284,12 @@ export function ChatInterface({
               <Sparkles size={24} className="text-white" />
             </div>
             <h1 className="mb-3 max-w-[700px] text-center text-2xl font-semibold text-[#ececec] md:text-3xl">
-              Private browser AI, ready in one tab
+              Run private AI models in one tab
             </h1>
             <p className="max-w-[640px] text-center text-sm leading-6 text-[#b4b4b4] md:text-base">
               llame runs ONNX models like Qwen and Llama entirely in your
-              browser with WebGPU (or WASM fallback), so prompts never leave
-              your device.
+              browser with WebGPU or WASM fallback, so prompts stay on your
+              device and no server ever handles inference.
             </p>
             {modelName && (
               <p className="mb-8 mt-3 text-sm text-[#8e8e8e]">

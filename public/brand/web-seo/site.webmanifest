@@ -1,7 +1,11 @@
 {
-  "name": "llame | Privacy-First Browser-Based AI with WebGPU",
-  "short_name": "llame | Privacy-First Browser-Based AI with WebGPU",
-  "description": "Run ONNX-optimized LLMs and vision models entirely in your browser. Zero-setup, client-side inference featuring WebGPU acceleration, WASM fallback, and Transformer.js.",
+  "id": "/",
+  "name": "llame | Run Private AI Models in Your Browser",
+  "short_name": "llame",
+  "description": "Run Qwen, Llama, and other ONNX AI models entirely in your browser with WebGPU acceleration, WASM fallback, and zero server-side inference.",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "en-US",
   "icons": [
     {
       "src": "android-chrome-192.png",
@@ -14,7 +18,8 @@
       "type": "image/png"
     }
   ],
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#081412",
+  "theme_color": "#081412",
+  "categories": ["developer", "productivity", "utilities"],
   "display": "standalone"
 }

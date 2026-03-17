@@ -5,7 +5,7 @@
 
   **No Python. No CUDA. No server. Just a URL.**
 
-  **🧠 Run AI models in the privacy of your browser ⚡**
+  **🧠 Run private AI models in your browser ⚡**
 
   [Live Demo](https://llame.tsilva.eu)
 </div>
@@ -16,7 +16,7 @@
 
 **The Solution:** llame runs ONNX-optimized LLMs entirely in the browser using WebGPU acceleration (with WASM fallback), powered by [Hugging Face Transformers.js](https://huggingface.co/docs/transformers.js).
 
-**The Result:** Open a URL, pick a model, and start chatting — zero setup, zero dependencies, zero server costs.
+**The Result:** Open a URL, pick a model, and start chatting with private, on-device AI — zero setup, zero dependencies, zero server costs.
 
 <div align="center">
 

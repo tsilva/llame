@@ -2,11 +2,11 @@ import createGeneratedMetadata from "../../repologogen-next/web-seo-metadata";
 
 export const siteName = "llame";
 export const siteUrl = "https://llame.tsilva.eu";
-export const siteTitle = "llame | Private Browser AI for Local LLM Chat";
+export const siteTitle = "llame | Run Private AI Models in Your Browser";
 export const siteDescription =
-  "Run AI models in the privacy of your browser with WebGPU and WASM fallback.";
+  "Run Qwen, Llama, and other ONNX AI models entirely in your browser with WebGPU acceleration, WASM fallback, and zero server-side inference.";
 export const siteTagline =
-  "Private browser AI with WebGPU acceleration, local model chat, and zero prompt upload.";
+  "No Python. No CUDA. No server. Just a URL for private, on-device AI chat.";
 const generatedMetadata = createGeneratedMetadata(new URL(siteUrl));
 
 function normalizeMetadataUrl(value: string | URL): string {
@@ -57,14 +57,19 @@ export const siteKeywords = [
   "private browser AI",
   "local LLM",
   "on-device AI",
+  "on-device LLM",
+  "browser LLM",
   "WebGPU LLM",
   "WebGPU chat",
+  "WebGPU AI",
   "client-side AI",
   "in-browser inference",
   "ONNX models",
   "Transformers.js",
   "Qwen browser chat",
   "Llama browser chat",
+  "run AI in browser",
+  "local AI chat",
   "offline AI chat",
   "privacy-first AI",
 ];
@@ -82,6 +87,7 @@ export const webApplicationJsonLd = {
       name: siteName,
       url: siteUrl,
       description: siteDescription,
+      keywords: siteKeywords.join(", "),
       inLanguage: "en-US",
       publisher: {
         "@type": "Person",
@@ -98,6 +104,7 @@ export const webApplicationJsonLd = {
       operatingSystem: "Any",
       image: `${siteUrl}${socialImage.url}`,
       screenshot: `${siteUrl}${socialImage.url}`,
+      slogan: siteTagline,
       browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
       isAccessibleForFree: true,
       featureList: [

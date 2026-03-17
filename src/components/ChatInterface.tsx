@@ -11,6 +11,7 @@ import {
 } from "react";
 import { ChatMessage as ChatMessageType, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
+import { siteDescription } from "@/lib/siteMetadata";
 import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
 import { compressImage } from "@/lib/imageUtils";
@@ -287,9 +288,7 @@ export function ChatInterface({
               Run private AI models in one tab
             </h1>
             <p className="max-w-[640px] text-center text-sm leading-6 text-[#b4b4b4] md:text-base">
-              llame runs ONNX models like Qwen and Llama entirely in your
-              browser with WebGPU or WASM fallback, so prompts stay on your
-              device and no server ever handles inference.
+              {siteDescription}
             </p>
             {modelName && (
               <p className="mb-8 mt-3 text-sm text-[#8e8e8e]">

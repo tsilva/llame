@@ -2,7 +2,7 @@
   "id": "/",
   "name": "llame | Run Private AI Models in Your Browser",
   "short_name": "llame",
-  "description": "Run Qwen, Llama, and other ONNX AI models entirely in your browser with WebGPU acceleration, WASM fallback, and zero server-side inference.",
+  "description": "Run Qwen and Llama in your browser with WebGPU or WASM fallback. Prompts stay on your device.",
   "start_url": "/",
   "scope": "/",
   "lang": "en-US",

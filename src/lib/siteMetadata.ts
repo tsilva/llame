@@ -4,7 +4,7 @@ export const siteName = "llame";
 export const siteUrl = "https://llame.tsilva.eu";
 export const siteTitle = "llame | Run Private AI Models in Your Browser";
 export const siteDescription =
-  "Run Qwen, Llama, and other ONNX AI models entirely in your browser with WebGPU acceleration, WASM fallback, and zero server-side inference.";
+  "Run Qwen and Llama in your browser with WebGPU or WASM fallback. Prompts stay on your device.";
 export const siteTagline =
   "No Python. No CUDA. No server. Just a URL for private, on-device AI chat.";
 const generatedMetadata = createGeneratedMetadata(new URL(siteUrl));

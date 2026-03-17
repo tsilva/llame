@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" alt="llame" width="512"/>
+  <img src="https://raw.githubusercontent.com/tsilva/llame/main/logo.png" alt="llame" width="512"/>
 
   [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)   [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
 
@@ -100,7 +100,7 @@ WebGPU is detected automatically. If unavailable, the app falls back to WASM wit
 
 The app is configured as a static export (`output: "export"`) with `Cross-Origin-Embedder-Policy: credentialless` and `Cross-Origin-Opener-Policy: same-origin` for `SharedArrayBuffer` support. `credentialless` keeps the app cross-origin isolated while allowing public Hugging Face asset downloads that do not opt into CORP. Its CSP also needs to allow both standard Hugging Face hosts and the newer `*.xethub.hf.co` bridge used for model asset downloads.
 
-Static metadata assets ship with the export: `site.webmanifest`, branded favicons/apple-touch icon, and a dedicated 1200x630 social card used by both Open Graph and Twitter metadata. The root layout also emits JSON-LD for the website and software application.
+Static metadata assets ship with the export under `public/brand/web-seo`, including `/brand/web-seo/site.webmanifest`, branded favicons/apple-touch icon, and a dedicated 1200x630 OG card. The root layout also emits JSON-LD for the website and software application.
 
 ONNX Runtime's WASM loader is pinned to same-origin assets under `public/onnxruntime/` so production CSP does not depend on jsDelivr for the `.mjs` and `.wasm` runtime bootstrap files. The CSP must also allow `blob:` in `script-src`, plus WebAssembly/eval bootstrap (`'wasm-unsafe-eval'` and `'unsafe-eval'` for worker compatibility), so ONNX Runtime can initialize in-browser.
 

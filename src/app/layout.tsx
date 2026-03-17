@@ -5,6 +5,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { ClientTelemetry } from "@/components/ClientTelemetry";
 import {
+  metadataIcons,
+  metadataManifestPath,
   siteDescription,
   siteKeywords,
   socialImage,
@@ -49,22 +51,14 @@ export const metadata: Metadata = {
   creator: "Tiago Silva",
   publisher: "Tiago Silva",
   metadataBase: new URL(siteUrl),
-  manifest: "/site.webmanifest",
+  manifest: metadataManifestPath,
   alternates: {
     canonical: "/",
     languages: {
       "en-US": "/",
     },
   },
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
-  },
+  icons: metadataIcons,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -24,7 +24,6 @@ function renderSidebar(conversations: ConversationMeta[]) {
   render(
     <Sidebar
       isOpen
-      isMobile={false}
       onToggle={vi.fn()}
       onNewChat={vi.fn()}
       onOpenSettings={vi.fn()}

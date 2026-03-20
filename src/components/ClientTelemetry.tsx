@@ -5,7 +5,7 @@ import { initTelemetry } from "@/lib/telemetry";
 
 export function ClientTelemetry() {
   useEffect(() => {
-    initTelemetry();
+    void initTelemetry();
   }, []);
 
   return null;

@@ -1,11 +1,10 @@
 "use client";
 
-import * as Sentry from "@sentry/browser";
-import { track as vercelTrack } from "@vercel/analytics";
-
 type TelemetryContext = Record<string, string | number | boolean | null | undefined>;
 
 let initialized = false;
+let sentryModulePromise: Promise<typeof import("@sentry/browser")> | null = null;
+let vercelAnalyticsPromise: Promise<typeof import("@vercel/analytics")> | null = null;
 
 function isVercelInsightsEnabled() {
   return process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
@@ -15,11 +14,22 @@ function isProductionTelemetryEnabled() {
   return process.env.NODE_ENV === "production";
 }
 
-export function initTelemetry() {
+function loadSentry() {
+  sentryModulePromise ??= import("@sentry/browser");
+  return sentryModulePromise;
+}
+
+function loadVercelAnalytics() {
+  vercelAnalyticsPromise ??= import("@vercel/analytics");
+  return vercelAnalyticsPromise;
+}
+
+export async function initTelemetry() {
   if (initialized || !isProductionTelemetryEnabled()) return;
 
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
   if (dsn) {
+    const Sentry = await loadSentry();
     Sentry.init({
       dsn,
       tracesSampleRate: 0,
@@ -44,21 +54,27 @@ export function captureTelemetryError(
 ) {
   if (!isProductionTelemetryEnabled()) return;
 
-  initTelemetry();
+  void (async () => {
+    const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+    if (!dsn) return;
 
-  Sentry.withScope((scope) => {
-    Object.entries(context).forEach(([key, value]) => {
-      if (value !== undefined) scope.setTag(key, String(value));
+    await initTelemetry();
+    const Sentry = await loadSentry();
+
+    Sentry.withScope((scope) => {
+      Object.entries(context).forEach(([key, value]) => {
+        if (value !== undefined) scope.setTag(key, String(value));
+      });
+
+      if (error instanceof Error) {
+        Sentry.captureException(error);
+        return;
+      }
+
+      scope.setLevel("error");
+      Sentry.captureMessage(message);
     });
-
-    if (error instanceof Error) {
-      Sentry.captureException(error);
-      return;
-    }
-
-    scope.setLevel("error");
-    Sentry.captureMessage(message);
-  });
+  })();
 }
 
 declare global {
@@ -71,11 +87,13 @@ export function trackProductEvent(name: string, payload: TelemetryContext = {}) 
   if (!isProductionTelemetryEnabled()) return;
 
   if (isVercelInsightsEnabled()) {
-    try {
-      vercelTrack(name, payload);
-    } catch {
-      // Ignore analytics transport failures.
-    }
+    void loadVercelAnalytics()
+      .then(({ track }) => {
+        track(name, payload);
+      })
+      .catch(() => {
+        // Ignore analytics transport failures.
+      });
   }
 
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

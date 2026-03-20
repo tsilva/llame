@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   useRef,
   useEffect,
@@ -12,7 +13,6 @@ import {
 import { ChatMessage as ChatMessageType, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
 import { siteDescription } from "@/lib/siteMetadata";
-import { ChatMessage } from "./ChatMessage";
 import { ModelLoadingCard } from "./ModelLoadingCard";
 import { compressImage } from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
@@ -49,13 +49,17 @@ interface PendingImage {
   file: File;
 }
 
-import bookPageImage from "../../assets/book_page.png";
-
 interface Suggestion {
   text: string;
   prompt?: string;
   image?: string;
 }
+
+const ChatMessage = dynamic(
+  () => import("./ChatMessage").then((mod) => mod.ChatMessage),
+);
+
+const BOOK_PAGE_IMAGE_URL = "/book_page.png";
 
 const STATIC_SUGGESTIONS: Suggestion[] = [
   { text: "Explain quantum computing in simple terms" },
@@ -64,7 +68,7 @@ const STATIC_SUGGESTIONS: Suggestion[] = [
   {
     text: "Transcribe image to plain text",
     prompt: "Extract all visible text from this image as plain text only. Preserve line breaks and paragraphs when possible. Do not add commentary, HTML, markdown, or code fences.",
-    image: bookPageImage.src,
+    image: BOOK_PAGE_IMAGE_URL,
   },
 ];
 
@@ -143,7 +147,7 @@ export function ChatInterface({
   useEffect(() => {
     const loadBookPageImage = async () => {
       try {
-        const response = await fetch(bookPageImage.src);
+        const response = await fetch(BOOK_PAGE_IMAGE_URL);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = async () => {

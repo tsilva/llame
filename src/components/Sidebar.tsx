@@ -5,7 +5,6 @@ import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare } from "lucide-re
 
 interface SidebarProps {
   isOpen: boolean;
-  isMobile: boolean;
   onToggle: () => void;
   onNewChat: () => void;
   onOpenSettings: () => void;
@@ -20,7 +19,6 @@ interface SidebarProps {
 
 export function Sidebar({
   isOpen,
-  isMobile,
   onToggle,
   onNewChat,
   onOpenSettings,
@@ -117,7 +115,7 @@ export function Sidebar({
                     {conv.title}
                   </span>
                 </button>
-                <span className="text-[10px] text-[#8e8e8e] flex-shrink-0">
+                <span className="flex-shrink-0 text-[11px] text-[#9f9f9f]">
                   {formatDate(conv.updatedAt)}
                 </span>
                 <div className="flex w-6 flex-shrink-0 justify-end">
@@ -156,36 +154,31 @@ export function Sidebar({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <>
-        {/* Backdrop */}
-        {isOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={onToggle}
-          />
-        )}
-        {/* Drawer */}
-        <div
-          aria-hidden={!isOpen}
-          inert={!isOpen || undefined}
-          className={`fixed inset-y-0 left-0 z-50 bg-[#171717] transition-transform duration-300 ${
-            isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
-          }`}
-        >
-          {sidebarContent}
-        </div>
-      </>
-    );
-  }
-
   return (
-    <div
-      className="flex-shrink-0 overflow-hidden transition-all duration-300 bg-[#171717]"
-      style={{ width: isOpen ? 260 : 0 }}
-    >
-      {sidebarContent}
-    </div>
+    <>
+      {isOpen ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onToggle}
+        />
+      ) : null}
+
+      <div
+        aria-hidden={!isOpen}
+        inert={!isOpen || undefined}
+        className={`fixed inset-y-0 left-0 z-50 bg-[#171717] transition-transform duration-300 md:hidden ${
+          isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+        }`}
+      >
+        {sidebarContent}
+      </div>
+
+      <div
+        className="hidden flex-shrink-0 overflow-hidden bg-[#171717] transition-all duration-300 md:block"
+        style={{ width: isOpen ? 260 : 0 }}
+      >
+        {sidebarContent}
+      </div>
+    </>
   );
 }

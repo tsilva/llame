@@ -1,9 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
-import { ClientTelemetry } from "@/components/ClientTelemetry";
 import {
   metadataIcons,
   metadataManifestPath,
@@ -16,20 +11,6 @@ import {
   webApplicationJsonLd,
 } from "@/lib/siteMetadata";
 import "./globals.css";
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-const SHOULD_RENDER_VERCEL_INSIGHTS =
-  process.env.NODE_ENV === "production" &&
-  process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -113,29 +94,8 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationJsonLd) }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ClientTelemetry />
+      <body className="antialiased">
         {children}
-        {GA_MEASUREMENT_ID ? (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${GA_MEASUREMENT_ID}');
-              `}
-            </Script>
-          </>
-        ) : null}
-        {SHOULD_RENDER_VERCEL_INSIGHTS ? <Analytics /> : null}
-        {SHOULD_RENDER_VERCEL_INSIGHTS ? <SpeedInsights /> : null}
       </body>
     </html>
   );

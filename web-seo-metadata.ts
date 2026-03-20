@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
-  "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
-  "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
+  "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+  "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
   "keywords": [
-    "transformers.js",
-    "webgpu",
-    "wasm",
-    "onnx-runtime",
     "nextjs",
-    "local-llm",
-    "browser-ai",
-    "client-side-inference",
-    "private-ai",
-    "web-worker"
+    "webgpu",
+    "transformers-js",
+    "onnx-runtime",
+    "client-side-ai",
+    "webassembly",
+    "private-gpt",
+    "llm-browser",
+    "wasm-inference",
+    "typescript"
   ],
   "openGraph": {
-    "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
-    "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
+    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+    "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
@@ -29,8 +29,8 @@ const payload: Omit<Metadata, "metadataBase"> = {
   },
   "twitter": {
     "card": "summary_large_image",
-    "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
-    "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
+    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+    "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"
     ]

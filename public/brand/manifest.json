@@ -10,21 +10,21 @@
     "cli_args"
   ],
   "metadata": {
-    "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
-    "short_description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
-    "social_title": "llame - Run Private LLMs in Your Browser via WebGPU",
-    "social_description": "Experience entirely client-side AI inference with llame. No Python, no CUDA, and no server required. Supports local chat, vision models, and ONNX presets.",
+    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+    "short_description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "social_title": "llame: Private Browser-Based AI Models",
+    "social_description": "Run private AI models directly in your browser with hardware acceleration. llame uses WebGPU and Transformers.js for low-latency, serverless inference.",
     "keywords": [
-      "transformers.js",
-      "webgpu",
-      "wasm",
-      "onnx-runtime",
       "nextjs",
-      "local-llm",
-      "browser-ai",
-      "client-side-inference",
-      "private-ai",
-      "web-worker"
+      "webgpu",
+      "transformers-js",
+      "onnx-runtime",
+      "client-side-ai",
+      "webassembly",
+      "private-gpt",
+      "llm-browser",
+      "wasm-inference",
+      "typescript"
     ]
   },
   "assets": [

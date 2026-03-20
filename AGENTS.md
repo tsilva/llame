@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run dev` — start dev server (http://localhost:3000)
 - `npm run build` — production build (static export via `next build --webpack`)
-- `npm run lint` — ESLint (flat config with Next.js core-web-vitals + TypeScript rules)
+- `npm run lint` — ESLint (flat config with core-web-vitals + TypeScript rules)
 - `npm start` — serve production build
 
 ## Architecture
 
-llame is a **fully client-side** Next.js 16 app that runs ONNX LLMs in the browser via WebGPU/WASM. There is no backend — all inference happens on the user's device.
+llame is a **fully client-side** app that runs ONNX LLMs in the browser via WebGPU/WASM. There is no backend — all inference happens on the user's device.
 
 ### Key design pattern: Web Worker message protocol
 

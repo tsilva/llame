@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./logo.png" alt="llame" width="512"/>
 
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
+  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
 
   **No Python. No CUDA. No server. Just a URL.**
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-llame is a fully client-side Next.js app that runs ONNX language models in the browser with [Transformers.js](https://huggingface.co/docs/transformers.js). It uses WebGPU when available, falls back to WASM when needed, and keeps inference on the user's device.
+llame is a fully client-side app that runs ONNX language models in the browser with [Transformers.js](https://huggingface.co/docs/transformers.js). It uses WebGPU when available, falls back to WASM when needed, and keeps inference on the user's device.
 
 Open the app, pick a model, and chat. There is no backend and no server-side inference.
 
@@ -55,7 +55,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```text
 src/
-├── app/              # Next.js app router
+├── app/              # Landing page, chat route, and metadata
 ├── components/       # Chat UI, model picker, settings, sidebar
 ├── hooks/            # Worker lifecycle and storage hooks
 ├── lib/              # Presets, policies, storage, telemetry, helpers
@@ -91,7 +91,7 @@ WebGPU is detected automatically. When unavailable, llame falls back to WASM and
 
 ## Deployment
 
-llame is built as a static export with `next build --webpack`. Production hosting needs cross-origin isolation headers for `SharedArrayBuffer`; the included [`vercel.json`](vercel.json) sets `Cross-Origin-Embedder-Policy: credentialless` and `Cross-Origin-Opener-Policy: same-origin` along with a CSP that allows Hugging Face model downloads.
+llame is built as a static export with `npm run build`. Production hosting needs cross-origin isolation headers for `SharedArrayBuffer`; the included [`vercel.json`](vercel.json) sets `Cross-Origin-Embedder-Policy: credentialless` and `Cross-Origin-Opener-Policy: same-origin` along with a CSP that allows Hugging Face model downloads.
 
 ONNX Runtime WASM assets are served from `public/onnxruntime/`, so production does not depend on a third-party CDN for runtime bootstrap files.
 
@@ -122,7 +122,6 @@ npm run smoke
 
 ## Tech Stack
 
-- [Next.js 16](https://nextjs.org/)
 - [React 19](https://react.dev/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS 4](https://tailwindcss.com/)

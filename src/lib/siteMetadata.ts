@@ -4,13 +4,12 @@ import createGeneratedMetadata from "../../web-seo-metadata";
 export const siteName = "llame";
 const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
 const FALLBACK_SITE_DESCRIPTION =
-  "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.";
+  "A client-side application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.";
 const FALLBACK_SITE_KEYWORDS = [
   "transformers.js",
   "webgpu",
   "wasm",
   "onnx-runtime",
-  "nextjs",
   "local-llm",
   "browser-ai",
   "client-side-inference",

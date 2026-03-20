@@ -11,11 +11,10 @@
   ],
   "metadata": {
     "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "short_description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "short_description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
     "social_title": "llame: Private Browser-Based AI Models",
     "social_description": "Run private AI models directly in your browser with hardware acceleration. llame uses WebGPU and Transformers.js for low-latency, serverless inference.",
     "keywords": [
-      "nextjs",
       "webgpu",
       "transformers-js",
       "onnx-runtime",
@@ -142,14 +141,14 @@
       "path": "web-seo/site.webmanifest"
     },
     {
-      "key": "web-seo-nextjs-metadata-json",
+      "key": "web-seo-metadata-json",
       "kind": "metadata",
       "target": "web-seo",
       "strategy": "written_metadata",
       "path": "web-seo-metadata.json"
     },
     {
-      "key": "web-seo-nextjs-metadata-ts",
+      "key": "web-seo-metadata-ts",
       "kind": "metadata",
       "target": "web-seo",
       "strategy": "written_metadata",

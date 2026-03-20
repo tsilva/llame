@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
   "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-  "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+  "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
   "keywords": [
-    "nextjs",
     "webgpu",
     "transformers-js",
     "onnx-runtime",
@@ -17,7 +16,7 @@ const payload: Omit<Metadata, "metadataBase"> = {
   ],
   "openGraph": {
     "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
@@ -30,7 +29,7 @@ const payload: Omit<Metadata, "metadataBase"> = {
   "twitter": {
     "card": "summary_large_image",
     "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "description": "A client-side Next.js application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"
     ]

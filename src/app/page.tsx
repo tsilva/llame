@@ -1,5 +1,5 @@
 import { siteDescription } from "@/lib/siteMetadata";
-import { Sparkles, ChevronRight, Shield, Cpu, HardDrive } from "lucide-react";
+import { Sparkles, ChevronRight, Shield, Cpu, HardDrive, Github } from "lucide-react";
 
 const SHELL_POINTS = [
   {
@@ -37,9 +37,11 @@ export default function Home() {
             href="https://github.com/tsilva/llame"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-white/[0.08] px-4 py-2 text-sm text-[#b4b4b4] transition-colors hover:border-white/[0.16] hover:text-white"
+            aria-label="GitHub repository"
+            title="GitHub repository"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] text-[#b4b4b4] transition-colors hover:border-white/[0.16] hover:text-white"
           >
-            GitHub
+            <Github size={18} />
           </a>
         </header>
 
@@ -62,12 +64,6 @@ export default function Home() {
                 >
                   Launch app
                   <ChevronRight size={16} />
-                </a>
-                <a
-                  href="https://llame.tsilva.eu"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/[0.08] px-5 py-3 text-sm font-medium text-[#d6d6d6] transition-colors hover:border-white/[0.16] hover:text-white"
-                >
-                  Live demo
                 </a>
               </div>
             </div>

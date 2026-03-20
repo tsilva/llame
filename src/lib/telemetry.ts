@@ -6,6 +6,9 @@ let initialized = false;
 let sentryModulePromise: Promise<typeof import("@sentry/browser")> | null = null;
 let vercelAnalyticsPromise: Promise<typeof import("@vercel/analytics")> | null = null;
 
+export const SENTRY_TEST_EXCEPTION_MESSAGE =
+  "Synthetic Sentry test exception from window.__sentryTest()";
+
 function isVercelInsightsEnabled() {
   return process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
 }
@@ -79,8 +82,28 @@ export function captureTelemetryError(
 
 declare global {
   interface Window {
+    __sentryTest?: () => Promise<void>;
     gtag?: (...args: unknown[]) => void;
   }
+}
+
+export function installSentryTestHook() {
+  if (typeof window === "undefined") return () => {};
+
+  const sentryTest = async () => {
+    await initTelemetry();
+    window.setTimeout(() => {
+      throw new Error(SENTRY_TEST_EXCEPTION_MESSAGE);
+    }, 0);
+  };
+
+  window.__sentryTest = sentryTest;
+
+  return () => {
+    if (window.__sentryTest === sentryTest) {
+      delete window.__sentryTest;
+    }
+  };
 }
 
 export function trackProductEvent(name: string, payload: TelemetryContext = {}) {

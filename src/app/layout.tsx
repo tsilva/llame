@@ -9,6 +9,7 @@ import {
   webApplicationJsonLd,
 } from "@/lib/siteMetadata";
 import { ClientTelemetry } from "@/components/ClientTelemetry";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -87,6 +88,7 @@ export default function RootLayout({
       <body className="antialiased">
         <ClientTelemetry />
         {children}
+        <Analytics />
       </body>
     </html>
   );

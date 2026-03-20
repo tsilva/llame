@@ -1,7 +1,22 @@
+import type { Metadata } from "next";
 import createGeneratedMetadata from "../../web-seo-metadata";
 
 export const siteName = "llame";
 const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
+const FALLBACK_SITE_DESCRIPTION =
+  "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.";
+const FALLBACK_SITE_KEYWORDS = [
+  "transformers.js",
+  "webgpu",
+  "wasm",
+  "onnx-runtime",
+  "nextjs",
+  "local-llm",
+  "browser-ai",
+  "client-side-inference",
+  "private-ai",
+  "web-worker",
+];
 
 function resolveSiteUrl(): string {
   const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -18,12 +33,39 @@ function resolveSiteUrl(): string {
 }
 
 export const siteUrl = resolveSiteUrl();
-export const siteTitle = "llame | Run Private AI Models in Your Browser";
-export const siteDescription =
-  "Run Qwen and Llama in your browser with WebGPU or WASM fallback. Prompts stay on your device.";
+export const generatedMetadata = createGeneratedMetadata(new URL(siteUrl));
+
+function resolveMetadataTitle(title: Metadata["title"] | undefined): string {
+  if (typeof title === "string") {
+    return title;
+  }
+
+  if (title && typeof title === "object" && "default" in title && typeof title.default === "string") {
+    return title.default;
+  }
+
+  return siteName;
+}
+
+function resolveMetadataKeywords(keywords: Metadata["keywords"] | undefined): string[] {
+  if (Array.isArray(keywords)) {
+    return keywords.filter((keyword): keyword is string => typeof keyword === "string");
+  }
+
+  if (typeof keywords === "string") {
+    return keywords
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
+  }
+
+  return FALLBACK_SITE_KEYWORDS;
+}
+
+export const siteTitle = resolveMetadataTitle(generatedMetadata.title);
+export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DESCRIPTION;
 export const siteTagline =
   "No Python. No CUDA. No server. Just a URL for private, on-device AI chat.";
-const generatedMetadata = createGeneratedMetadata(new URL(siteUrl));
 
 function normalizeMetadataUrl(value: string | URL): string {
   return value instanceof URL ? value.toString() : value;
@@ -67,28 +109,7 @@ export const metadataManifestPath =
       ? generatedMetadata.manifest.toString()
       : "/brand/web-seo/site.webmanifest";
 export const metadataIcons = generatedMetadata.icons;
-
-export const siteKeywords = [
-  "browser AI",
-  "private browser AI",
-  "local LLM",
-  "on-device AI",
-  "on-device LLM",
-  "browser LLM",
-  "WebGPU LLM",
-  "WebGPU chat",
-  "WebGPU AI",
-  "client-side AI",
-  "in-browser inference",
-  "ONNX models",
-  "Transformers.js",
-  "Qwen browser chat",
-  "Llama browser chat",
-  "run AI in browser",
-  "local AI chat",
-  "offline AI chat",
-  "privacy-first AI",
-];
+export const siteKeywords = resolveMetadataKeywords(generatedMetadata.keywords);
 
 export const siteLinks = {
   creator: "https://www.tsilva.eu",

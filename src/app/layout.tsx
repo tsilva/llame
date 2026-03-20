@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import {
+  generatedMetadata,
   metadataIcons,
   metadataManifestPath,
-  siteDescription,
-  siteKeywords,
   socialImage,
   siteName,
-  siteTitle,
   siteUrl,
   webApplicationJsonLd,
 } from "@/lib/siteMetadata";
@@ -20,17 +18,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: {
-    default: siteTitle,
-    template: "%s | llame",
-  },
-  description: siteDescription,
+  ...generatedMetadata,
   applicationName: siteName,
-  keywords: siteKeywords,
   authors: [{ name: "Tiago Silva" }],
   creator: "Tiago Silva",
   publisher: "Tiago Silva",
-  metadataBase: new URL(siteUrl),
   manifest: metadataManifestPath,
   alternates: {
     canonical: "/",
@@ -52,8 +44,7 @@ export const metadata: Metadata = {
   referrer: "strict-origin-when-cross-origin",
   category: "technology",
   openGraph: {
-    title: siteTitle,
-    description: siteDescription,
+    ...generatedMetadata.openGraph,
     type: "website",
     url: siteUrl,
     siteName,
@@ -61,9 +52,7 @@ export const metadata: Metadata = {
     images: [socialImage],
   },
   twitter: {
-    card: "summary_large_image",
-    title: siteTitle,
-    description: siteDescription,
+    ...generatedMetadata.twitter,
     creator: "@tiagosilva",
     site: "@tiagosilva",
     images: [socialImage.url],

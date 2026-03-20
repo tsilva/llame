@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
-  "title": "llame: Private In-Browser AI with Next.js & Transformers.js",
-  "description": "A serverless Next.js web app for running private LLMs directly in the browser using WebGPU and WASM via Transformers.js.",
+  "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
+  "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
   "keywords": [
-    "nextjs",
-    "transformers-js",
+    "transformers.js",
     "webgpu",
-    "webassembly",
-    "browser-ai",
-    "local-llm",
+    "wasm",
     "onnx-runtime",
+    "nextjs",
+    "local-llm",
+    "browser-ai",
     "client-side-inference",
     "private-ai",
     "web-worker"
   ],
   "openGraph": {
-    "title": "llame: Private In-Browser AI with Next.js & Transformers.js",
-    "description": "A serverless Next.js web app for running private LLMs directly in the browser using WebGPU and WASM via Transformers.js.",
+    "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
+    "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
@@ -29,8 +29,8 @@ const payload: Omit<Metadata, "metadataBase"> = {
   },
   "twitter": {
     "card": "summary_large_image",
-    "title": "llame: Private In-Browser AI with Next.js & Transformers.js",
-    "description": "A serverless Next.js web app for running private LLMs directly in the browser using WebGPU and WASM via Transformers.js.",
+    "title": "llame: Private Browser-Based AI with WebGPU & Next.js",
+    "description": "A serverless Next.js application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"
     ]

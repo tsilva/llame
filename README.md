@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/tsilva/llame/main/logo.png" alt="llame" width="512"/>
+  <img src="./logo.png" alt="llame" width="512"/>
 
   [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
 
@@ -97,6 +97,7 @@ ONNX Runtime WASM assets are served from `public/onnxruntime/`, so production do
 
 Optional env vars:
 
+- `NEXT_PUBLIC_SITE_URL=https://llame.tsilva.eu` for canonical, Open Graph, Twitter, robots, and sitemap URLs
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID` for Google Analytics 4
 - `NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS=true` to enable Vercel Analytics and Speed Insights
 - `NEXT_PUBLIC_SENTRY_DSN` for client-side Sentry reporting in production

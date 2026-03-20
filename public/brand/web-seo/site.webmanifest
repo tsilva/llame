@@ -1,11 +1,7 @@
 {
-  "id": "/",
-  "name": "llame | Run Private AI Models in Your Browser",
-  "short_name": "llame",
-  "description": "Run Qwen and Llama in your browser with WebGPU or WASM fallback. Prompts stay on your device.",
-  "start_url": "/",
-  "scope": "/",
-  "lang": "en-US",
+  "name": "llame: Private In-Browser AI with Next.js & Transformers.js",
+  "short_name": "llame: Private In-Browser AI with Next.js & Transformers.js",
+  "description": "A serverless Next.js web app for running private LLMs directly in the browser using WebGPU and WASM via Transformers.js.",
   "icons": [
     {
       "src": "android-chrome-192.png",
@@ -18,8 +14,7 @@
       "type": "image/png"
     }
   ],
-  "background_color": "#081412",
-  "theme_color": "#081412",
-  "categories": ["developer", "productivity", "utilities"],
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "display": "standalone"
 }

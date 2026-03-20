@@ -1,7 +1,23 @@
-import createGeneratedMetadata from "../../repologogen-next/web-seo-metadata";
+import createGeneratedMetadata from "../../web-seo-metadata";
 
 export const siteName = "llame";
-export const siteUrl = "https://llame.tsilva.eu";
+const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
+
+function resolveSiteUrl(): string {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+  if (!configuredSiteUrl) {
+    return DEFAULT_SITE_URL;
+  }
+
+  try {
+    return new URL(configuredSiteUrl).toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_SITE_URL;
+  }
+}
+
+export const siteUrl = resolveSiteUrl();
 export const siteTitle = "llame | Run Private AI Models in Your Browser";
 export const siteDescription =
   "Run Qwen and Llama in your browser with WebGPU or WASM fallback. Prompts stay on your device.";

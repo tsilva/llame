@@ -8,6 +8,7 @@ import {
   siteUrl,
   webApplicationJsonLd,
 } from "@/lib/siteMetadata";
+import { ClientTelemetry } from "@/components/ClientTelemetry";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -84,6 +85,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <ClientTelemetry />
         {children}
       </body>
     </html>

@@ -1,7 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
-import { ClientTelemetry } from "@/components/ClientTelemetry";
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const SHOULD_RENDER_VERCEL_INSIGHTS =
@@ -18,7 +17,6 @@ export default function ChatLayout({
 }>) {
   return (
     <>
-      <ClientTelemetry />
       {children}
       {SHOULD_RENDER_GOOGLE_ANALYTICS ? (
         <>

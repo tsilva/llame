@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import createGeneratedMetadata from "../../web-seo-metadata";
 
 export const siteName = "llame";
+export const siteBackgroundColor = "#212121";
+export const siteThemeColor = "#10a37f";
 const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
 const FALLBACK_SITE_DESCRIPTION =
   "A client-side application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.";

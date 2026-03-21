@@ -4,7 +4,9 @@ import {
   metadataIcons,
   metadataManifestPath,
   socialImage,
+  siteBackgroundColor,
   siteName,
+  siteThemeColor,
   siteUrl,
   webApplicationJsonLd,
 } from "@/lib/siteMetadata";
@@ -14,7 +16,7 @@ import "./globals.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#081412",
+  themeColor: siteThemeColor,
   colorScheme: "dark",
 };
 
@@ -79,6 +81,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content={siteThemeColor} />
+        <meta name="msapplication-TileColor" content={siteBackgroundColor} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationJsonLd) }}

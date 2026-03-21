@@ -16,6 +16,13 @@ export interface ModelPreset extends ModelSelection {
   downloadSizeLabel: string;
 }
 
+function normalizeModelId(modelId?: string | null) {
+  if (typeof modelId !== "string") return DEFAULT_MODEL;
+
+  const trimmedModelId = modelId.trim();
+  return trimmedModelId.length > 0 ? trimmedModelId : DEFAULT_MODEL;
+}
+
 export const MODEL_PRESETS = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
@@ -67,39 +74,43 @@ export const MODEL_PRESETS = [
   },
 ] satisfies ModelPreset[];
 
-function parseModelParameterCountB(modelId: string) {
-  const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
+function parseModelParameterCountB(modelId?: string | null) {
+  const normalizedModelId = normalizeModelId(modelId);
+  const match = normalizedModelId.match(/(\d+(?:\.\d+)?)B/i);
   if (!match) return null;
 
   const value = Number.parseFloat(match[1]);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-export function isVlmModel(modelId: string) {
-  return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma3n|paligemma|smolvlm|idefics|llava|mistral3/i.test(modelId);
+export function isVlmModel(modelId?: string | null) {
+  return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma3n|paligemma|smolvlm|idefics|llava|mistral3/i.test(normalizeModelId(modelId));
 }
 
-export function getModelPreset(modelId: string) {
-  return MODEL_PRESETS.find((preset) => preset.id === modelId);
+export function getModelPreset(modelId?: string | null) {
+  const normalizedModelId = normalizeModelId(modelId);
+  return MODEL_PRESETS.find((preset) => preset.id === normalizedModelId);
 }
 
-export function getModelDisplayName(modelId: string) {
-  const preset = getModelPreset(modelId);
+export function getModelDisplayName(modelId?: string | null) {
+  const normalizedModelId = normalizeModelId(modelId);
+  const preset = getModelPreset(normalizedModelId);
   if (preset) {
     return preset.label;
   }
 
-  const repoName = modelId.split("/").pop();
-  return repoName?.replace(/-ONNX$/i, "") || modelId;
+  const repoName = normalizedModelId.split("/").pop();
+  return repoName?.replace(/-ONNX$/i, "") || normalizedModelId;
 }
 
-export function getModelSelection(modelId: string, overrides?: Partial<ModelSelection>): ModelSelection {
-  const preset = getModelPreset(modelId);
+export function getModelSelection(modelId?: string | null, overrides?: Partial<ModelSelection>): ModelSelection {
+  const normalizedModelId = normalizeModelId(modelId);
+  const preset = getModelPreset(normalizedModelId);
 
   return {
-    id: modelId,
+    id: normalizedModelId,
     revision: overrides?.revision ?? preset?.revision ?? null,
-    supportsImages: overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(modelId),
+    supportsImages: overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(normalizedModelId),
     recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
     supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",
   };
@@ -109,10 +120,11 @@ export function getDefaultModelSelectionForDevice(device: "webgpu" | "wasm") {
   return getModelSelection(device === "wasm" ? DEFAULT_WASM_MODEL : DEFAULT_MODEL);
 }
 
-export function getModelQuantizationLabel(modelId: string, isVisionModel = isVlmModel(modelId)) {
+export function getModelQuantizationLabel(modelId?: string | null, isVisionModel = isVlmModel(modelId)) {
+  const normalizedModelId = normalizeModelId(modelId);
   if (isVisionModel) return "q4+fp16";
 
-  const parameterCountB = parseModelParameterCountB(modelId);
+  const parameterCountB = parseModelParameterCountB(normalizedModelId);
   if (parameterCountB !== null && parameterCountB >= 1) return "q4/q4f16";
 
   return "q4/fp16";
@@ -124,35 +136,37 @@ export function formatDownloadSizeLabel(valueGb: number | null) {
   return `${valueGb.toFixed(valueGb >= 10 ? 0 : 1)}GB`;
 }
 
-export function getModelCardMeta(modelId: string, options?: {
+export function getModelCardMeta(modelId?: string | null, options?: {
   parameterCountLabel?: string | null;
   downloadSizeLabel?: string | null;
   isVisionModel?: boolean;
 }) {
-  const preset = getModelPreset(modelId);
+  const normalizedModelId = normalizeModelId(modelId);
+  const preset = getModelPreset(normalizedModelId);
 
   return [
     options?.parameterCountLabel ?? preset?.parameterCountLabel ?? null,
-    preset?.quantizationLabel ?? getModelQuantizationLabel(modelId, options?.isVisionModel),
+    preset?.quantizationLabel ?? getModelQuantizationLabel(normalizedModelId, options?.isVisionModel),
     options?.downloadSizeLabel ?? preset?.downloadSizeLabel ?? null,
   ].filter((part): part is string => Boolean(part));
 }
 
-export function getModelThinkingMode(modelId: string): ThinkingMode {
-  const presetMode = getModelPreset(modelId)?.thinkingMode;
+export function getModelThinkingMode(modelId?: string | null): ThinkingMode {
+  const normalizedModelId = normalizeModelId(modelId);
+  const presetMode = getModelPreset(normalizedModelId)?.thinkingMode;
   if (presetMode) return presetMode;
-  if (modelId.includes("Qwen3.5")) return "optional";
+  if (normalizedModelId.includes("Qwen3.5")) return "optional";
   return "unsupported";
 }
 
-export function getEffectiveThinkingEnabled(modelId: string, preferred: boolean): boolean {
+export function getEffectiveThinkingEnabled(modelId: string | null | undefined, preferred: boolean): boolean {
   const thinkingMode = getModelThinkingMode(modelId);
   if (thinkingMode === "required") return true;
   if (thinkingMode === "unsupported") return false;
   return preferred;
 }
 
-export function canToggleThinking(modelId: string): boolean {
+export function canToggleThinking(modelId: string | null | undefined): boolean {
   return getModelThinkingMode(modelId) === "optional";
 }
 

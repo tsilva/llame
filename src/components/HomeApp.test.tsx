@@ -164,4 +164,37 @@ describe("HomeApp", () => {
     expect(window.location.pathname).toBe("/chat");
     expect(window.location.search).toBe("");
   });
+
+  it("falls back to the default model when a restored conversation is missing model metadata", () => {
+    const malformedConversation = buildConversation({
+      modelId: undefined as unknown as string,
+      modelRevision: undefined,
+      modelSupportsImages: undefined,
+      recommendedDevice: undefined,
+      supportTier: undefined,
+    });
+
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: malformedConversation,
+      activeConversationId: malformedConversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation: vi.fn(),
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    expect(() => render(<HomeApp />)).not.toThrow();
+  });
 });

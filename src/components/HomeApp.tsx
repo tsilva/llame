@@ -91,6 +91,7 @@ export default function HomeApp() {
   const worker = useInferenceWorker();
   const storage = useStorage();
 
+  const [launchNewChatRequested, setLaunchNewChatRequested] = useState<boolean | null>(null);
   const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
@@ -107,6 +108,7 @@ export default function HomeApp() {
   const streamingThinkingRef = useRef("");
   const streamingRawOutputRef = useRef("");
   const activeConversationIdRef = useRef<string | null>(null);
+  const launchNewChatHandledRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -122,6 +124,11 @@ export default function HomeApp() {
         setWebgpuSupported(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setLaunchNewChatRequested(searchParams.get("new") === "1");
   }, []);
 
   useEffect(() => {
@@ -195,6 +202,8 @@ export default function HomeApp() {
 
   useEffect(() => {
     if (!storage.ready) return;
+    if (launchNewChatRequested === null) return;
+    if (launchNewChatRequested) return;
     if (storage.activeConversationId) return;
 
     const sortedConversations = [...storage.index].sort((left, right) => right.updatedAt - left.updatedAt);
@@ -208,7 +217,7 @@ export default function HomeApp() {
     const conversation = storage.createConversation(lastSelectedModel);
     setLastSelectedModel(buildModelSelectionFromConversation(conversation));
     if (isMobile) setSidebarOpen(false);
-  }, [isMobile, lastSelectedModel, storage]);
+  }, [isMobile, lastSelectedModel, launchNewChatRequested, storage]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
@@ -378,15 +387,30 @@ export default function HomeApp() {
     void storage.flushPendingSave();
   }, [storage, worker]);
 
-  const createNewConversation = useCallback(() => {
+  const createNewConversation = useCallback((model = lastSelectedModel) => {
     if (worker.status === "generating") {
       interruptActiveGeneration();
     }
     setPendingGeneration(null);
-    const conversation = storage.createConversation(lastSelectedModel);
+    const conversation = storage.createConversation(model);
     if (isMobile) setSidebarOpen(false);
     return conversation;
   }, [interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
+
+  useEffect(() => {
+    if (!storage.ready) return;
+    if (launchNewChatRequested !== true) return;
+    if (launchNewChatHandledRef.current) return;
+
+    launchNewChatHandledRef.current = true;
+    createNewConversation(buildModelSelectionFromConversation(storage.activeConversation));
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("new");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+    setLaunchNewChatRequested(false);
+  }, [createNewConversation, launchNewChatRequested, storage.activeConversation, storage.ready]);
 
   const deleteConversation = useCallback((id: string) => {
     storage.deleteConversation(id);

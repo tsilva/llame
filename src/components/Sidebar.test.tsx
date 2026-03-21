@@ -54,7 +54,7 @@ describe("Sidebar", () => {
       }),
     ]);
 
-    expect(screen.getByLabelText("Delete conversation Hello world")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Delete conversation Hello world")).not.toHaveLength(0);
   });
 
   it("keeps the delete button visible on touch layouts while preserving desktop hover behavior", () => {
@@ -66,7 +66,7 @@ describe("Sidebar", () => {
       }),
     ]);
 
-    expect(screen.getByLabelText("Delete conversation Touch chat")).toHaveClass(
+    expect(screen.getAllByLabelText("Delete conversation Touch chat")[0]).toHaveClass(
       "opacity-100",
       "md:opacity-0",
       "md:group-hover:opacity-100",

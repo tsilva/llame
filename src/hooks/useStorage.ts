@@ -44,6 +44,33 @@ function sortByUpdatedAt(conversations: ConversationMeta[]) {
   return [...conversations].sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
+function isEmptyDraftMeta(conversation: ConversationMeta) {
+  return conversation.messageCount === 0;
+}
+
+function isEmptyDraftConversation(conversation: Conversation | null) {
+  return conversation?.messages.length === 0;
+}
+
+function applyModelSelection(
+  conversation: Conversation,
+  model?: string | ModelSelection,
+): Conversation {
+  const selection = typeof model === "string"
+    ? getModelSelection(model)
+    : model ?? getConversationSelection(conversation);
+
+  return {
+    ...conversation,
+    updatedAt: Date.now(),
+    modelId: selection.id,
+    modelRevision: selection.revision ?? null,
+    modelSupportsImages: selection.supportsImages ?? null,
+    recommendedDevice: selection.recommendedDevice,
+    supportTier: selection.supportTier,
+  };
+}
+
 export function useStorage() {
   const [index, setIndex] = useState<ConversationMeta[]>([]);
   const [activeConversation, setActiveConvState] = useState<Conversation | null>(null);
@@ -133,14 +160,38 @@ export function useStorage() {
         const nextIndex = await storage.listConversationMeta();
         if (cancelled) return;
 
-        setIndex(nextIndex);
-        indexRef.current = nextIndex;
-        await refreshStats(nextIndex);
-
         const persistedActiveId = storage.getPersistedActiveConversationId();
-        const initialActiveId = persistedActiveId && nextIndex.some((item) => item.id === persistedActiveId)
+        const emptyDrafts = sortByUpdatedAt(nextIndex.filter(isEmptyDraftMeta));
+        const draftIdToKeep = emptyDrafts.length > 1
+          ? (
+              persistedActiveId && emptyDrafts.some((item) => item.id === persistedActiveId)
+                ? persistedActiveId
+                : emptyDrafts[0]?.id ?? null
+            )
+          : null;
+        const duplicateDraftIds = draftIdToKeep
+          ? emptyDrafts
+            .filter((item) => item.id !== draftIdToKeep)
+            .map((item) => item.id)
+          : [];
+        const duplicateDraftIdSet = new Set(duplicateDraftIds);
+
+        if (duplicateDraftIds.length > 0) {
+          await storage.deleteConversations(duplicateDraftIds);
+          if (cancelled) return;
+        }
+
+        const dedupedIndex = duplicateDraftIds.length > 0
+          ? nextIndex.filter((item) => !duplicateDraftIdSet.has(item.id))
+          : nextIndex;
+
+        setIndex(dedupedIndex);
+        indexRef.current = dedupedIndex;
+        await refreshStats(dedupedIndex);
+
+        const initialActiveId = persistedActiveId && dedupedIndex.some((item) => item.id === persistedActiveId)
           ? persistedActiveId
-          : sortByUpdatedAt(nextIndex)[0]?.id ?? null;
+          : sortByUpdatedAt(dedupedIndex)[0]?.id ?? null;
 
         if (initialActiveId) {
           const conversation = await storage.loadConversation(initialActiveId);
@@ -183,9 +234,44 @@ export function useStorage() {
   }, [flushPendingSave, reportStorageError]);
 
   const createConversation = useCallback((model?: string | ModelSelection): Conversation => {
+    const activeDraft = isEmptyDraftConversation(activeConversation) ? activeConversation : null;
+    const draftIdsToDelete = indexRef.current
+      .filter((item) => isEmptyDraftMeta(item) && item.id !== activeDraft?.id)
+      .map((item) => item.id);
+    const draftIdsToDeleteSet = new Set(draftIdsToDelete);
+    const nextBaseIndex = draftIdsToDelete.length > 0
+      ? indexRef.current.filter((item) => !draftIdsToDeleteSet.has(item.id))
+      : indexRef.current;
+
+    if (draftIdsToDelete.length > 0) {
+      setIndex(nextBaseIndex);
+      indexRef.current = nextBaseIndex;
+      void refreshStats(nextBaseIndex);
+      void storage.deleteConversations(draftIdsToDelete).catch((error) => {
+        reportStorageError(error as StorageErrorState);
+      });
+    }
+
+    if (activeDraft) {
+      const nextConversation = applyModelSelection(activeDraft, model);
+      const meta = storage.buildMeta(nextConversation);
+      const nextIndex = nextBaseIndex.filter((item) => item.id !== nextConversation.id);
+      nextIndex.push(meta);
+
+      setIndex(nextIndex);
+      indexRef.current = nextIndex;
+      setActiveIdState(nextConversation.id);
+      setActiveConvState(nextConversation);
+      storage.setPersistedActiveConversationId(nextConversation.id);
+      void refreshStats(nextIndex);
+      void persistConversation(nextConversation);
+
+      return nextConversation;
+    }
+
     const conversation = createConversationRecord(model);
     const meta = storage.buildMeta(conversation);
-    const nextIndex = indexRef.current.filter((item) => item.id !== conversation.id);
+    const nextIndex = nextBaseIndex.filter((item) => item.id !== conversation.id);
     nextIndex.push(meta);
 
     setIndex(nextIndex);
@@ -197,7 +283,7 @@ export function useStorage() {
     void persistConversation(conversation);
 
     return conversation;
-  }, [persistConversation, refreshStats]);
+  }, [activeConversation, persistConversation, refreshStats, reportStorageError]);
 
   const updateConversation = useCallback((conversation: Conversation) => {
     setActiveConvState(conversation);
@@ -240,12 +326,27 @@ export function useStorage() {
     const nextIndex = indexRef.current.filter((item) => item.id !== id);
 
     if (isActiveConversation) {
+      const draftIdsToDelete = nextIndex
+        .filter(isEmptyDraftMeta)
+        .map((item) => item.id);
+      const draftIdsToDeleteSet = new Set(draftIdsToDelete);
+      const nextIndexWithoutDrafts = draftIdsToDelete.length > 0
+        ? nextIndex.filter((item) => !draftIdsToDeleteSet.has(item.id))
+        : nextIndex;
       const replacementConversation = createConversationRecord(getConversationSelection(activeConversation));
-      nextIndex.push(storage.buildMeta(replacementConversation));
+      nextIndexWithoutDrafts.push(storage.buildMeta(replacementConversation));
       setActiveIdState(replacementConversation.id);
       setActiveConvState(replacementConversation);
       storage.setPersistedActiveConversationId(replacementConversation.id);
       void persistConversation(replacementConversation);
+      setIndex(nextIndexWithoutDrafts);
+      indexRef.current = nextIndexWithoutDrafts;
+      void refreshStats(nextIndexWithoutDrafts);
+
+      void storage.deleteConversations([id, ...draftIdsToDelete]).catch((error) => {
+        reportStorageError(error as StorageErrorState, { conversation_id: id });
+      });
+      return;
     }
 
     setIndex(nextIndex);

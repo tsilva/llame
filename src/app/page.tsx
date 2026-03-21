@@ -59,7 +59,7 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
-                  href="/chat"
+                  href="/chat?new=1"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#10a37f] px-5 py-3 text-sm font-medium text-[#081412] transition-transform hover:translate-y-[-1px] hover:bg-[#12b58b]"
                 >
                   Launch app

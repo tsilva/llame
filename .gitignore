@@ -66,3 +66,5 @@ logs/
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+!.env.example
+!.env.*.example

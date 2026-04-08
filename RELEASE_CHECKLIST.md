@@ -19,6 +19,8 @@
 ## Deployment checks
 
 - `NEXT_PUBLIC_SENTRY_DSN` is set for production if error reporting is desired.
+- `NEXT_PUBLIC_SENTRY_ENABLED=true` is set only when you intentionally want Sentry enabled outside production.
+- `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present in CI/CD or `.env.sentry-build-plugin` if source map upload is desired.
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set only if analytics should be enabled.
 - `vercel.json` contains COOP/COEP, CSP, referrer, content-type, and permissions headers.
 - The live deployment serves the static export and preserves `SharedArrayBuffer` support.

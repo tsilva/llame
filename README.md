@@ -23,7 +23,7 @@ Open the app, pick a model, and chat. There is no backend and no server-side inf
 | Backend | None |
 | Runtime | WebGPU (fp16) / WASM (q4) |
 | Smallest preset | ~538MB |
-| Setup | `npm install && npm run dev` |
+| Setup | `pnpm install && pnpm dev` |
 
 </div>
 
@@ -45,8 +45,8 @@ Open the app, pick a model, and chat. There is no backend and no server-side inf
 ```bash
 git clone https://github.com/tsilva/llame.git
 cd llame
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -100,22 +100,45 @@ Optional env vars:
 - `NEXT_PUBLIC_SITE_URL=https://llame.tsilva.eu` for canonical, Open Graph, Twitter, robots, and sitemap URLs
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID` for Google Analytics 4
 - `NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS=true` to enable Vercel Analytics and Speed Insights
-- `NEXT_PUBLIC_SENTRY_DSN` for client-side Sentry reporting in production
+- `NEXT_PUBLIC_SENTRY_DSN` for Sentry error reporting
+- `NEXT_PUBLIC_SENTRY_ENABLED=true` to force client-side reporting outside production
+
+### Sentry
+
+llame uses `@sentry/nextjs` with Next.js instrumentation files so browser, server, and edge entrypoints share the same DSN and redaction rules. Telemetry is production-only by default unless `NEXT_PUBLIC_SENTRY_ENABLED=true` is set.
+
+The shared Sentry config strips request payloads plus fields named like prompts, outputs, conversations, messages, and images before events leave the client. That keeps prompt text, raw model output, and image payloads out of Sentry.
+
+For readable production stack traces, copy `.env.sentry-build-plugin.example` to `.env.sentry-build-plugin` locally or set the same variables in CI/CD:
+
+- `SENTRY_AUTH_TOKEN`
+- `SENTRY_ORG`
+- `SENTRY_PROJECT`
+
+When those values are present, `pnpm build` uploads client source maps through `withSentryConfig(...)`.
+
+For project issue lookups, copy `.env.sentry-mcp.example` to `.env.sentry-mcp` and run:
+
+```bash
+pnpm sentry:issues --days 7 --limit 10 --status unresolved
+```
+
+Use a read-only token with `org:read`, `project:read`, and `event:read`.
 
 Deploy to Vercel with:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## Quality Gates
 
 ```bash
-npm run lint
-npm test
-npm run test:e2e
-npm run build
-npm run smoke
+pnpm lint
+pnpm test
+pnpm test:e2e
+pnpm build
+pnpm smoke
 ```
 
 [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) covers the manual release and device checks.

@@ -1,7 +1,7 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
-import { captureTelemetryError } from "@/lib/telemetry";
 
 export default function GlobalError({
   error,
@@ -11,9 +11,13 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    captureTelemetryError("Unhandled application error", {
-      digest: error.digest ?? null,
-    }, error);
+    Sentry.withScope((scope) => {
+      if (error.digest) {
+        scope.setTag("digest", error.digest);
+      }
+
+      Sentry.captureException(error);
+    });
   }, [error]);
 
   return (

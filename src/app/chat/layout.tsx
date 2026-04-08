@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { chatPageMetadata } from "@/lib/siteMetadata";
 import Script from "next/script";
+import "./chat.css";
 
 export const metadata: Metadata = chatPageMetadata;
 

@@ -9,17 +9,20 @@ export const siteLocale = "en_US";
 export const siteLanguage = "en-US";
 const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
 const FALLBACK_SITE_DESCRIPTION =
-  "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.";
+  "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.";
 const FALLBACK_SITE_KEYWORDS = [
-  "transformers.js",
-  "webgpu",
-  "wasm",
-  "onnx-runtime",
-  "local-llm",
+  "private-ai-chat",
   "browser-ai",
-  "client-side-inference",
+  "local-ai",
+  "run-ai-in-browser",
+  "on-device-ai",
+  "offline-ai",
+  "local-llm",
+  "browser-llm",
   "private-ai",
-  "web-worker",
+  "webgpu",
+  "onnx",
+  "transformers.js",
 ];
 
 function resolveSiteUrl(): string {
@@ -70,10 +73,10 @@ function resolveMetadataKeywords(keywords: Metadata["keywords"] | undefined): st
 export const siteTitle = resolveMetadataTitle(generatedMetadata.title);
 export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DESCRIPTION;
 export const siteTagline =
-  "No Python. No CUDA. No server. Just a URL for private, on-device AI chat.";
-export const chatPageTitle = "llame Chat | Local Browser AI Workspace";
+  "Private AI chat in your browser. No installs. No setup. Your chats stay on your device.";
+export const chatPageTitle = "llame Chat | Private Browser AI Workspace";
 export const chatPageDescription =
-  "Launch llame's local chat workspace to run ONNX models on-device with WebGPU or WASM.";
+  "Open llame's private browser AI workspace to chat with local models on your device.";
 
 function normalizeMetadataUrl(value: string | URL): string {
   return value instanceof URL ? value.toString() : value;
@@ -92,7 +95,7 @@ function getGeneratedSocialImage() {
       url: "/brand/web-seo/og-image-1200x630.png",
       width: 1200,
       height: 630,
-      alt: "llame social card for private in-browser AI with WebGPU acceleration",
+      alt: "llame social card for private AI chat that runs in your browser",
     };
   }
 
@@ -101,7 +104,7 @@ function getGeneratedSocialImage() {
       url: normalizeMetadataUrl(firstImage),
       width: 1200,
       height: 630,
-      alt: "llame social card for private in-browser AI with WebGPU acceleration",
+      alt: "llame social card for private AI chat that runs in your browser",
     };
   }
 
@@ -109,7 +112,7 @@ function getGeneratedSocialImage() {
     url: normalizeMetadataUrl(firstImage.url),
     width: firstImage.width ?? 1200,
     height: firstImage.height ?? 630,
-    alt: firstImage.alt ?? "llame social card for private in-browser AI with WebGPU acceleration",
+    alt: firstImage.alt ?? "llame social card for private AI chat that runs in your browser",
   };
 }
 
@@ -264,10 +267,10 @@ export const homePageJsonLd = {
       browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
       isAccessibleForFree: true,
       featureList: [
-        "Run ONNX large language models locally in the browser",
-        "Use WebGPU acceleration with WASM fallback",
-        "Chat with Qwen, Llama, and other compatible open models",
-        "Keep prompts and responses on the user's device",
+        "Run local AI models directly in your browser",
+        "Keep prompts and responses on your device",
+        "Start chatting without installs or API keys",
+        "Use popular open models including Qwen and Llama",
       ],
       creator: {
         "@type": "Person",

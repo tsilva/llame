@@ -1,35 +1,37 @@
 import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
-  "title": "Run Private AI Models in Your Browser | llame",
-  "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
+  "title": "Private AI Chat in Your Browser | llame",
+  "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
   "keywords": [
+    "private-ai-chat",
+    "browser-ai",
+    "local-ai",
+    "run-ai-in-browser",
+    "on-device-ai",
+    "offline-ai",
+    "local-llm",
+    "browser-llm",
     "webgpu",
-    "transformers-js",
-    "onnx-runtime",
-    "client-side-ai",
-    "webassembly",
-    "private-gpt",
-    "llm-browser",
-    "wasm-inference",
-    "typescript"
+    "onnx",
+    "transformers-js"
   ],
   "openGraph": {
-    "title": "Run Private AI Models in Your Browser | llame",
-    "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
+    "title": "Private AI Chat in Your Browser | llame",
+    "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
         "width": 1200,
         "height": 630,
-        "alt": "llame social card for private in-browser AI with WebGPU acceleration"
+        "alt": "llame social card for private AI chat that runs in your browser"
       }
     ]
   },
   "twitter": {
     "card": "summary_large_image",
-    "title": "Run Private AI Models in Your Browser | llame",
-    "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
+    "title": "Private AI Chat in Your Browser | llame",
+    "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"
     ]

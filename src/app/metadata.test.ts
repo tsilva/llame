@@ -1,14 +1,35 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { metadata as chatMetadata } from "@/app/chat/layout";
 import { metadata as homeMetadata } from "@/app/page";
 import sitemap from "@/app/sitemap";
-import { socialImage, siteUrl } from "@/lib/siteMetadata";
+import {
+  chatPageDescription,
+  homePageJsonLd,
+  siteDescription,
+  siteKeywords,
+  siteTitle,
+  socialImage,
+  siteUrl,
+} from "@/lib/siteMetadata";
+
+const generatedMetadataJson = JSON.parse(
+  readFileSync(join(process.cwd(), "web-seo-metadata.json"), "utf8"),
+);
+const webManifest = JSON.parse(
+  readFileSync(join(process.cwd(), "public/brand/web-seo/site.webmanifest"), "utf8"),
+);
+const brandManifest = JSON.parse(
+  readFileSync(join(process.cwd(), "public/brand/manifest.json"), "utf8"),
+);
+const stackFirstTermsPattern = /\b(transformers(?:\.js|-js)?|onnx|webgpu|wasm|webassembly|typescript)\b/i;
 
 describe("SEO metadata", () => {
-  it("exports homepage metadata with the CTR title, description, canonical, and OG alt text", () => {
-    expect(homeMetadata.title).toBe("Run Private AI Models in Your Browser | llame");
+  it("exports homepage metadata with value-first copy, canonical, and meaningful OG alt text", () => {
+    expect(homeMetadata.title).toBe("Private AI Chat in Your Browser | llame");
     expect(homeMetadata.description).toBe(
-      "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
+      "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     );
     expect(homeMetadata.alternates?.canonical).toBe("/");
 
@@ -18,15 +39,15 @@ describe("SEO metadata", () => {
     const firstHomeImage = homeImages[0];
 
     expect(firstHomeImage).toMatchObject({
-      alt: "llame social card for private in-browser AI with WebGPU acceleration",
+      alt: "llame social card for private AI chat that runs in your browser",
     });
+    expect(String(homeMetadata.title)).not.toMatch(stackFirstTermsPattern);
+    expect(homeMetadata.description).not.toMatch(stackFirstTermsPattern);
   });
 
   it("exports noindex metadata for the chat workspace", () => {
-    expect(chatMetadata.title).toBe("llame Chat | Local Browser AI Workspace");
-    expect(chatMetadata.description).toBe(
-      "Launch llame's local chat workspace to run ONNX models on-device with WebGPU or WASM.",
-    );
+    expect(chatMetadata.title).toBe("llame Chat | Private Browser AI Workspace");
+    expect(chatMetadata.description).toBe(chatPageDescription);
     expect(chatMetadata.alternates?.canonical).toBe("/chat");
     expect(chatMetadata.robots).toMatchObject({
       index: false,
@@ -36,6 +57,44 @@ describe("SEO metadata", () => {
       url: "/chat",
       images: [socialImage],
     });
+  });
+
+  it("keeps generated metadata and manifest surfaces aligned with the homepage copy", () => {
+    expect(generatedMetadataJson.title).toBe(siteTitle);
+    expect(generatedMetadataJson.description).toBe(siteDescription);
+    expect(generatedMetadataJson.openGraph.title).toBe(siteTitle);
+    expect(generatedMetadataJson.openGraph.description).toBe(siteDescription);
+    expect(generatedMetadataJson.openGraph.images[0].alt).toBe(socialImage.alt);
+    expect(generatedMetadataJson.twitter.title).toBe(siteTitle);
+    expect(generatedMetadataJson.twitter.description).toBe(siteDescription);
+
+    expect(webManifest.name).toBe(siteTitle);
+    expect(webManifest.description).toBe(siteDescription);
+
+    expect(brandManifest.metadata.title).toBe(siteTitle);
+    expect(brandManifest.metadata.short_description).toBe(siteDescription);
+    expect(brandManifest.metadata.social_title).toBe(siteTitle);
+    expect(brandManifest.metadata.social_description).toBe(siteDescription);
+
+    expect(generatedMetadataJson.title).not.toMatch(stackFirstTermsPattern);
+    expect(generatedMetadataJson.description).not.toMatch(stackFirstTermsPattern);
+    expect(webManifest.name).not.toMatch(stackFirstTermsPattern);
+    expect(webManifest.description).not.toMatch(stackFirstTermsPattern);
+  });
+
+  it("keeps schema descriptions and keyword ordering focused on user intent first", () => {
+    expect(homePageJsonLd["@graph"][0].description).toBe(siteDescription);
+    expect(homePageJsonLd["@graph"][1].description).toBe(siteDescription);
+    expect(siteKeywords.slice(0, 8)).toEqual([
+      "private-ai-chat",
+      "browser-ai",
+      "local-ai",
+      "run-ai-in-browser",
+      "on-device-ai",
+      "offline-ai",
+      "local-llm",
+      "browser-llm",
+    ]);
   });
 });
 

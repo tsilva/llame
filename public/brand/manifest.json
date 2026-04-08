@@ -10,20 +10,22 @@
     "cli_args"
   ],
   "metadata": {
-    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "short_description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
-    "social_title": "llame: Private Browser-Based AI Models",
-    "social_description": "Run private AI models directly in your browser with hardware acceleration. llame uses WebGPU and Transformers.js for low-latency, serverless inference.",
+    "title": "Private AI Chat in Your Browser | llame",
+    "short_description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
+    "social_title": "Private AI Chat in Your Browser | llame",
+    "social_description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     "keywords": [
+      "private-ai-chat",
+      "browser-ai",
+      "local-ai",
+      "run-ai-in-browser",
+      "on-device-ai",
+      "offline-ai",
+      "local-llm",
+      "browser-llm",
       "webgpu",
-      "transformers-js",
-      "onnx-runtime",
-      "client-side-ai",
-      "webassembly",
-      "private-gpt",
-      "llm-browser",
-      "wasm-inference",
-      "typescript"
+      "onnx",
+      "transformers-js"
     ]
   },
   "assets": [

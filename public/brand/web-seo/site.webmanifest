@@ -1,7 +1,7 @@
 {
-  "name": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+  "name": "Private AI Chat in Your Browser | llame",
   "short_name": "llame",
-  "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+  "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
   "icons": [
     {
       "src": "android-chrome-192.png",

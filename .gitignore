@@ -66,6 +66,8 @@ logs/
 *.tsbuildinfo
 next-env.d.ts
 tmp/lighthouse/
+tmp/lighthouse-*/
+tmp/playwright-*/
 .env*.local
 !.env.example
 !.env.*.example

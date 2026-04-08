@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
-  "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-  "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+  "title": "Run Private AI Models in Your Browser | llame",
+  "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
   "keywords": [
     "webgpu",
     "transformers-js",
@@ -15,21 +15,21 @@ const payload: Omit<Metadata, "metadataBase"> = {
     "typescript"
   ],
   "openGraph": {
-    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "title": "Run Private AI Models in Your Browser | llame",
+    "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
         "width": 1200,
         "height": 630,
-        "alt": "llame brand card"
+        "alt": "llame social card for private in-browser AI with WebGPU acceleration"
       }
     ]
   },
   "twitter": {
     "card": "summary_large_image",
-    "title": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-    "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
+    "title": "Run Private AI Models in Your Browser | llame",
+    "description": "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"
     ]

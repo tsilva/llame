@@ -4,9 +4,12 @@ import createGeneratedMetadata from "../../web-seo-metadata";
 export const siteName = "llame";
 export const siteBackgroundColor = "#212121";
 export const siteThemeColor = "#10a37f";
+export const socialHandle = "@tiagosilva";
+export const siteLocale = "en_US";
+export const siteLanguage = "en-US";
 const DEFAULT_SITE_URL = "https://llame.tsilva.eu";
 const FALLBACK_SITE_DESCRIPTION =
-  "A client-side application for running private AI models directly in the browser using WebGPU, WASM, and Transformers.js.";
+  "Chat with local ONNX models in your browser using WebGPU or WASM. No server inference, no API keys, and prompts stay on your device.";
 const FALLBACK_SITE_KEYWORDS = [
   "transformers.js",
   "webgpu",
@@ -35,6 +38,7 @@ function resolveSiteUrl(): string {
 
 export const siteUrl = resolveSiteUrl();
 export const generatedMetadata = createGeneratedMetadata(new URL(siteUrl));
+const metadataBase = new URL(siteUrl);
 
 function resolveMetadataTitle(title: Metadata["title"] | undefined): string {
   if (typeof title === "string") {
@@ -67,9 +71,16 @@ export const siteTitle = resolveMetadataTitle(generatedMetadata.title);
 export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DESCRIPTION;
 export const siteTagline =
   "No Python. No CUDA. No server. Just a URL for private, on-device AI chat.";
+export const chatPageTitle = "llame Chat | Local Browser AI Workspace";
+export const chatPageDescription =
+  "Launch llame's local chat workspace to run ONNX models on-device with WebGPU or WASM.";
 
 function normalizeMetadataUrl(value: string | URL): string {
   return value instanceof URL ? value.toString() : value;
+}
+
+function resolveAbsoluteUrl(path: string): string {
+  return new URL(path, metadataBase).toString();
 }
 
 function getGeneratedSocialImage() {
@@ -81,7 +92,7 @@ function getGeneratedSocialImage() {
       url: "/brand/web-seo/og-image-1200x630.png",
       width: 1200,
       height: 630,
-      alt: "llame brand card",
+      alt: "llame social card for private in-browser AI with WebGPU acceleration",
     };
   }
 
@@ -90,7 +101,7 @@ function getGeneratedSocialImage() {
       url: normalizeMetadataUrl(firstImage),
       width: 1200,
       height: 630,
-      alt: "llame brand card",
+      alt: "llame social card for private in-browser AI with WebGPU acceleration",
     };
   }
 
@@ -98,7 +109,7 @@ function getGeneratedSocialImage() {
     url: normalizeMetadataUrl(firstImage.url),
     width: firstImage.width ?? 1200,
     height: firstImage.height ?? 630,
-    alt: firstImage.alt ?? "llame brand card",
+    alt: firstImage.alt ?? "llame social card for private in-browser AI with WebGPU acceleration",
   };
 }
 
@@ -117,7 +128,114 @@ export const siteLinks = {
   github: "https://github.com/tsilva/llame",
 };
 
-export const webApplicationJsonLd = {
+export const sharedSiteMetadata: Metadata = {
+  metadataBase,
+  applicationName: siteName,
+  authors: [{ name: "Tiago Silva" }],
+  creator: "Tiago Silva",
+  publisher: "Tiago Silva",
+  manifest: metadataManifestPath,
+  icons: metadataIcons,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: siteName,
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  referrer: "strict-origin-when-cross-origin",
+  category: "technology",
+};
+
+type PageMetadataOptions = {
+  title: string;
+  description: string;
+  canonicalPath: "/" | "/chat";
+  robots?: Metadata["robots"];
+  includeLanguages?: boolean;
+};
+
+function createPageMetadata({
+  title,
+  description,
+  canonicalPath,
+  robots,
+  includeLanguages = false,
+}: PageMetadataOptions): Metadata {
+  return {
+    title,
+    description,
+    keywords: siteKeywords,
+    alternates: {
+      canonical: canonicalPath,
+      ...(includeLanguages
+        ? {
+            languages: {
+              [siteLanguage]: canonicalPath,
+            },
+          }
+        : {}),
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalPath,
+      type: "website",
+      siteName,
+      locale: siteLocale,
+      images: [socialImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      creator: socialHandle,
+      site: socialHandle,
+      images: [socialImage.url],
+    },
+    ...(robots ? { robots } : {}),
+  };
+}
+
+export const homePageMetadata = createPageMetadata({
+  title: siteTitle,
+  description: siteDescription,
+  canonicalPath: "/",
+  includeLanguages: true,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+});
+
+export const chatPageMetadata = createPageMetadata({
+  title: chatPageTitle,
+  description: chatPageDescription,
+  canonicalPath: "/chat",
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+});
+
+export const homePageJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -126,7 +244,7 @@ export const webApplicationJsonLd = {
       url: siteUrl,
       description: siteDescription,
       keywords: siteKeywords.join(", "),
-      inLanguage: "en-US",
+      inLanguage: siteLanguage,
       publisher: {
         "@type": "Person",
         name: "Tiago Silva",
@@ -140,8 +258,8 @@ export const webApplicationJsonLd = {
       description: siteDescription,
       applicationCategory: "BrowserApplication",
       operatingSystem: "Any",
-      image: `${siteUrl}${socialImage.url}`,
-      screenshot: `${siteUrl}${socialImage.url}`,
+      image: resolveAbsoluteUrl(socialImage.url),
+      screenshot: resolveAbsoluteUrl(socialImage.url),
       slogan: siteTagline,
       browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
       isAccessibleForFree: true,

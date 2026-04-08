@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { chatPageMetadata } from "@/lib/siteMetadata";
 import Script from "next/script";
+
+export const metadata: Metadata = chatPageMetadata;
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const SHOULD_RENDER_VERCEL_INSIGHTS =

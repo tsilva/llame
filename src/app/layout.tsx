@@ -1,16 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import {
-  generatedMetadata,
-  metadataIcons,
-  metadataManifestPath,
-  socialImage,
   siteBackgroundColor,
-  siteName,
   siteThemeColor,
-  siteUrl,
-  webApplicationJsonLd,
+  sharedSiteMetadata,
 } from "@/lib/siteMetadata";
-import { ClientTelemetry } from "@/components/ClientTelemetry";
+import { getSentryTestHookInlineScript } from "@/lib/sentryTestHook";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -20,58 +14,7 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export const metadata: Metadata = {
-  ...generatedMetadata,
-  applicationName: siteName,
-  authors: [{ name: "Tiago Silva" }],
-  creator: "Tiago Silva",
-  publisher: "Tiago Silva",
-  manifest: metadataManifestPath,
-  alternates: {
-    canonical: "/",
-    languages: {
-      "en-US": "/",
-    },
-  },
-  icons: metadataIcons,
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: siteName,
-  },
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  referrer: "strict-origin-when-cross-origin",
-  category: "technology",
-  openGraph: {
-    ...generatedMetadata.openGraph,
-    type: "website",
-    url: siteUrl,
-    siteName,
-    locale: "en_US",
-    images: [socialImage],
-  },
-  twitter: {
-    ...generatedMetadata.twitter,
-    creator: "@tiagosilva",
-    site: "@tiagosilva",
-    images: [socialImage.url],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
-};
+export const metadata: Metadata = sharedSiteMetadata;
 
 export default function RootLayout({
   children,
@@ -83,12 +26,11 @@ export default function RootLayout({
       <head>
         <meta name="msapplication-TileColor" content={siteBackgroundColor} />
         <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationJsonLd) }}
+          id="sentry-test-hook"
+          dangerouslySetInnerHTML={{ __html: getSentryTestHookInlineScript() }}
         />
       </head>
       <body className="antialiased">
-        <ClientTelemetry />
         {children}
       </body>
     </html>

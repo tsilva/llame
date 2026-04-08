@@ -1,0 +1,287 @@
+.page {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #212121;
+  color: #ececec;
+}
+
+.shell {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  flex-direction: column;
+  padding: 2rem 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brandMark {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: #10a37f;
+}
+
+.brandMarkIcon {
+  color: white;
+}
+
+.brandName {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+}
+
+.brandKicker {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #8e8e8e;
+}
+
+.repoLink {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #b4b4b4;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.repoLink:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: white;
+}
+
+.heroSection {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding: 3rem 0;
+}
+
+.heroGrid {
+  display: grid;
+  width: 100%;
+  gap: 2.5rem;
+}
+
+.copyColumn {
+  max-width: 42rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin: 0 0 1rem;
+  border: 1px solid rgba(16, 163, 127, 0.25);
+  border-radius: 999px;
+  background: rgba(16, 163, 127, 0.1);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #7ee7c7;
+}
+
+.title {
+  max-width: 48rem;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: white;
+}
+
+.description {
+  max-width: 42rem;
+  margin: 1.25rem 0 0;
+  font-size: 1rem;
+  line-height: 1.75rem;
+  color: #b4b4b4;
+}
+
+.ctaRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.primaryCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  border-radius: 1rem;
+  background: #10a37f;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #081412;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.primaryCta:hover {
+  background: #12b58b;
+  transform: translateY(-1px);
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.75rem;
+  background: #171717;
+  padding: 1.25rem;
+}
+
+.readinessCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: #212121;
+  padding: 1rem;
+}
+
+.readinessLabel {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #8e8e8e;
+}
+
+.modelCard {
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: #171717;
+  padding: 1rem;
+}
+
+.modelLabel {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #8e8e8e;
+}
+
+.modelName {
+  margin: 0.25rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: white;
+}
+
+.modelDescription {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: #b4b4b4;
+}
+
+.pointsGrid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pointCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.75rem 1rem;
+}
+
+.pointRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pointIconWrap {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #10a37f;
+}
+
+.pointLabel {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+}
+
+.pointDetail {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #8e8e8e;
+}
+
+@media (min-width: 640px) {
+  .shell {
+    padding-inline: 2rem;
+  }
+
+  .heroSection {
+    padding: 4rem 0;
+  }
+
+  .title {
+    font-size: 3rem;
+  }
+
+  .description {
+    font-size: 1.125rem;
+  }
+
+  .ctaRow {
+    flex-direction: row;
+  }
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    padding-inline: 2.5rem;
+  }
+
+  .heroGrid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    gap: 3rem;
+  }
+
+  .title {
+    font-size: 3.75rem;
+  }
+}

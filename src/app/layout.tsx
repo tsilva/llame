@@ -5,7 +5,7 @@ import {
   sharedSiteMetadata,
 } from "@/lib/siteMetadata";
 import { getSentryTestHookInlineScript } from "@/lib/sentryTestHook";
-import "./globals.css";
+import "./base.css";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -30,7 +30,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: getSentryTestHookInlineScript() }}
         />
       </head>
-      <body className="antialiased">
+      <body>
         {children}
       </body>
     </html>

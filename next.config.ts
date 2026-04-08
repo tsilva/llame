@@ -8,6 +8,14 @@ const DEFAULT_SENTRY_ORG = "tsilva";
 const DEFAULT_SENTRY_PROJECT = path.basename(process.cwd());
 
 const getGitHash = () => {
+  const hostedCommitHash =
+    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ??
+    process.env.GITHUB_SHA?.trim();
+
+  if (hostedCommitHash) {
+    return hostedCommitHash.slice(0, 7);
+  }
+
   try {
     return execSync("git rev-parse --short HEAD").toString().trim();
   } catch {

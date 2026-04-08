@@ -121,6 +121,8 @@ For readable production stack traces, copy `.env.sentry-build-plugin.example` to
 
 The examples default to the `tsilva/llame` project. When those values are present, `pnpm build` uploads client source maps through `withSentryConfig(...)`.
 
+Release metadata prefers the hosted commit SHA on Vercel and falls back to the local git hash, so production browser events keep the active release even when the build runs without a `.git` checkout.
+
 For project issue lookups, copy `.env.sentry-mcp.example` to `.env.sentry-mcp` and run:
 
 ```bash

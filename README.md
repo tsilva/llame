@@ -101,11 +101,15 @@ Optional env vars:
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID` for Google Analytics 4
 - `NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS=true` to enable Vercel Analytics and Speed Insights
 - `NEXT_PUBLIC_SENTRY_DSN` for Sentry error reporting
+- `SENTRY_DSN` for Node or Edge runtime event capture if you later add non-static runtime handlers
 - `NEXT_PUBLIC_SENTRY_ENABLED=true` to force client-side reporting outside production
+- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1` to override the default production tracing sample rate
 
 ### Sentry
 
-llame uses `@sentry/nextjs` with Next.js instrumentation files so browser, server, and edge entrypoints share the same DSN and redaction rules. Telemetry is production-only by default unless `NEXT_PUBLIC_SENTRY_ENABLED=true` is set.
+llame uses `@sentry/nextjs` with Next.js instrumentation files so browser, server, and edge entrypoints share one config path and the same redaction rules. Browser events use `NEXT_PUBLIC_SENTRY_DSN`; server and edge runtimes prefer `SENTRY_DSN` and fall back to the public DSN when present. Telemetry is production-only by default unless `NEXT_PUBLIC_SENTRY_ENABLED=true` is set.
+
+Performance tracing is enabled in production with a default `tracesSampleRate` of `0.1`. Set `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` to a value between `0` and `1` to tune or disable tracing explicitly.
 
 The shared Sentry config strips request payloads plus fields named like prompts, outputs, conversations, messages, and images before events leave the client. That keeps prompt text, raw model output, and image payloads out of Sentry.
 
@@ -115,7 +119,7 @@ For readable production stack traces, copy `.env.sentry-build-plugin.example` to
 - `SENTRY_ORG`
 - `SENTRY_PROJECT`
 
-When those values are present, `pnpm build` uploads client source maps through `withSentryConfig(...)`.
+The examples default to the `tsilva/llame` project. When those values are present, `pnpm build` uploads client source maps through `withSentryConfig(...)`.
 
 For project issue lookups, copy `.env.sentry-mcp.example` to `.env.sentry-mcp` and run:
 

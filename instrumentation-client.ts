@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/nextjs";
-import { getSentryBaseConfig } from "@/lib/sentry";
+import { getSentryBaseConfig, getSentryTracesSampleRate } from "@/lib/sentry";
 
 Sentry.init({
   ...getSentryBaseConfig(),
-  tracesSampleRate: 0,
+  tracesSampleRate: getSentryTracesSampleRate(),
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

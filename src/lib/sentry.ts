@@ -1,12 +1,18 @@
 import type { ErrorEvent } from "@sentry/nextjs";
 
 const DEV_ENABLE_FLAG = "NEXT_PUBLIC_SENTRY_ENABLED";
+const TRACE_SAMPLE_RATE_FLAG = "NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE";
 const DEFAULT_ENVIRONMENT =
   process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ??
   process.env.VERCEL_ENV ??
   process.env.NODE_ENV ??
   "development";
+const DEFAULT_PRODUCTION_TRACES_SAMPLE_RATE = 0.1;
 const SENSITIVE_FIELD_PATTERN = /(prompt|output|image|attachment|conversation|messages?)/i;
+
+function getSentryDsn() {
+  return process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
+}
 
 function scrubSensitiveFields(value: unknown, depth = 0) {
   if (!value || typeof value !== "object" || depth > 3) {
@@ -24,7 +30,7 @@ function scrubSensitiveFields(value: unknown, depth = 0) {
 }
 
 export function isSentryEnabled() {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+  const dsn = getSentryDsn();
   if (!dsn) {
     return false;
   }
@@ -42,7 +48,7 @@ export function isSentryEnabled() {
 
 export function getSentryBaseConfig() {
   return {
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    dsn: getSentryDsn(),
     enabled: isSentryEnabled(),
     environment: DEFAULT_ENVIRONMENT,
     release:
@@ -62,4 +68,24 @@ export function getSentryBaseConfig() {
       return event;
     },
   };
+}
+
+export function getSentryTracesSampleRate() {
+  if (!isSentryEnabled()) {
+    return 0;
+  }
+
+  const configuredValue = process.env[TRACE_SAMPLE_RATE_FLAG];
+  if (configuredValue) {
+    const parsedValue = Number.parseFloat(configuredValue);
+    if (!Number.isNaN(parsedValue) && parsedValue >= 0 && parsedValue <= 1) {
+      return parsedValue;
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return DEFAULT_PRODUCTION_TRACES_SAMPLE_RATE;
+  }
+
+  return 0;
 }

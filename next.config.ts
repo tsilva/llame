@@ -4,6 +4,9 @@ import { execSync } from "child_process";
 import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const DEFAULT_SENTRY_ORG = "tsilva";
+const DEFAULT_SENTRY_PROJECT = path.basename(process.cwd());
+
 const getGitHash = () => {
   try {
     return execSync("git rev-parse --short HEAD").toString().trim();
@@ -62,8 +65,8 @@ const nextConfig: NextConfig = {
 
 export default withSentryConfig(nextConfig, {
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
+  org: process.env.SENTRY_ORG ?? DEFAULT_SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
 });

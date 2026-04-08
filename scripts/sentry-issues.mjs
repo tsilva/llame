@@ -3,6 +3,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+const DEFAULT_SENTRY_ORG = "tsilva";
+const DEFAULT_SENTRY_PROJECT = path.basename(process.cwd());
+const DEFAULT_SENTRY_BASE_URL = "https://sentry.io";
 const HELP_TEXT = `Usage: pnpm sentry:issues [--days 7] [--limit 10] [--status unresolved]
 
 List recent Sentry issues for the configured project.
@@ -64,13 +67,13 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
 }
 
 const authToken = process.env.SENTRY_AUTH_TOKEN;
-const org = process.env.SENTRY_ORG;
-const project = process.env.SENTRY_PROJECT;
-const baseUrl = process.env.SENTRY_BASE_URL ?? "https://sentry.io";
+const org = process.env.SENTRY_ORG ?? DEFAULT_SENTRY_ORG;
+const project = process.env.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT;
+const baseUrl = process.env.SENTRY_BASE_URL ?? DEFAULT_SENTRY_BASE_URL;
 
-if (!authToken || !org || !project) {
+if (!authToken) {
   exitWithError(
-    "Missing Sentry credentials. Populate .env.sentry-mcp with SENTRY_AUTH_TOKEN, SENTRY_ORG, and SENTRY_PROJECT.",
+    "Missing Sentry credentials. Populate .env.sentry-mcp with SENTRY_AUTH_TOKEN.",
   );
 }
 
@@ -90,12 +93,40 @@ if (!["unresolved", "resolved", "ignored", "all"].includes(status)) {
   exitWithError("--status must be one of: unresolved, resolved, ignored, all.");
 }
 
-const issuesUrl = new URL(`/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/issues/`, baseUrl);
-issuesUrl.searchParams.set("limit", String(limit));
-issuesUrl.searchParams.set("statsPeriod", `${days}d`);
-if (status !== "all") {
-  issuesUrl.searchParams.set("query", `is:${status}`);
+const projectLookupUrl = new URL(
+  `/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/`,
+  baseUrl,
+);
+
+const projectResponse = await fetch(projectLookupUrl, {
+  headers: {
+    Accept: "application/json",
+    Authorization: `Bearer ${authToken}`,
+  },
+});
+
+if (!projectResponse.ok) {
+  const body = await projectResponse.text();
+  exitWithError(`Sentry project lookup failed (${projectResponse.status} ${projectResponse.statusText}). ${body}`);
 }
+
+const projectDetails = await projectResponse.json();
+const projectId = projectDetails.id;
+
+if (!projectId) {
+  exitWithError(`Sentry project lookup for ${org}/${project} did not return a project id.`);
+}
+
+const issuesUrl = new URL(`/api/0/organizations/${encodeURIComponent(org)}/issues/`, baseUrl);
+issuesUrl.searchParams.set("limit", String(limit));
+issuesUrl.searchParams.append("project", String(projectId));
+
+const queryParts = [];
+if (status !== "all") {
+  queryParts.push(`is:${status}`);
+}
+queryParts.push(`firstSeen:-${days}d`);
+issuesUrl.searchParams.set("query", queryParts.join(" "));
 
 const response = await fetch(issuesUrl, {
   headers: {

@@ -1,6 +1,6 @@
 {
   "name": "llame | Private In-Browser AI with WebGPU & Transformers.js",
-  "short_name": "llame | Private In-Browser AI with WebGPU & Transformers.js",
+  "short_name": "llame",
   "description": "A client-side application for running ONNX language models locally using WebGPU and WebAssembly. No server-side inference or API keys required.",
   "icons": [
     {

@@ -81,10 +81,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content={siteThemeColor} />
         <meta name="msapplication-TileColor" content={siteBackgroundColor} />
         <script
           type="application/ld+json"

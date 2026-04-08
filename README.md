@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./logo.png" alt="llame" width="512"/>
+  <img src="./public/brand/logo/logo-1024.png" alt="llame" width="512"/>
 
   [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Deploy](https://img.shields.io/badge/demo-live-brightgreen)](https://llame.tsilva.eu)
 

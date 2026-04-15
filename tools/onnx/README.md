@@ -15,6 +15,9 @@ The exporter in this repo currently targets that layout with these defaults:
 - `decoder_model_merged_q4f16.onnx`
 
 That matches the current `llame` WebGPU load policy for Qwen3.5 models.
+The exporter also keeps small scalar and shape constants embedded in the ONNX
+graph instead of pushing every tensor into `.onnx_data`, which avoids browser
+shape-inference failures in ONNX Runtime WebGPU.
 
 ### Run
 

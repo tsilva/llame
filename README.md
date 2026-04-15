@@ -157,6 +157,8 @@ By default this writes a Transformers.js-style package into `build/onnx-transfor
 - `onnx/decoder_model_merged_q4f16.onnx`
 
 The exporter is intentionally focused on Qwen3.5 multimodal models and the WebGPU path used by the latest stable Transformers.js `v4.0.0`. Internally it transplants weights from the target checkpoint into the official `onnx-community/Qwen3.5-0.8B-ONNX` reference graphs instead of trying to re-export the Qwen3.5 vision stack from PyTorch.
+It preserves the reference graphs' small inline constants so the exported model
+remains compatible with ONNX Runtime WebGPU in the browser.
 
 ## Quality Gates
 

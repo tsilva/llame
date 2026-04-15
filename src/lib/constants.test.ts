@@ -27,6 +27,6 @@ describe("constants", () => {
       supportTier: "curated",
     });
 
-    expect(selection.revision).toBe("5a34290ef1c1599f7f0fc0a48f5afa941adee998");
+    expect(selection.revision).toBe("485135195eba6101aec08199e24cef89a971c464");
   });
 });

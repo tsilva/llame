@@ -24,6 +24,12 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_ID = "tsilva/unsloth_Qwen3.5-0.8B_uncensored"
 DEFAULT_REFERENCE_MODEL_ID = "onnx-community/Qwen3.5-0.8B-ONNX"
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "build" / "onnx-transformersjs" / "tsilva__unsloth_Qwen3.5-0.8B_uncensored"
+EXTERNAL_DATA_SIZE_THRESHOLD_BYTES = 1024
+INLINE_SENSITIVE_INITIALIZER_PREFIXES = (
+    "/model/constants/",
+    "model.inv_freq",
+    "model.vision.inv_freq",
+)
 MODEL_SNAPSHOT_PATTERNS = [
     "config.json",
     "generation_config.json",
@@ -227,9 +233,36 @@ def save_onnx_with_external_data(model: onnx.ModelProto, output_path: Path) -> N
         save_as_external_data=True,
         all_tensors_to_one_file=True,
         location=f"{output_path.name}_data",
-        size_threshold=0,
+        # Keep tiny scalar/shape constants inline to match the reference graphs.
+        # ORT WebGPU shape inference can fail when those constants live in
+        # external data, even though the weight tensors should stay external.
+        size_threshold=EXTERNAL_DATA_SIZE_THRESHOLD_BYTES,
         convert_attribute=False,
     )
+    validate_external_data_layout(output_path)
+
+
+def validate_external_data_layout(output_path: Path) -> None:
+    model = onnx.load_model(output_path.as_posix(), load_external_data=False)
+    invalid_initializers: list[str] = []
+
+    for initializer in model.graph.initializer:
+        if initializer.data_location != onnx.TensorProto.EXTERNAL:
+            continue
+
+        metadata = {entry.key: entry.value for entry in initializer.external_data}
+        length = int(metadata.get("length", "0"))
+        if any(initializer.name.startswith(prefix) for prefix in INLINE_SENSITIVE_INITIALIZER_PREFIXES):
+            invalid_initializers.append(f"{initializer.name} ({length} bytes)")
+
+    if invalid_initializers:
+        joined = ", ".join(invalid_initializers[:5])
+        if len(invalid_initializers) > 5:
+            joined += ", ..."
+        raise ValueError(
+            "Exported ONNX graph still externalized small initializers, "
+            f"which breaks browser loading: {joined}"
+        )
 
 
 def materialize_reference_artifact(source_path: Path, stage_dir: Path) -> Path:

@@ -99,6 +99,52 @@ describe("useStorage", () => {
     expect(result.current.activeConversationId).toBe(firstId);
   });
 
+  it("preserves the active model when creating a new conversation without an explicit model", async () => {
+    const { result } = renderHook(() => useStorage());
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => {
+      result.current.createConversation({
+        id: "onnx-community/Qwen2.5-0.5B-Instruct",
+        revision: "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0",
+        supportsImages: false,
+        recommendedDevice: "wasm",
+        supportTier: "curated",
+      });
+    });
+
+    act(() => {
+      const conversation = result.current.activeConversation;
+      if (!conversation) {
+        throw new Error("Expected an active conversation before updating it.");
+      }
+
+      result.current.updateConversation({
+        ...conversation,
+        title: "Existing chat",
+        updatedAt: Date.now(),
+        messages: [
+          {
+            id: "user-1",
+            role: "user",
+            content: "Hello",
+          },
+        ],
+      });
+    });
+
+    act(() => {
+      result.current.createConversation();
+    });
+
+    expect(result.current.activeConversation?.title).toBe("New chat");
+    expect(result.current.activeConversation?.messages).toEqual([]);
+    expect(result.current.activeConversation?.modelId).toBe("onnx-community/Qwen2.5-0.5B-Instruct");
+    expect(result.current.activeConversation?.recommendedDevice).toBe("wasm");
+    expect(result.current.activeConversation?.supportTier).toBe("curated");
+  });
+
   it("does not restore a deleted active conversation from the pending save timer", async () => {
     const { result } = renderHook(() => useStorage());
 

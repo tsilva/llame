@@ -15,6 +15,7 @@ import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@
 import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { pickDtypeForModel } from "@/lib/modelDtype";
 import { ThinkingParser } from "@/lib/thinkingParser";
+import { GeneratedTextSanitizer } from "@/lib/generatedTextSanitizer";
 import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
 import { getOnnxWasmAssetBaseUrl } from "@/lib/workerBootstrap";
@@ -347,6 +348,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
 
     const templateEndsWithThink = thinkingEnabled && promptEndsWithThinkingTag(inputText);
     const parser = new ThinkingParser(templateEndsWithThink);
+    const sanitizer = new GeneratedTextSanitizer();
     const inputTokens = tokenizer(inputText, { return_tensor: false }).input_ids.length;
 
     let inputs: Record<string, unknown>;
@@ -364,6 +366,27 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
 
     let numTokens = 0;
     const startTime = performance.now();
+    const emitChunk = (chunk: string) => {
+      if (!chunk) return;
+
+      numTokens += 1;
+      const elapsed = Math.max((performance.now() - startTime) / 1000, 0.001);
+      const tps = numTokens / elapsed;
+      const result = parser.processToken(chunk);
+
+      if (result.type === "thinking" && result.content) {
+        if (thinkingEnabled) {
+          post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: true });
+          if (result.thinkingComplete) {
+            post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
+          }
+        } else {
+          post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
+        }
+      } else if (result.type === "content" && result.content) {
+        post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
+      }
+    };
     const streamer = new TextStreamer(tokenizer, {
       skip_prompt: true,
       skip_special_tokens: false,
@@ -371,26 +394,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         if (requestId !== generationId) return;
 
         post({ status: "raw_update", token: rawToken });
-        const token = rawToken.replace(/<\|[^>]*\|>/g, "");
-        if (!token) return;
-
-        numTokens += 1;
-        const elapsed = (performance.now() - startTime) / 1000;
-        const tps = numTokens / elapsed;
-        const result = parser.processToken(token);
-
-        if (result.type === "thinking" && result.content) {
-          if (thinkingEnabled) {
-            post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: true });
-            if (result.thinkingComplete) {
-              post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
-            }
-          } else {
-            post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
-          }
-        } else if (result.type === "content" && result.content) {
-          post({ status: "update", token: result.content, tps, numTokens, inputTokens, isThinking: false });
-        }
+        emitChunk(sanitizer.processChunk(rawToken));
       },
     });
 
@@ -404,6 +408,8 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     });
 
     if (requestId !== generationId) return;
+
+    emitChunk(sanitizer.flush());
 
     const remaining = parser.flush();
     if (remaining) {

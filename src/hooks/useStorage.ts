@@ -269,7 +269,7 @@ export function useStorage() {
       return nextConversation;
     }
 
-    const conversation = createConversationRecord(model);
+    const conversation = createConversationRecord(model ?? getConversationSelection(activeConversation));
     const meta = storage.buildMeta(conversation);
     const nextIndex = nextBaseIndex.filter((item) => item.id !== conversation.id);
     nextIndex.push(meta);

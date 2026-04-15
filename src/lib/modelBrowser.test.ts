@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assessModelCompatibility, searchOnnxCommunityModels } from "@/lib/modelBrowser";
+import { assessModelCompatibility, searchBrowserReadyModels } from "@/lib/modelBrowser";
 
 describe("model browser search", () => {
   afterEach(() => {
@@ -38,7 +38,7 @@ describe("model browser search", () => {
       ),
     );
 
-    const page = await searchOnnxCommunityModels("");
+    const page = await searchBrowserReadyModels("");
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
@@ -79,7 +79,7 @@ describe("model browser search", () => {
       ),
     );
 
-    const page = await searchOnnxCommunityModels("");
+    const page = await searchBrowserReadyModels("");
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
@@ -124,7 +124,7 @@ describe("model browser search", () => {
       ),
     );
 
-    const page = await searchOnnxCommunityModels("");
+    const page = await searchBrowserReadyModels("");
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
@@ -179,7 +179,7 @@ describe("model browser search", () => {
       ),
     );
 
-    const page = await searchOnnxCommunityModels("");
+    const page = await searchBrowserReadyModels("");
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
@@ -239,11 +239,57 @@ describe("model browser search", () => {
       ),
     );
 
-    const page = await searchOnnxCommunityModels("");
+    const page = await searchBrowserReadyModels("");
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
       id: "onnx-community/Qwen3.5-0.8B-ONNX",
+      isVisionModel: true,
+    });
+  });
+
+  it("finds compatible non-onnx-community repos when they expose the expected onnx artifacts", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+              sha: "custom-rev",
+              tags: ["onnx", "qwen3_5", "vision-language-model", "conversational"],
+              pipeline_tag: "image-text-to-text",
+              config: {
+                model_type: "qwen3_5",
+                tokenizer_config: {
+                  chat_template: "<|im_start|>user\n{{ message }}<|im_end|>",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/embed_tokens_fp16.onnx" },
+                { rfilename: "onnx/vision_encoder_fp16.onnx" },
+                { rfilename: "onnx/decoder_model_merged_q4f16.onnx" },
+              ],
+            },
+            {
+              id: "someone/random-onnx-vision-model",
+              sha: "bad-rev",
+              tags: ["onnx", "image-segmentation"],
+              pipeline_tag: "image-segmentation",
+              config: { model_type: "briaai" },
+              siblings: [{ rfilename: "onnx/model.onnx" }],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchBrowserReadyModels("uncensored");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
       isVisionModel: true,
     });
   });

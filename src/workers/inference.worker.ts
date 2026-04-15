@@ -215,12 +215,12 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
 
       const dtype = isQwen35
         ? {
-            embed_tokens: "q4",
+            embed_tokens: "fp16",
             vision_encoder: "fp16",
-            decoder_model_merged: "q4",
+            decoder_model_merged: "q4f16",
           }
         : pickDtypeForModel(modelId, device);
-      currentPrecision = typeof dtype === "string" ? dtype : "q4";
+      currentPrecision = typeof dtype === "string" ? dtype : "q4f16+fp16";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
         ...commonOptions,

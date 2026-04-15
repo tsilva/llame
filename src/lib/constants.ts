@@ -37,6 +37,18 @@ export const MODEL_PRESETS = [
     supportTier: "curated",
   },
   {
+    id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+    revision: "1f4a4b1d69b20ed3f1f3278ba3e4a3bef89a28c2",
+    label: "Qwen3.5 0.8B Uncensored",
+    thinkingMode: "optional",
+    parameterCountLabel: "0.8B",
+    quantizationLabel: "q4+fp16",
+    downloadSizeLabel: "1.1GB",
+    supportsImages: true,
+    recommendedDevice: "webgpu",
+    supportTier: "curated",
+  },
+  {
     id: "onnx-community/Qwen3.5-2B-ONNX",
     revision: "d8ddc1cfd46bdefa6771b3a82097f3610a5b3ee4",
     label: "Qwen3.5 2B",
@@ -172,6 +184,7 @@ export function canToggleThinking(modelId: string | null | undefined): boolean {
 
 export const CONTEXT_WINDOWS: Record<string, number> = {
   "onnx-community/Qwen3.5-0.8B-ONNX": 32768, // 32k context window
+  "tsilva/unsloth_Qwen3.5-0.8B_uncensored": 32768, // 32k context window
   "onnx-community/Qwen3.5-2B-ONNX": 32768, // 32k context window
   "onnx-community/Qwen2.5-0.5B-Instruct": 32768, // 32k context window
   "HuggingFaceTB/SmolLM3-3B-ONNX": 32768, // 32k context window

@@ -9,6 +9,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "onnx:export:qwen35": "bash ./scripts/export-qwen35-transformersjs.sh",
     "sentry:issues": "node scripts/sentry-issues.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

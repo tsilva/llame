@@ -299,7 +299,7 @@ function parseNextCursor(linkHeader: string | null) {
   }
 }
 
-interface SearchOnnxCommunityModelsOptions {
+interface SearchBrowserReadyModelsOptions {
   cursor?: string | null;
   sort?: ModelBrowserSort;
 }
@@ -318,15 +318,15 @@ function getHubSort(sort: ModelBrowserSort) {
   };
 }
 
-export async function searchOnnxCommunityModels(
+export async function searchBrowserReadyModels(
   query: string,
   signal?: AbortSignal,
-  options: SearchOnnxCommunityModelsOptions = {},
+  options: SearchBrowserReadyModelsOptions = {},
 ): Promise<ModelSearchPage> {
   const requestedSort = options.sort ?? "relevance";
   const hubSort = getHubSort(requestedSort);
   const params = new URLSearchParams({
-    author: "onnx-community",
+    filter: "onnx",
     limit: "24",
     sort: hubSort.sort,
     direction: hubSort.direction,

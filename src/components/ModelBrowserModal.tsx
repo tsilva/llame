@@ -9,7 +9,7 @@ import {
   CompatibilityContext,
   DiscoveredModel,
   ModelBrowserSort,
-  searchOnnxCommunityModels,
+  searchBrowserReadyModels,
 } from "@/lib/modelBrowser";
 
 interface ModelBrowserModalProps {
@@ -210,7 +210,7 @@ export function ModelBrowserModal({
     }
 
     try {
-      const page = await searchOnnxCommunityModels(searchQuery, controller.signal, {
+      const page = await searchBrowserReadyModels(searchQuery, controller.signal, {
         cursor,
         sort: requestedSort,
       });
@@ -347,7 +347,7 @@ export function ModelBrowserModal({
       <div className="mx-4 flex max-h-[88dvh] w-full max-w-4xl flex-col rounded-2xl border border-white/[0.08] bg-[#2f2f2f] shadow-2xl shadow-black/40 animate-modal-enter" role="dialog" aria-modal="true" aria-labelledby="model-browser-title">
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
           <div className="space-y-1">
-            <h2 id="model-browser-title" className="text-lg font-medium text-[#ececec]">Browse ONNX Community LLMs and VLMs</h2>
+            <h2 id="model-browser-title" className="text-lg font-medium text-[#ececec]">Browse Browser-Ready ONNX LLMs and VLMs</h2>
             <BrowserProfileLine device={device} webgpuSupported={webgpuSupported} profile={profile} />
           </div>
           <button
@@ -366,7 +366,7 @@ export function ModelBrowserModal({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search ONNX Community LLMs and VLMs"
+                placeholder="Search browser-ready ONNX LLMs and VLMs"
                 className="w-full bg-transparent text-sm text-[#ececec] outline-none placeholder:text-[#6f6f6f]"
                 autoFocus
               />
@@ -406,7 +406,7 @@ export function ModelBrowserModal({
           {initialLoading && (
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-4 text-sm text-[#b4b4b4]" role="status" aria-live="polite">
               <Loader2 size={16} className="animate-spin text-[#10a37f]" />
-              <span>Searching ONNX Community…</span>
+              <span>Searching Hugging Face ONNX models…</span>
             </div>
           )}
 
@@ -428,7 +428,7 @@ export function ModelBrowserModal({
           {!initialLoading && !error && displayedResults.length === 0 && (
             <div className="rounded-xl border border-white/[0.08] bg-[#212121] px-4 py-5 text-sm text-[#8e8e8e]">
               {results.length === 0
-                ? "No ONNX Community LLMs or VLMs matched that search."
+                ? "No browser-ready ONNX LLMs or VLMs matched that search."
                 : "No models matched the current filters. Try widening the fit filter."}
             </div>
           )}

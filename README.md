@@ -31,7 +31,7 @@ Open the app, pick a model, and chat. There is no backend and no server-side inf
 
 - In-browser inference in a dedicated Web Worker
 - WebGPU acceleration with automatic WASM fallback
-- Curated model presets plus an in-app browser for ONNX Community models
+- Curated model presets plus an in-app browser for browser-ready ONNX models on Hugging Face
 - Streaming chat UI with tokens-per-second feedback
 - Raw debug view for exact model input and output
 - Image input support for vision-capable models
@@ -67,16 +67,17 @@ Inference runs inside [`src/workers/inference.worker.ts`](src/workers/inference.
 
 ## Supported Models
 
-The app ships with curated, revision-pinned presets and can search additional models from the [ONNX Community](https://huggingface.co/onnx-community).
+The app ships with curated, revision-pinned presets and can search additional Hugging Face repos tagged with `onnx`, then filter to browser-ready chat and vision models that match the worker's supported architectures.
 
 | Preset | Params | Download |
 |--------|--------|----------|
 | Qwen3.5 0.8B | 0.8B | ~850MB |
+| Qwen3.5 0.8B Uncensored | 0.8B | ~1.1GB |
 | Qwen3.5 2B | 2B | ~2GB |
 | Qwen2.5 0.5B | 0.5B | ~538MB |
 | SmolLM3 3B | 3B | ~2.1GB |
 
-Community search results are best-effort and may still fail depending on browser support and device limits.
+Search results are best-effort and may still fail depending on browser support, repo packaging, and device limits.
 
 ## Requirements
 
@@ -136,6 +137,24 @@ Deploy to Vercel with:
 ```bash
 pnpm build
 ```
+
+## Custom ONNX Conversion
+
+llame now includes a local Qwen3.5-to-Transformers.js export toolchain under [`tools/onnx`](tools/onnx/README.md). This is for creating `llame`-compatible ONNX packages for custom Qwen3.5 multimodal checkpoints, including fine-tunes hosted on Hugging Face.
+
+Run:
+
+```bash
+pnpm onnx:export:qwen35 -- --model-id tsilva/unsloth_Qwen3.5-0.8B_uncensored
+```
+
+By default this writes a Transformers.js-style package into `build/onnx-transformersjs/` with:
+
+- `onnx/embed_tokens_fp16.onnx`
+- `onnx/vision_encoder_fp16.onnx`
+- `onnx/decoder_model_merged_q4f16.onnx`
+
+The exporter is intentionally focused on Qwen3.5 multimodal models and the WebGPU path used by the latest stable Transformers.js `v4.0.0`. Internally it transplants weights from the target checkpoint into the official `onnx-community/Qwen3.5-0.8B-ONNX` reference graphs instead of trying to re-export the Qwen3.5 vision stack from PyTorch.
 
 ## Quality Gates
 

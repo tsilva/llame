@@ -40,6 +40,8 @@ interface PendingGeneration {
   reuseLastAssistant?: boolean;
 }
 
+const LAST_SELECTED_MODEL_KEY = "llame-last-selected-model";
+
 function createAssistantMessage(): ChatMessageType {
   return {
     id: crypto.randomUUID(),
@@ -86,6 +88,41 @@ function shouldPreferWasmFallbackModel(model: ModelSelection) {
   return model.supportsImages ?? isVlmModel(model.id);
 }
 
+function loadLastSelectedModel(): ModelSelection | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = localStorage.getItem(LAST_SELECTED_MODEL_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<ModelSelection>;
+    if (typeof parsed.id !== "string" || parsed.id.trim().length === 0) {
+      return null;
+    }
+
+    return getModelSelection(parsed.id, {
+      revision: parsed.revision ?? null,
+      supportsImages: parsed.supportsImages ?? null,
+      recommendedDevice: parsed.recommendedDevice,
+      supportTier: parsed.supportTier,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function persistLastSelectedModel(selection: ModelSelection) {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(LAST_SELECTED_MODEL_KEY, JSON.stringify({
+    id: selection.id,
+    revision: selection.revision ?? null,
+    supportsImages: selection.supportsImages ?? null,
+    recommendedDevice: selection.recommendedDevice,
+    supportTier: selection.supportTier,
+  }));
+}
+
 export default function HomeApp() {
   const [webgpuSupported, setWebgpuSupported] = useState<boolean | null>(null);
   const worker = useInferenceWorker();
@@ -95,7 +132,8 @@ export default function HomeApp() {
   const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
-  const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(getModelSelection(DEFAULT_MODEL));
+  const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(() => loadLastSelectedModel() ?? getModelSelection(DEFAULT_MODEL));
+  const [hasExplicitLastSelectedModel, setHasExplicitLastSelectedModel] = useState(() => loadLastSelectedModel() !== null);
   const [dismissedWorkerErrorKey, setDismissedWorkerErrorKey] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -368,10 +406,10 @@ export default function HomeApp() {
   );
 
   useEffect(() => {
-    if (storage.activeConversation) {
+    if (!hasExplicitLastSelectedModel && storage.activeConversation) {
       setLastSelectedModel(activeModel);
     }
-  }, [activeModel, storage.activeConversation]);
+  }, [activeModel, hasExplicitLastSelectedModel, storage.activeConversation]);
 
   const interruptActiveGeneration = useCallback(() => {
     worker.interrupt();
@@ -498,6 +536,8 @@ export default function HomeApp() {
 
   const handleModelChange = useCallback((selection: ModelSelection) => {
     setLastSelectedModel(selection);
+    setHasExplicitLastSelectedModel(true);
+    persistLastSelectedModel(selection);
     setPendingGeneration(null);
 
     if (storage.activeConversation) {
@@ -540,15 +580,6 @@ export default function HomeApp() {
       interruptActiveGeneration();
     }
     storage.setActiveConversation(id);
-    const conversationMeta = storage.index.find((conversation) => conversation.id === id);
-    if (conversationMeta) {
-      setLastSelectedModel(getModelSelection(conversationMeta.modelId, {
-        revision: conversationMeta.modelRevision ?? null,
-        supportsImages: conversationMeta.modelSupportsImages ?? null,
-        recommendedDevice: conversationMeta.recommendedDevice,
-        supportTier: conversationMeta.supportTier,
-      }));
-    }
     if (isMobile) setSidebarOpen(false);
   }, [interruptActiveGeneration, isMobile, storage, worker.status]);
 

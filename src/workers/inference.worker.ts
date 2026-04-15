@@ -13,6 +13,7 @@ import {
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
+import { dataUrlToBlob } from "@/lib/dataUrl";
 import { pickDtypeForModel } from "@/lib/modelDtype";
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { GeneratedTextSanitizer } from "@/lib/generatedTextSanitizer";
@@ -119,6 +120,15 @@ function getErrorMessage(error: unknown): string {
 
 function promptEndsWithThinkingTag(prompt: string) {
   return /(?:<think>|<\|think\|>)\s*$/u.test(prompt);
+}
+
+async function resolveImageInput(source: string) {
+  const dataUrlBlob = dataUrlToBlob(source);
+  if (dataUrlBlob) {
+    return RawImage.fromBlob(dataUrlBlob);
+  }
+
+  return RawImage.fromURL(source);
 }
 
 async function dispose() {
@@ -354,10 +364,11 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     let inputs: Record<string, unknown>;
     if (hasImages && processor) {
       post({ status: "processing", message: "Processing image..." });
-      const images = messages
-        .flatMap((message) => message.images || [])
-        .map((image) => RawImage.fromURL(image));
-      const resolvedImages = await Promise.all(images);
+      const resolvedImages = await Promise.all(
+        messages
+          .flatMap((message) => message.images || [])
+          .map((image) => resolveImageInput(image)),
+      );
       inputs = await processor(inputText, resolvedImages.length === 1 ? resolvedImages[0] : resolvedImages);
       post({ status: "generating" });
     } else {

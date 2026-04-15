@@ -1,9 +1,9 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeApp from "@/components/HomeApp";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
-import { Conversation } from "@/types";
+import { Conversation, ModelSelection } from "@/types";
 
 vi.mock("next/dynamic", () => ({
   default: () => () => null,
@@ -27,11 +27,37 @@ vi.mock("@/components/ChatInterface", () => ({
 }));
 
 vi.mock("@/components/ModelSelector", () => ({
-  ModelSelector: () => <div data-testid="model-selector" />,
+  ModelSelector: ({ onModelChange }: { onModelChange: (model: ModelSelection) => void }) => (
+    <button
+      data-testid="model-selector"
+      onClick={() => onModelChange({
+        id: "onnx-community/Llama-3.2-1B-Instruct-q4f16",
+        revision: "custom-rev",
+        supportsImages: false,
+        recommendedDevice: "webgpu",
+        supportTier: "community",
+      })}
+    >
+      Model selector
+    </button>
+  ),
 }));
 
 vi.mock("@/components/Sidebar", () => ({
-  Sidebar: () => <div data-testid="sidebar" />,
+  Sidebar: ({
+    onNewChat,
+    onSwitchConversation,
+  }: {
+    onNewChat: () => void;
+    onSwitchConversation: (id: string) => void;
+  }) => (
+    <div data-testid="sidebar">
+      <button data-testid="new-chat" onClick={() => onNewChat()}>New chat</button>
+      <button data-testid="switch-conversation" onClick={() => onSwitchConversation("conv-2")}>
+        Switch conversation
+      </button>
+    </div>
+  ),
 }));
 
 const mockedUseInferenceWorker = vi.mocked(useInferenceWorker);
@@ -196,5 +222,140 @@ describe("HomeApp", () => {
     });
 
     expect(() => render(<HomeApp />)).not.toThrow();
+  });
+
+  it("uses the last model selected from the dropdown for a new chat after switching conversations", async () => {
+    localStorage.clear();
+
+    const firstConversation = buildConversation();
+    const secondConversation = buildConversation({
+      id: "conv-2",
+      title: "Second chat",
+      modelId: "onnx-community/gemma-3-270m-it-ONNX",
+      modelRevision: "rev-2",
+      recommendedDevice: "webgpu",
+      supportTier: "curated",
+    });
+    const createConversation = vi.fn();
+    const updateConversation = vi.fn();
+
+    mockedUseStorage.mockReturnValue({
+      index: [
+        {
+          id: firstConversation.id,
+          title: firstConversation.title,
+          createdAt: firstConversation.createdAt,
+          updatedAt: firstConversation.updatedAt,
+          modelId: firstConversation.modelId,
+          modelRevision: firstConversation.modelRevision ?? null,
+          modelSupportsImages: firstConversation.modelSupportsImages ?? null,
+          recommendedDevice: firstConversation.recommendedDevice,
+          supportTier: firstConversation.supportTier,
+          messageCount: firstConversation.messages.length,
+          sizeBytes: 0,
+        },
+        {
+          id: secondConversation.id,
+          title: secondConversation.title,
+          createdAt: secondConversation.createdAt,
+          updatedAt: secondConversation.updatedAt,
+          modelId: secondConversation.modelId,
+          modelRevision: secondConversation.modelRevision ?? null,
+          modelSupportsImages: secondConversation.modelSupportsImages ?? null,
+          recommendedDevice: secondConversation.recommendedDevice,
+          supportTier: secondConversation.supportTier,
+          messageCount: secondConversation.messages.length,
+          sizeBytes: 0,
+        },
+      ],
+      activeConversation: firstConversation,
+      activeConversationId: firstConversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation,
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 2,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId, rerender } = render(<HomeApp />);
+
+    fireEvent.click(getByTestId("model-selector"));
+
+    expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      modelId: "onnx-community/Llama-3.2-1B-Instruct-q4f16",
+      modelRevision: "custom-rev",
+      recommendedDevice: "webgpu",
+      supportTier: "community",
+    }));
+
+    mockedUseStorage.mockReturnValue({
+      index: [
+        {
+          id: firstConversation.id,
+          title: firstConversation.title,
+          createdAt: firstConversation.createdAt,
+          updatedAt: firstConversation.updatedAt,
+          modelId: firstConversation.modelId,
+          modelRevision: firstConversation.modelRevision ?? null,
+          modelSupportsImages: firstConversation.modelSupportsImages ?? null,
+          recommendedDevice: firstConversation.recommendedDevice,
+          supportTier: firstConversation.supportTier,
+          messageCount: firstConversation.messages.length,
+          sizeBytes: 0,
+        },
+        {
+          id: secondConversation.id,
+          title: secondConversation.title,
+          createdAt: secondConversation.createdAt,
+          updatedAt: secondConversation.updatedAt,
+          modelId: secondConversation.modelId,
+          modelRevision: secondConversation.modelRevision ?? null,
+          modelSupportsImages: secondConversation.modelSupportsImages ?? null,
+          recommendedDevice: secondConversation.recommendedDevice,
+          supportTier: secondConversation.supportTier,
+          messageCount: secondConversation.messages.length,
+          sizeBytes: 0,
+        },
+      ],
+      activeConversation: secondConversation,
+      activeConversationId: secondConversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation,
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 2,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    rerender(<HomeApp />);
+
+    fireEvent.click(getByTestId("new-chat"));
+
+    expect(createConversation).toHaveBeenLastCalledWith(expect.objectContaining({
+      id: "onnx-community/Llama-3.2-1B-Instruct-q4f16",
+      revision: "custom-rev",
+      supportsImages: false,
+      recommendedDevice: "webgpu",
+      supportTier: "community",
+    }));
   });
 });

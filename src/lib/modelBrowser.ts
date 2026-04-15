@@ -220,6 +220,18 @@ function hasUsableOnnxArtifacts(entry: HubModelApiEntry) {
   ));
 }
 
+function hasRequiredVisionProcessorAssets(entry: HubModelApiEntry) {
+  const filenames = entry.siblings
+    ?.map((sibling) => sibling.rfilename)
+    .filter((name): name is string => Boolean(name)) ?? [];
+
+  if (filenames.length === 0) {
+    return true;
+  }
+
+  return filenames.includes("preprocessor_config.json");
+}
+
 function isSupportedChatModel(entry: HubModelApiEntry) {
   const tags = entry.tags ?? [];
   const pipelineTag = entry.pipeline_tag ?? null;
@@ -240,6 +252,9 @@ function isSupportedChatModel(entry: HubModelApiEntry) {
 
   const looksLikeVisionModel = isVisionModel(entry.id, tags, pipelineTag, modelType);
   if (looksLikeVisionModel && !tags.includes("conversational") && !hasChatTemplate(entry)) {
+    return false;
+  }
+  if (looksLikeVisionModel && !hasRequiredVisionProcessorAssets(entry)) {
     return false;
   }
 

@@ -98,9 +98,11 @@ def clear_previous_outputs(output_dir: Path) -> None:
     shutil.rmtree(output_dir / "_reference_stage", ignore_errors=True)
 
 
-def copy_metadata(snapshot_dir: Path, output_dir: Path) -> None:
+def copy_metadata(snapshot_dir: Path, output_dir: Path, reference_snapshot_dir: Path | None = None) -> None:
     for filename in METADATA_FILENAMES:
         source = snapshot_dir / filename
+        if not source.exists() and reference_snapshot_dir is not None and filename == "preprocessor_config.json":
+            source = reference_snapshot_dir / filename
         if source.exists():
             shutil.copy2(source, output_dir / filename)
 
@@ -425,7 +427,7 @@ def main() -> int:
     print(f"Using reference snapshot: {reference_snapshot_dir}")
     print(f"Writing package to: {output_dir}")
 
-    copy_metadata(model_snapshot_dir, output_dir)
+    copy_metadata(model_snapshot_dir, output_dir, reference_snapshot_dir)
     reader = SafeTensorReader(model_snapshot_dir)
     reference_stage_dir = output_dir / "_reference_stage"
 

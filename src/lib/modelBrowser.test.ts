@@ -228,6 +228,7 @@ describe("model browser search", () => {
                 },
               },
               siblings: [
+                { rfilename: "preprocessor_config.json" },
                 { rfilename: "onnx/embed_tokens_q4.onnx" },
                 { rfilename: "onnx/vision_encoder_fp16.onnx" },
                 { rfilename: "onnx/decoder_model_merged_q4.onnx" },
@@ -248,7 +249,7 @@ describe("model browser search", () => {
     });
   });
 
-  it("finds compatible non-onnx-community repos when they expose the expected onnx artifacts", async () => {
+  it("requires preprocessor_config.json for vision repos and allows them once present", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -269,6 +270,25 @@ describe("model browser search", () => {
                 { rfilename: "onnx/embed_tokens_fp16.onnx" },
                 { rfilename: "onnx/vision_encoder_fp16.onnx" },
                 { rfilename: "onnx/decoder_model_merged_q4f16.onnx" },
+                { rfilename: "processor_config.json" },
+              ],
+            },
+            {
+              id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored-fixed",
+              sha: "good-rev",
+              tags: ["onnx", "qwen3_5", "vision-language-model", "conversational"],
+              pipeline_tag: "image-text-to-text",
+              config: {
+                model_type: "qwen3_5",
+                tokenizer_config: {
+                  chat_template: "<|im_start|>user\n{{ message }}<|im_end|>",
+                },
+              },
+              siblings: [
+                { rfilename: "onnx/embed_tokens_fp16.onnx" },
+                { rfilename: "onnx/vision_encoder_fp16.onnx" },
+                { rfilename: "onnx/decoder_model_merged_q4f16.onnx" },
+                { rfilename: "preprocessor_config.json" },
               ],
             },
             {
@@ -289,7 +309,7 @@ describe("model browser search", () => {
 
     expect(page.models).toHaveLength(1);
     expect(page.models[0]).toMatchObject({
-      id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+      id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored-fixed",
       isVisionModel: true,
     });
   });

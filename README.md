@@ -67,7 +67,7 @@ Inference runs inside [`src/workers/inference.worker.ts`](src/workers/inference.
 
 ## Supported Models
 
-The app ships with curated, revision-pinned presets and can search additional Hugging Face repos tagged with `onnx`, then filter to browser-ready chat and vision models that match the worker's supported architectures.
+The app ships with curated, revision-pinned presets and can search additional Hugging Face repos tagged with `onnx`, then filter to browser-ready chat and vision models that match the worker's supported architectures and required processor assets.
 
 | Preset | Params | Download |
 |--------|--------|----------|

@@ -38,7 +38,7 @@ export const MODEL_PRESETS = [
   },
   {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-    revision: "5a8d40aa7717b98d72a27c0f71798a3ecd0a9ce0",
+    revision: "5a34290ef1c1599f7f0fc0a48f5afa941adee998",
     label: "Qwen3.5 0.8B Uncensored",
     thinkingMode: "optional",
     parameterCountLabel: "0.8B",
@@ -127,10 +127,13 @@ export function getModelDisplayName(modelId?: string | null) {
 export function getModelSelection(modelId?: string | null, overrides?: Partial<ModelSelection>): ModelSelection {
   const normalizedModelId = normalizeModelId(modelId);
   const preset = getModelPreset(normalizedModelId);
+  const revision = preset?.supportTier === "curated"
+    ? preset.revision ?? overrides?.revision ?? null
+    : overrides?.revision ?? preset?.revision ?? null;
 
   return {
     id: normalizedModelId,
-    revision: overrides?.revision ?? preset?.revision ?? null,
+    revision,
     supportsImages: overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(normalizedModelId),
     recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
     supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",

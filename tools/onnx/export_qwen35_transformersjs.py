@@ -98,13 +98,45 @@ def clear_previous_outputs(output_dir: Path) -> None:
     shutil.rmtree(output_dir / "_reference_stage", ignore_errors=True)
 
 
+def merge_json_objects(base: object, override: object) -> object:
+    if isinstance(base, dict) and isinstance(override, dict):
+        merged = dict(base)
+        for key, value in override.items():
+            merged[key] = merge_json_objects(merged[key], value) if key in merged else value
+        return merged
+    return override
+
+
 def copy_metadata(snapshot_dir: Path, output_dir: Path, reference_snapshot_dir: Path | None = None) -> None:
     for filename in METADATA_FILENAMES:
         source = snapshot_dir / filename
         if not source.exists() and reference_snapshot_dir is not None and filename == "preprocessor_config.json":
             source = reference_snapshot_dir / filename
-        if source.exists():
-            shutil.copy2(source, output_dir / filename)
+        if not source.exists():
+            continue
+
+        destination = output_dir / filename
+        if filename == "config.json" and reference_snapshot_dir is not None:
+            reference_config_path = reference_snapshot_dir / filename
+            if reference_config_path.exists():
+                with source.open() as handle:
+                    source_config = json.load(handle)
+                with reference_config_path.open() as handle:
+                    reference_config = json.load(handle)
+
+                reference_transformers_js_config = reference_config.get("transformers.js_config")
+                if reference_transformers_js_config:
+                    source_config["transformers.js_config"] = merge_json_objects(
+                        reference_transformers_js_config,
+                        source_config.get("transformers.js_config") or {},
+                    )
+
+                with destination.open("w") as handle:
+                    json.dump(source_config, handle, indent=2)
+                    handle.write("\n")
+                continue
+
+        shutil.copy2(source, destination)
 
 
 class SafeTensorReader:

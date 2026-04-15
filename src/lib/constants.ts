@@ -86,6 +86,10 @@ export const MODEL_PRESETS = [
   },
 ] satisfies ModelPreset[];
 
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  "onnx-community/gemma-4-E2B-it-ONNX": "Gemma 4 E2B",
+};
+
 function parseModelParameterCountB(modelId?: string | null) {
   const normalizedModelId = normalizeModelId(modelId);
   const match = normalizedModelId.match(/(\d+(?:\.\d+)?)B/i);
@@ -96,7 +100,7 @@ function parseModelParameterCountB(modelId?: string | null) {
 }
 
 export function isVlmModel(modelId?: string | null) {
-  return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma3n|paligemma|smolvlm|idefics|llava|mistral3/i.test(normalizeModelId(modelId));
+  return /Qwen(?:2(?:\.5)?|3(?:\.5)?)|gemma(?:3n|[-_]?4)|paligemma|smolvlm|idefics|llava|mistral3/i.test(normalizeModelId(modelId));
 }
 
 export function getModelPreset(modelId?: string | null) {
@@ -109,6 +113,11 @@ export function getModelDisplayName(modelId?: string | null) {
   const preset = getModelPreset(normalizedModelId);
   if (preset) {
     return preset.label;
+  }
+
+  const override = DISPLAY_NAME_OVERRIDES[normalizedModelId];
+  if (override) {
+    return override;
   }
 
   const repoName = normalizedModelId.split("/").pop();
@@ -134,6 +143,7 @@ export function getDefaultModelSelectionForDevice(device: "webgpu" | "wasm") {
 
 export function getModelQuantizationLabel(modelId?: string | null, isVisionModel = isVlmModel(modelId)) {
   const normalizedModelId = normalizeModelId(modelId);
+  if (/gemma-4/i.test(normalizedModelId)) return "q4f16";
   if (isVisionModel) return "q4+fp16";
 
   const parameterCountB = parseModelParameterCountB(normalizedModelId);
@@ -168,6 +178,7 @@ export function getModelThinkingMode(modelId?: string | null): ThinkingMode {
   const presetMode = getModelPreset(normalizedModelId)?.thinkingMode;
   if (presetMode) return presetMode;
   if (normalizedModelId.includes("Qwen3.5")) return "optional";
+  if (/gemma-4/i.test(normalizedModelId)) return "optional";
   return "unsupported";
 }
 
@@ -188,6 +199,7 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "onnx-community/Qwen3.5-2B-ONNX": 32768, // 32k context window
   "onnx-community/Qwen2.5-0.5B-Instruct": 32768, // 32k context window
   "HuggingFaceTB/SmolLM3-3B-ONNX": 32768, // 32k context window
+  "onnx-community/gemma-4-E2B-it-ONNX": 131072, // 128k context window
 };
 
 export const DEFAULT_PARAMS: GenerationParams = {

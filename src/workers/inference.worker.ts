@@ -116,6 +116,10 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
+function promptEndsWithThinkingTag(prompt: string) {
+  return /(?:<think>|<\|think\|>)\s*$/u.test(prompt);
+}
+
 async function dispose() {
   if (model) {
     try {
@@ -341,7 +345,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     ) as string;
     post({ status: "prompt", inputText });
 
-    const templateEndsWithThink = thinkingEnabled && inputText.trimEnd().endsWith("<think>");
+    const templateEndsWithThink = thinkingEnabled && promptEndsWithThinkingTag(inputText);
     const parser = new ThinkingParser(templateEndsWithThink);
     const inputTokens = tokenizer(inputText, { return_tensor: false }).input_ids.length;
 

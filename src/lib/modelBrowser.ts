@@ -60,7 +60,7 @@ export interface ModelCompatibility {
 }
 
 const GIGABYTE = 1024 ** 3;
-const SUPPORTED_PIPELINE_TAGS = new Set(["text-generation", "image-text-to-text"]);
+const SUPPORTED_PIPELINE_TAGS = new Set(["text-generation", "image-text-to-text", "any-to-any"]);
 const SUPPORTED_TEXT_TAGS = new Set(["text-generation", "conversational"]);
 const UNSUPPORTED_TASK_TAGS = new Set([
   "feature-extraction",
@@ -81,6 +81,7 @@ const SUPPORTED_TEXT_MODEL_TYPES = new Set([
   "falcon_h1",
   "gemma",
   "gemma2",
+  "gemma4_text",
   "glm",
   "gpt2",
   "gpt_bigcode",
@@ -129,6 +130,7 @@ const SUPPORTED_TEXT_MODEL_TYPES = new Set([
 const SUPPORTED_VISION_MODEL_TYPES = new Set([
   "florence2",
   "gemma3n",
+  "gemma4",
   "idefics3",
   "llava",
   "llava_onevision",
@@ -184,8 +186,10 @@ function estimateDownloadGb(parameterCountB: number | null, usedStorage?: number
 
 function isVisionModel(modelId: string, tags: string[], pipelineTag: string | null, modelType: string | null) {
   return (
+    pipelineTag === "any-to-any" ||
     pipelineTag === "image-text-to-text" ||
     SUPPORTED_VISION_MODEL_TYPES.has(modelType ?? "") ||
+    /gemma-4/i.test(modelId) ||
     modelId.includes("Qwen3.5") ||
     tags.some((tag) => tag.includes("vision") || tag.includes("vlm"))
   );

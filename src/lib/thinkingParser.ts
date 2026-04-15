@@ -4,8 +4,8 @@ export class ThinkingParser {
   private thinkingContent = "";
   private thinkingComplete = false;
 
-  private static readonly START_RE = /<(think|thinking|thought|reasoning)>/;
-  private static readonly END_RE = /<\/(think|thinking|thought|reasoning)>/;
+  private static readonly START_RE = /<(think|thinking|thought|reasoning)>|<\|channel\>(thought|thinking|reasoning)\s*/;
+  private static readonly END_RE = /<\/(think|thinking|thought|reasoning)>|<channel\|>/;
 
   constructor(startInThinking = false) {
     if (startInThinking) this.inThinking = true;

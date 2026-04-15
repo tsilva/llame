@@ -314,6 +314,50 @@ describe("model browser search", () => {
     });
   });
 
+  it("accepts Gemma 4 any-to-any repos that expose Gemma 4 multimodal assets", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "onnx-community/gemma-4-E2B-it-ONNX",
+              sha: "gemma-rev",
+              tags: ["onnx", "gemma4", "image-text-to-text", "conversational", "any-to-any"],
+              pipeline_tag: "any-to-any",
+              usedStorage: 47666982629,
+              config: {
+                model_type: "gemma4",
+                tokenizer_config: {
+                  chat_template_jinja: "{%- for message in messages -%}{%- endfor -%}",
+                },
+              },
+              siblings: [
+                { rfilename: "preprocessor_config.json" },
+                { rfilename: "processor_config.json" },
+                { rfilename: "onnx/embed_tokens_q4f16.onnx" },
+                { rfilename: "onnx/vision_encoder_q4f16.onnx" },
+                { rfilename: "onnx/decoder_model_merged_q4f16.onnx" },
+                { rfilename: "onnx/audio_encoder_q4f16.onnx" },
+              ],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchBrowserReadyModels("gemma");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "onnx-community/gemma-4-E2B-it-ONNX",
+      isVisionModel: true,
+      pipelineTag: "any-to-any",
+      parameterCountB: 2,
+    });
+  });
+
   it("downgrades larger Qwen2 WebGPU models on 8 GB devices", () => {
     const compatibility = assessModelCompatibility(
       {

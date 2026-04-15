@@ -25,4 +25,20 @@ describe("ThinkingParser", () => {
     expect(parser.processToken("step 1")).toEqual({ type: "buffer", content: "" });
     expect(parser.flush()).toEqual({ type: "thinking", content: "step 1" });
   });
+
+  it("separates Gemma 4 channel-style thinking blocks from visible content", () => {
+    const parser = new ThinkingParser();
+    const chunks = ["<|chan", "nel>thought\n", "secret", "<channel|>", " answer"];
+
+    const outputs = chunks
+      .map((chunk) => parser.processToken(chunk))
+      .filter((result) => result.type !== "buffer");
+
+    expect(outputs).toEqual([
+      { type: "thinking", content: "secret", thinkingComplete: true },
+    ]);
+
+    expect(parser.flush()).toEqual({ type: "content", content: " answer" });
+    expect(parser.getThinkingContent()).toBe("secret");
+  });
 });

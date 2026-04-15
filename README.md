@@ -77,6 +77,8 @@ The app ships with curated, revision-pinned presets and can search additional Hu
 | Qwen2.5 0.5B | 0.5B | ~538MB |
 | SmolLM3 3B | 3B | ~2.1GB |
 
+The model browser also recognizes newer multimodal ONNX repos such as `onnx-community/gemma-4-E2B-it-ONNX`, including Gemma 4's `any-to-any` packaging and configurable thinking mode.
+
 Search results are best-effort and may still fail depending on browser support, repo packaging, and device limits.
 
 ## Requirements

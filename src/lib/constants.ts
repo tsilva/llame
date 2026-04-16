@@ -209,6 +209,7 @@ export const DEFAULT_PARAMS: GenerationParams = {
   max_new_tokens: 2048,
   temperature: 0.7,
   top_p: 0.9,
+  min_p: 0,
   top_k: 50,
   repetition_penalty: 1.1,
   do_sample: true,
@@ -219,6 +220,7 @@ export const PARAM_RANGES = {
   max_new_tokens: { min: 16, max: 2048, step: 16 },
   temperature: { min: 0.0, max: 2.0, step: 0.05 },
   top_p: { min: 0.0, max: 1.0, step: 0.05 },
+  min_p: { min: 0.0, max: 1.0, step: 0.01 },
   top_k: { min: 1, max: 200, step: 1 },
   repetition_penalty: { min: 1.0, max: 2.0, step: 0.05 },
 };
@@ -227,6 +229,7 @@ export const SLIDER_CONFIGS: { label: string; key: keyof typeof PARAM_RANGES; sa
   { label: "Max tokens", key: "max_new_tokens" },
   { label: "Temperature", key: "temperature", samplingOnly: true },
   { label: "Top P", key: "top_p", samplingOnly: true },
+  { label: "Min P", key: "min_p", samplingOnly: true },
   { label: "Top K", key: "top_k", samplingOnly: true },
   { label: "Repetition penalty", key: "repetition_penalty", samplingOnly: true },
 ];

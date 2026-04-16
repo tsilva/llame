@@ -59,6 +59,7 @@ export interface GenerationParams {
   max_new_tokens: number;
   temperature: number;
   top_p: number;
+  min_p: number;
   top_k: number;
   repetition_penalty: number;
   do_sample: boolean;

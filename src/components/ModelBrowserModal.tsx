@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, Loader2, Search, X } from "lucide-react";
+import { BadgeCheck, ExternalLink, Loader2, Search, X } from "lucide-react";
+import { getVerifiedModel } from "@/config/verifiedModels";
 import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
 import { ModelSelection } from "@/types";
 import {
@@ -440,6 +441,7 @@ export function ModelBrowserModal({
             const parameterCountLabel = model.parameterCountB !== null ? `${model.parameterCountB}B` : null;
             const downloadSizeLabel = formatDownloadSizeLabel(model.estimatedDownloadGb);
             const active = model.id === currentModelId;
+            const verifiedModel = getVerifiedModel(model.id);
 
             return (
               <div
@@ -470,6 +472,15 @@ export function ModelBrowserModal({
                         {downloadSizeLabel && (
                           <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
                             {downloadSizeLabel}
+                          </span>
+                        )}
+                        {verifiedModel && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border border-[#10a37f]/30 bg-[#10a37f]/12 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]"
+                            title={verifiedModel.testedUrl ? `Personally tested at ${verifiedModel.testedUrl}` : "Personally tested"}
+                          >
+                            <BadgeCheck size={11} className="shrink-0" />
+                            Verified
                           </span>
                         )}
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>

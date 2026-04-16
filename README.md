@@ -57,6 +57,7 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
 ├── app/              # Landing page, chat route, and metadata
 ├── components/       # Chat UI, model picker, settings, sidebar
+├── config/           # UI/catalog configuration such as verified models
 ├── hooks/            # Worker lifecycle and storage hooks
 ├── lib/              # Presets, policies, storage, telemetry, helpers
 ├── types/            # Worker request/response types
@@ -70,6 +71,8 @@ Inference runs inside [`src/workers/inference.worker.ts`](src/workers/inference.
 The app ships with curated, revision-pinned presets and can search additional Hugging Face repos tagged with `onnx`, then filter to browser-ready chat and vision models that match the worker's supported architectures and required processor assets.
 
 Each curated preset also has a direct chat route using the full Hugging Face namespace, such as `/chat/onnx-community/Qwen3.5-0.8B-ONNX`. Opening one of these URLs starts a fresh chat with that model selected.
+
+Models listed in [`src/config/verifiedModels.ts`](src/config/verifiedModels.ts) are stamped as verified in the model browser after personal testing. Verified entries can also define model-specific sampling defaults that load when that model is selected.
 
 | Preset | Params | Download |
 |--------|--------|----------|

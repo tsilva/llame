@@ -8,6 +8,7 @@ import {
   GenerationParams,
   ModelSelection,
 } from "@/types";
+import { getVerifiedModelGenerationParams } from "@/config/verifiedModels";
 import {
   DEFAULT_MODEL,
   DEFAULT_PARAMS,
@@ -93,6 +94,10 @@ function shouldPreferWasmFallbackModel(model: ModelSelection) {
   return model.supportsImages ?? isVlmModel(model.id);
 }
 
+function getModelSelectionKey(model: ModelSelection) {
+  return `${model.id}\0${model.revision ?? ""}`;
+}
+
 function loadLastSelectedModel(): ModelSelection | null {
   if (typeof window === "undefined") return null;
 
@@ -174,6 +179,7 @@ export default function HomeApp({
   const activeConversationIdRef = useRef<string | null>(null);
   const launchNewChatHandledRef = useRef(false);
   const modelRouteChatHandledRef = useRef<string | null>(null);
+  const appliedVerifiedParamsModelKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -441,6 +447,18 @@ export default function HomeApp({
     [storage.activeConversation],
   );
 
+  const applyVerifiedParamsForModel = useCallback((model: ModelSelection) => {
+    appliedVerifiedParamsModelKeyRef.current = getModelSelectionKey(model);
+    setParams((current) => getVerifiedModelGenerationParams(model.id, current));
+  }, []);
+
+  useEffect(() => {
+    const modelKey = getModelSelectionKey(activeModel);
+    if (appliedVerifiedParamsModelKeyRef.current === modelKey) return;
+
+    applyVerifiedParamsForModel(activeModel);
+  }, [activeModel, applyVerifiedParamsForModel]);
+
   useEffect(() => {
     if (!hasExplicitLastSelectedModel && storage.activeConversation) {
       setLastSelectedModel(activeModel);
@@ -466,10 +484,11 @@ export default function HomeApp({
       interruptActiveGeneration();
     }
     setPendingGeneration(null);
+    applyVerifiedParamsForModel(model);
     const conversation = storage.createConversation(model);
     if (isMobile) setSidebarOpen(false);
     return conversation;
-  }, [interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
+  }, [applyVerifiedParamsForModel, interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
 
   useEffect(() => {
     if (!forceNewChat) return;
@@ -603,6 +622,7 @@ export default function HomeApp({
     setHasExplicitLastSelectedModel(true);
     persistLastSelectedModel(selection);
     setPendingGeneration(null);
+    applyVerifiedParamsForModel(selection);
 
     if (storage.activeConversation) {
       storage.updateConversation({
@@ -621,7 +641,7 @@ export default function HomeApp({
     ) {
       worker.reset();
     }
-  }, [storage, worker]);
+  }, [applyVerifiedParamsForModel, storage, worker]);
 
   const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
     const nextModel = nextDevice === "wasm" && shouldPreferWasmFallbackModel(activeModel)

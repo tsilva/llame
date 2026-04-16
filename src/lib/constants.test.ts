@@ -33,6 +33,6 @@ describe("constants", () => {
       supportTier: "curated",
     });
 
-    expect(selection.revision).toBe("485135195eba6101aec08199e24cef89a971c464");
+    expect(selection.revision).toBe("2333f32297e44073d7f7e5259034b4a24c166c67");
   });
 });

@@ -193,6 +193,10 @@ def neg_exp(tensor: torch.Tensor) -> torch.Tensor:
     return (-torch.exp(tensor.to(torch.float32))).contiguous()
 
 
+def rms_norm_scale(tensor: torch.Tensor) -> torch.Tensor:
+    return (tensor.to(torch.float32) + 1.0).contiguous()
+
+
 def flatten_patch_embed_weight(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.flatten(start_dim=1).transpose(0, 1).contiguous()
 
@@ -332,7 +336,7 @@ def resolve_decoder_tensor_name(name: str) -> tuple[str, Transform | None] | Non
     if name == "lm_head.MatMul.weight":
         return "model.language_model.embed_tokens.weight", transpose_2d
     if name == "model.layers.24.final_norm_layernorm.weight":
-        return "model.language_model.norm.weight", None
+        return "model.language_model.norm.weight", rms_norm_scale
 
     match = DECODER_LAYER_RE.fullmatch(name)
     if not match:
@@ -341,9 +345,9 @@ def resolve_decoder_tensor_name(name: str) -> tuple[str, Transform | None] | Non
     layer_idx, suffix = match.groups()
     prefix = f"model.language_model.layers.{layer_idx}"
     if suffix == "input_layernorm.weight":
-        return f"{prefix}.input_layernorm.weight", None
+        return f"{prefix}.input_layernorm.weight", rms_norm_scale
     if suffix == "post_attention_layernorm.weight":
-        return f"{prefix}.post_attention_layernorm.weight", None
+        return f"{prefix}.post_attention_layernorm.weight", rms_norm_scale
     if suffix == "gdn.conv1d.weight":
         return f"{prefix}.linear_attn.conv1d.weight", squeeze_conv1d
     if suffix == "gdn.conv1d.weight_3d":
@@ -373,9 +377,9 @@ def resolve_decoder_tensor_name(name: str) -> tuple[str, Transform | None] | Non
     if suffix == "attn.o_proj.MatMul.weight":
         return f"{prefix}.self_attn.o_proj.weight", transpose_2d
     if suffix == "attn.q_norm.layernorm.weight":
-        return f"{prefix}.self_attn.q_norm.weight", None
+        return f"{prefix}.self_attn.q_norm.weight", rms_norm_scale
     if suffix == "attn.k_norm.layernorm.weight":
-        return f"{prefix}.self_attn.k_norm.weight", None
+        return f"{prefix}.self_attn.k_norm.weight", rms_norm_scale
     if suffix == "mlp.gate_proj.MatMul.weight":
         return f"{prefix}.mlp.gate_proj.weight", transpose_2d
     if suffix == "mlp.up_proj.MatMul.weight":

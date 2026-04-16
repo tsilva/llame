@@ -38,7 +38,7 @@ export const MODEL_PRESETS = [
   },
   {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-    revision: "485135195eba6101aec08199e24cef89a971c464",
+    revision: "2333f32297e44073d7f7e5259034b4a24c166c67",
     label: "Qwen3.5 0.8B Uncensored",
     thinkingMode: "optional",
     parameterCountLabel: "0.8B",

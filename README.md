@@ -101,7 +101,7 @@ llame ships with curated, revision-pinned presets from `src/lib/constants.ts`.
 | Qwen3.5 0.8B | 0.8B | q4+fp16 | ~850MB | Yes |
 | Qwen3.5 0.8B Uncensored | 0.8B | q4+fp16 | ~1.1GB | Yes |
 | Qwen3.5 2B | 2B | q4+fp16 | ~2GB | Yes |
-| Gemma 4 E2B | 2B | q4f16 | ~44GB | Yes |
+| Gemma 4 E2B | 2B | q4f16 | ~3.4GB | Yes |
 | SmolLM3 3B | 3B | q4/q4f16 | ~2.1GB | No |
 
 Models in `src/config/verifiedModels.ts` are marked as verified after personal testing and can define model-specific sampling defaults. Search results from the model browser are best-effort and may still fail depending on browser support, repo packaging, and device limits.
@@ -224,7 +224,7 @@ See `tools/onnx/README.md` for scope, optional flags, and packaging details.
 
 - First model load can be large because artifacts are downloaded from Hugging Face.
 - Larger vision models can exceed browser, GPU, or device memory limits.
-- `Gemma 4 E2B` is listed because the app recognizes the packaging, but its download size is much larger than the small default presets.
+- `Gemma 4 E2B` downloads the q4f16 ONNX subset; the full Hugging Face repo is much larger because it includes additional precision variants.
 - `RELEASE_CHECKLIST.md` covers manual release checks across browsers and devices.
 
 ## License

@@ -10,6 +10,8 @@ import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { Check, Pencil, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 
+const MESSAGE_ACTION_ICON_SIZE = 16;
+
 interface ChatMessageProps {
   message: ChatMessageType;
   isStreaming?: boolean;
@@ -225,7 +227,7 @@ function MessageActions({
           aria-label="Regenerate answer"
           title="Regenerate answer"
         >
-          <RefreshCw size={18} />
+          <RefreshCw size={MESSAGE_ACTION_ICON_SIZE} />
         </button>
       )}
       {onEdit && (
@@ -236,7 +238,7 @@ function MessageActions({
           aria-label="Edit message"
           title="Edit message"
         >
-          <Pencil size={18} />
+          <Pencil size={MESSAGE_ACTION_ICON_SIZE} />
         </button>
       )}
       {onDelete && (
@@ -247,7 +249,7 @@ function MessageActions({
           aria-label="Delete message"
           title="Delete message"
         >
-          <Trash2 size={18} />
+          <Trash2 size={MESSAGE_ACTION_ICON_SIZE} />
         </button>
       )}
     </div>

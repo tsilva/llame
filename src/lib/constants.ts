@@ -67,7 +67,7 @@ export const MODEL_PRESETS = [
     thinkingMode: "optional",
     parameterCountLabel: "2B",
     quantizationLabel: "q4f16",
-    downloadSizeLabel: "44GB",
+    downloadSizeLabel: "3.4GB",
     supportsImages: true,
     recommendedDevice: "webgpu",
     supportTier: "curated",

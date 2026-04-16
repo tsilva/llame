@@ -22,6 +22,7 @@ describe("constants", () => {
     expect(getModelThinkingMode(modelId)).toBe("optional");
     expect(getModelDisplayName(modelId)).toBe("Gemma 4 E2B");
     expect(getModelQuantizationLabel(modelId, true)).toBe("q4f16");
+    expect(MODEL_PRESETS.find((preset) => preset.id === modelId)?.downloadSizeLabel).toBe("3.4GB");
     expect(CONTEXT_WINDOWS[modelId]).toBe(131072);
   });
 

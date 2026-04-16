@@ -18,6 +18,10 @@ export const VERIFIED_MODELS = [
     testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-0.8B-ONNX",
   },
   {
+    id: "onnx-community/gemma-4-E2B-it-ONNX",
+    testedUrl: "https://llame.tsilva.eu/chat/onnx-community/gemma-4-E2B-it-ONNX",
+  },
+  {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
     testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
     sampling: {

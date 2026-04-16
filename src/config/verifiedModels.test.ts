@@ -8,13 +8,21 @@ import {
 
 describe("verified model config", () => {
   it("marks personally tested models as verified", () => {
-    const modelId = "onnx-community/Qwen3.5-0.8B-ONNX";
+    const verifiedModels = [
+      {
+        id: "onnx-community/Qwen3.5-0.8B-ONNX",
+        testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-0.8B-ONNX",
+      },
+      {
+        id: "onnx-community/gemma-4-E2B-it-ONNX",
+        testedUrl: "https://llame.tsilva.eu/chat/onnx-community/gemma-4-E2B-it-ONNX",
+      },
+    ];
 
-    expect(VERIFIED_MODELS.map((model) => model.id)).toContain(modelId);
-    expect(isVerifiedModel(modelId)).toBe(true);
-    expect(getVerifiedModel(modelId)).toMatchObject({
-      id: modelId,
-      testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-0.8B-ONNX",
+    verifiedModels.forEach((model) => {
+      expect(VERIFIED_MODELS.map((verifiedModel) => verifiedModel.id)).toContain(model.id);
+      expect(isVerifiedModel(model.id)).toBe(true);
+      expect(getVerifiedModel(model.id)).toMatchObject(model);
     });
   });
 

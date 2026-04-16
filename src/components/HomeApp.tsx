@@ -736,21 +736,22 @@ export default function HomeApp({
     worker.generate(getGeneratableMessages(messages), params);
   }, [activeModel, device, params, storage, updateActiveConversation, worker]);
 
-  const handleDeleteLastAssistant = useCallback(() => {
+  const handleDeleteLastMessage = useCallback(() => {
     const conversation = storage.activeConversation;
     if (!conversation) return;
     if (worker.status === "loading" || worker.status === "processing" || worker.status === "generating") return;
 
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    if (lastMessage?.role !== "assistant") return;
+    if (!lastMessage) return;
 
     updateActiveConversation({
       ...conversation,
       messages: conversation.messages.slice(0, -1),
       updatedAt: Date.now(),
     });
-    trackProductEvent("assistant_message_delete", {
+    trackProductEvent("message_delete", {
       model_id: conversation.modelId,
+      role: lastMessage.role,
     });
   }, [storage, updateActiveConversation, worker.status]);
 
@@ -1121,7 +1122,7 @@ export default function HomeApp({
           onToggleThinking={handleToggleThinking}
           showRawConversation={showRawConversation}
           onRegenerateLastAssistant={handleRegenerateLastAssistant}
-          onDeleteLastAssistant={handleDeleteLastAssistant}
+          onDeleteLastMessage={handleDeleteLastMessage}
           onEditLastMessage={handleEditLastMessage}
         />
       </main>

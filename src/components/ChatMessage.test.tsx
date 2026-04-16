@@ -21,9 +21,31 @@ describe("ChatMessage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Regenerate answer" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete answer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete message" }));
 
     expect(onRegenerate).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a user delete button when requested", () => {
+    const onDelete = vi.fn();
+
+    render(
+      <ChatMessage
+        message={{
+          id: "user-1",
+          role: "user",
+          content: "Question",
+        }}
+        showActions
+        onDelete={onDelete}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Regenerate answer" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete message" }));
+
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
@@ -63,7 +85,7 @@ describe("ChatMessage", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Regenerate answer" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete answer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete message" })).not.toBeInTheDocument();
   });
 
   it("shows generation time and stop reason in assistant stats", () => {

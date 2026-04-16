@@ -25,18 +25,18 @@ vi.mock("@/lib/telemetry", () => ({
 vi.mock("@/components/ChatInterface", () => ({
   ChatInterface: ({
     onRegenerateLastAssistant,
-    onDeleteLastAssistant,
+    onDeleteLastMessage,
     onEditLastMessage,
   }: {
     onRegenerateLastAssistant: () => void;
-    onDeleteLastAssistant: () => void;
+    onDeleteLastMessage: () => void;
     onEditLastMessage: (content: string) => void;
   }) => (
     <div data-testid="chat-interface">
       <button data-testid="regenerate-answer" onClick={onRegenerateLastAssistant}>
         Regenerate
       </button>
-      <button data-testid="delete-answer" onClick={onDeleteLastAssistant}>
+      <button data-testid="delete-message" onClick={onDeleteLastMessage}>
         Delete
       </button>
       <button data-testid="edit-message" onClick={() => onEditLastMessage("Edited answer")}>
@@ -616,7 +616,7 @@ describe("HomeApp", () => {
     expect(generate).toHaveBeenCalledWith([conversation.messages[0]], expect.any(Object));
   });
 
-  it("deletes only the last assistant answer", () => {
+  it("deletes the last assistant message", () => {
     const conversation = buildConversation({
       messages: [
         {
@@ -656,10 +656,52 @@ describe("HomeApp", () => {
 
     const { getByTestId } = render(<HomeApp />);
 
-    fireEvent.click(getByTestId("delete-answer"));
+    fireEvent.click(getByTestId("delete-message"));
 
     expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
       messages: [conversation.messages[0]],
+    }));
+  });
+
+  it("deletes the last user message", () => {
+    const conversation = buildConversation({
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "Hello",
+        },
+      ],
+    });
+    const updateConversation = vi.fn();
+
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId } = render(<HomeApp />);
+
+    fireEvent.click(getByTestId("delete-message"));
+
+    expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [],
     }));
   });
 

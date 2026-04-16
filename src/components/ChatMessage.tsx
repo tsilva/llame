@@ -107,7 +107,7 @@ export function ChatMessage({
             align={isUser ? "right" : "left"}
             onEdit={canEditMessage ? startEditing : undefined}
             onRegenerate={!isUser && showActions ? onRegenerate : undefined}
-            onDelete={!isUser && showActions ? onDelete : undefined}
+            onDelete={showActions ? onDelete : undefined}
           />
         )}
       </div>
@@ -144,8 +144,12 @@ export function ChatMessage({
                 {message.content}
               </div>
             )}
-            {!isEditing && canEditMessage ? (
-              <MessageActions align="right" onEdit={startEditing} />
+            {!isEditing && (showActions || canEditMessage) ? (
+              <MessageActions
+                align="right"
+                onEdit={canEditMessage ? startEditing : undefined}
+                onDelete={showActions ? onDelete : undefined}
+              />
             ) : null}
           </div>
         </div>
@@ -240,8 +244,8 @@ function MessageActions({
           type="button"
           onClick={onDelete}
           className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-          aria-label="Delete answer"
-          title="Delete answer"
+          aria-label="Delete message"
+          title="Delete message"
         >
           <Trash2 size={18} />
         </button>

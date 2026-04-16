@@ -44,7 +44,7 @@ interface ChatInterfaceProps {
   onToggleThinking: () => void;
   showRawConversation: boolean;
   onRegenerateLastAssistant: () => void;
-  onDeleteLastAssistant: () => void;
+  onDeleteLastMessage: () => void;
   onEditLastMessage: (content: string) => void;
 }
 
@@ -104,7 +104,7 @@ export function ChatInterface({
   onToggleThinking,
   showRawConversation,
   onRegenerateLastAssistant,
-  onDeleteLastAssistant,
+  onDeleteLastMessage,
   onEditLastMessage,
 }: ChatInterfaceProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -330,7 +330,7 @@ export function ChatInterface({
               const isLastMessage = i === messages.length - 1;
               const isLastAssistant =
                 msg.role === "assistant" && isLastMessage;
-              const canEditLastMessage =
+              const canActOnLastMessage =
                 isLastMessage && !isGenerating && !isLoading && !isProcessing;
               return (
                 <ChatMessage
@@ -346,10 +346,10 @@ export function ChatInterface({
                   generationTime={isLastAssistant ? generationTime : undefined}
                   stopReason={isLastAssistant ? stopReason : undefined}
                   showRaw={showRawConversation}
-                  showActions={isLastAssistant && !isGenerating && !isLoading && !isProcessing}
-                  showEditAction={canEditLastMessage}
+                  showActions={canActOnLastMessage}
+                  showEditAction={canActOnLastMessage}
                   onRegenerate={onRegenerateLastAssistant}
-                  onDelete={onDeleteLastAssistant}
+                  onDelete={onDeleteLastMessage}
                   onEdit={onEditLastMessage}
                 />
               );

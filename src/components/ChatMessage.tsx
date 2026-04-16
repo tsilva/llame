@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChatMessage as ChatMessageType } from "@/types";
+import { useState, useEffect, useRef, type RefObject } from "react";
+import {
+  ChatMessage as ChatMessageType,
+  GenerationStats,
+  GenerationStopReason,
+} from "@/types";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { RefreshCw, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Pencil, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -13,10 +17,14 @@ interface ChatMessageProps {
   isComplete?: boolean;
   tps?: number;
   numTokens?: number;
+  generationTime?: number;
+  stopReason?: GenerationStopReason | null;
   showRaw?: boolean;
   showActions?: boolean;
+  showEditAction?: boolean;
   onRegenerate?: () => void;
   onDelete?: () => void;
+  onEdit?: (content: string) => void;
 }
 
 export function ChatMessage({
@@ -26,22 +34,81 @@ export function ChatMessage({
   isComplete,
   tps,
   numTokens,
+  generationTime,
+  stopReason,
   showRaw,
   showActions,
+  showEditAction,
   onRegenerate,
   onDelete,
+  onEdit,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const hasThinking = message.thinking !== undefined && message.thinking !== null;
   const hasImages = message.images && message.images.length > 0;
+  const stats = getDisplayStats(message, tps, numTokens, generationTime, stopReason);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [draftContent, setDraftContent] = useState(message.content);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const isEditing = editingMessageId === message.id;
+  const canSaveEdit = draftContent.trim().length > 0 || Boolean(hasImages);
+  const canEditMessage = Boolean(showEditAction && onEdit);
+
+  useEffect(() => {
+    if (!isEditing || !editTextareaRef.current) return;
+
+    const textarea = editTextareaRef.current;
+    textarea.focus();
+    textarea.selectionStart = textarea.value.length;
+    textarea.selectionEnd = textarea.value.length;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 260)}px`;
+  }, [draftContent, isEditing]);
+
+  const startEditing = () => {
+    setDraftContent(message.content);
+    setEditingMessageId(message.id);
+  };
+
+  const cancelEditing = () => {
+    setDraftContent(message.content);
+    setEditingMessageId(null);
+  };
+
+  const saveEditing = () => {
+    if (!canSaveEdit) return;
+    onEdit?.(draftContent);
+    setEditingMessageId(null);
+  };
+
+  const editForm = (
+    <MessageEditForm
+      textareaRef={editTextareaRef}
+      value={draftContent}
+      onChange={setDraftContent}
+      onSave={saveEditing}
+      onCancel={cancelEditing}
+      canSave={canSaveEdit}
+      align={isUser ? "right" : "left"}
+    />
+  );
 
   if (showRaw) {
     return (
       <div className="animate-fade-in">
-        <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} tps={tps} numTokens={numTokens} />
-        {showActions && !isUser && (
-          <AssistantMessageActions onRegenerate={onRegenerate} onDelete={onDelete} />
+        {isEditing ? (
+          editForm
+        ) : (
+          <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} stats={stats} />
+        )}
+        {!isEditing && (showActions || canEditMessage) && (
+          <MessageActions
+            align={isUser ? "right" : "left"}
+            onEdit={canEditMessage ? startEditing : undefined}
+            onRegenerate={!isUser && showActions ? onRegenerate : undefined}
+            onDelete={!isUser && showActions ? onDelete : undefined}
+          />
         )}
       </div>
     );
@@ -70,9 +137,16 @@ export function ChatMessage({
                 ))}
               </div>
             )}
-            <div className="rounded-3xl bg-[#2f2f2f] px-5 py-3 text-sm leading-relaxed text-[#ececec] whitespace-pre-wrap break-words">
-              {message.content}
-            </div>
+            {isEditing ? (
+              editForm
+            ) : (
+              <div className="rounded-3xl bg-[#2f2f2f] px-5 py-3 text-sm leading-relaxed text-[#ececec] whitespace-pre-wrap break-words">
+                {message.content}
+              </div>
+            )}
+            {!isEditing && canEditMessage ? (
+              <MessageActions align="right" onEdit={startEditing} />
+            ) : null}
           </div>
         </div>
         {selectedImage && (
@@ -105,50 +179,135 @@ export function ChatMessage({
         )}
 
         {/* Content */}
-        <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
-
-        {/* Generation stats */}
-        {isComplete && !isGenerating && numTokens && numTokens > 0 && (
-          <div className="mt-2 text-xs text-[#8e8e8e]">
-            {numTokens} tokens{tps && tps > 0 ? ` · ${tps.toFixed(1)} tokens/sec` : ""}
-          </div>
+        {isEditing ? (
+          editForm
+        ) : (
+          <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
         )}
 
-        {showActions && (
-          <AssistantMessageActions onRegenerate={onRegenerate} onDelete={onDelete} />
+        {/* Generation stats */}
+        {isComplete && !isGenerating && stats && <GenerationStatsRow stats={stats} />}
+
+        {!isEditing && (showActions || canEditMessage) && (
+          <MessageActions
+            onEdit={canEditMessage ? startEditing : undefined}
+            onRegenerate={showActions ? onRegenerate : undefined}
+            onDelete={showActions ? onDelete : undefined}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function AssistantMessageActions({
+function MessageActions({
+  align = "left",
+  onEdit,
   onRegenerate,
   onDelete,
 }: {
+  align?: "left" | "right";
+  onEdit?: () => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
 }) {
   return (
-    <div className="mt-3 flex items-center gap-1">
-      <button
-        type="button"
-        onClick={onRegenerate}
-        className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-        aria-label="Regenerate answer"
-        title="Regenerate answer"
-      >
-        <RefreshCw size={18} />
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-        aria-label="Delete answer"
-        title="Delete answer"
-      >
-        <Trash2 size={18} />
-      </button>
+    <div className={`mt-3 flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
+      {onRegenerate && (
+        <button
+          type="button"
+          onClick={onRegenerate}
+          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+          aria-label="Regenerate answer"
+          title="Regenerate answer"
+        >
+          <RefreshCw size={18} />
+        </button>
+      )}
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+          aria-label="Edit message"
+          title="Edit message"
+        >
+          <Pencil size={18} />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+          aria-label="Delete answer"
+          title="Delete answer"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MessageEditForm({
+  textareaRef,
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  canSave,
+  align,
+}: {
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  canSave: boolean;
+  align: "left" | "right";
+}) {
+  return (
+    <div className={align === "right" ? "text-right" : undefined}>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onCancel();
+          }
+          if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            onSave();
+          }
+        }}
+        rows={1}
+        className="w-full resize-none rounded-2xl border border-white/[0.08] bg-[#2f2f2f] px-4 py-3 text-sm leading-6 text-[#ececec] outline-none transition-colors placeholder:text-[#8e8e8e] focus:border-[#10a37f]/50"
+        aria-label="Edit message content"
+      />
+      <div className={`mt-2 flex items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!canSave}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#212121] transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
+          aria-label="Save edited message"
+          title="Save"
+        >
+          <Check size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#424242] text-[#ececec] transition-colors hover:bg-[#4a4a4a]"
+          aria-label="Cancel editing message"
+          title="Cancel"
+        >
+          <X size={16} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -157,14 +316,12 @@ function RawChatMessage({
   message,
   isComplete,
   isGenerating,
-  tps,
-  numTokens,
+  stats,
 }: {
   message: ChatMessageType;
   isComplete?: boolean;
   isGenerating?: boolean;
-  tps?: number;
-  numTokens?: number;
+  stats: GenerationStats | null;
 }) {
   const isUser = message.role === "user";
   const rawOutputAvailable = typeof message.debug?.rawOutput === "string";
@@ -215,14 +372,65 @@ function RawChatMessage({
                 muted={!rawOutputAvailable}
               />
             </div>
-            {isComplete && !isGenerating && numTokens && numTokens > 0 && (
-              <div className="mt-3 text-xs text-[#6f6f6f]">
-                {numTokens} tokens{tps && tps > 0 ? ` · ${tps.toFixed(1)} tokens/sec` : ""}
-              </div>
-            )}
+            {isComplete && !isGenerating && stats && <GenerationStatsRow stats={stats} raw />}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function getDisplayStats(
+  message: ChatMessageType,
+  tps?: number,
+  numTokens?: number,
+  generationTime?: number,
+  stopReason?: GenerationStopReason | null,
+): GenerationStats | null {
+  if (message.stats && message.stats.numTokens > 0) {
+    return message.stats;
+  }
+
+  if (!numTokens || numTokens <= 0) return null;
+
+  return {
+    tps: tps ?? 0,
+    numTokens,
+    generationTime: generationTime ?? 0,
+    stopReason: stopReason ?? "unknown",
+  };
+}
+
+function formatGenerationTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  return seconds < 10 ? `${seconds.toFixed(2)}s` : `${seconds.toFixed(1)}s`;
+}
+
+function getStopReasonLabel(reason: GenerationStopReason) {
+  switch (reason) {
+    case "eos_token":
+      return "EOS token found";
+    case "max_new_tokens":
+      return "Max tokens reached";
+    case "interrupted":
+      return "Interrupted";
+    case "stale":
+      return "Superseded";
+    case "unknown":
+      return "Unknown";
+  }
+}
+
+function GenerationStatsRow({ stats, raw = false }: { stats: GenerationStats; raw?: boolean }) {
+  const generationTime = formatGenerationTime(stats.generationTime);
+  const textColor = raw ? "text-[#6f6f6f]" : "text-[#8e8e8e]";
+
+  return (
+    <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${textColor}`}>
+      <span>{stats.numTokens} tokens</span>
+      {stats.tps > 0 && <span>{stats.tps.toFixed(1)} tokens/sec</span>}
+      {generationTime && <span>Generation time: {generationTime}</span>}
+      <span>Stop reason: {getStopReasonLabel(stats.stopReason)}</span>
     </div>
   );
 }

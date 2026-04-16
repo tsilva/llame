@@ -10,7 +10,7 @@ import {
   PreTrainedModel,
   RawImage,
 } from "@huggingface/transformers";
-import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams } from "@/types";
+import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
@@ -104,6 +104,40 @@ let generationId = 0;
 
 function post(message: WorkerResponse) {
   self.postMessage(message);
+}
+
+function toBigIntTokenId(value: unknown): bigint | null {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return BigInt(value);
+  if (typeof value === "string" && /^\d+$/u.test(value)) return BigInt(value);
+  return null;
+}
+
+function addTokenIds(target: Set<bigint>, value: unknown) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => addTokenIds(target, item));
+    return;
+  }
+
+  const tokenId = toBigIntTokenId(value);
+  if (tokenId !== null) {
+    target.add(tokenId);
+  }
+}
+
+function getEosTokenIds(activeTokenizer: PreTrainedTokenizer, activeModel: PreTrainedModel) {
+  const eosTokenIds = new Set<bigint>();
+  const tokenizerLike = activeTokenizer as { eos_token_id?: unknown };
+  const modelLike = activeModel as {
+    config?: { eos_token_id?: unknown };
+    generation_config?: { eos_token_id?: unknown };
+  };
+
+  addTokenIds(eosTokenIds, tokenizerLike.eos_token_id);
+  addTokenIds(eosTokenIds, modelLike.config?.eos_token_id);
+  addTokenIds(eosTokenIds, modelLike.generation_config?.eos_token_id);
+
+  return eosTokenIds;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -376,6 +410,9 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     }
 
     let numTokens = 0;
+    const generatedTokenIds: bigint[] = [];
+    const eosTokenIds = getEosTokenIds(tokenizer, model);
+    let stopReason: GenerationStopReason = "unknown";
     const startTime = performance.now();
     const emitChunk = (chunk: string) => {
       if (!chunk) return;
@@ -401,6 +438,9 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const streamer = new TextStreamer(tokenizer, {
       skip_prompt: true,
       skip_special_tokens: false,
+      token_callback_function: (tokens: bigint[]) => {
+        generatedTokenIds.push(...tokens);
+      },
       callback_function: (rawToken: string) => {
         if (requestId !== generationId) return;
 
@@ -408,14 +448,19 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
         emitChunk(sanitizer.processChunk(rawToken));
       },
     });
+    const stoppingCriteria = (inputIds: unknown[]) => {
+      const stop = shouldInterrupt || requestId !== generationId;
+      if (stop && stopReason === "unknown") {
+        stopReason = shouldInterrupt ? "interrupted" : "stale";
+      }
+      return new Array(inputIds.length).fill(stop);
+    };
 
     await (model as { generate: (args: Record<string, unknown>) => Promise<unknown> }).generate({
       ...inputs,
       ...params,
       streamer,
-      stopping_criteria: [
-        () => shouldInterrupt || requestId !== generationId,
-      ],
+      stopping_criteria: [stoppingCriteria],
     });
 
     if (requestId !== generationId) return;
@@ -437,14 +482,20 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       }
     }
 
-    const elapsed = (performance.now() - startTime) / 1000;
+    const elapsed = Math.max((performance.now() - startTime) / 1000, 0.001);
+    const finalTokenId = generatedTokenIds.at(-1);
+    if (stopReason === "unknown" && finalTokenId !== undefined && eosTokenIds.has(finalTokenId)) {
+      stopReason = "eos_token";
+    } else if (stopReason === "unknown" && generatedTokenIds.length >= params.max_new_tokens) {
+      stopReason = "max_new_tokens";
+    }
     const tps = numTokens / elapsed;
-    post({ status: "complete", tps, numTokens });
+    post({ status: "complete", tps, numTokens, generationTime: elapsed, stopReason });
   } catch (error) {
     if (requestId !== generationId) return;
 
     if (shouldInterrupt) {
-      post({ status: "complete", tps: 0, numTokens: 0 });
+      post({ status: "complete", tps: 0, numTokens: 0, generationTime: 0, stopReason: "interrupted" });
       return;
     }
 

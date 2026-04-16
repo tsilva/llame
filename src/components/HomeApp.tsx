@@ -6,6 +6,7 @@ import {
   ChatMessage as ChatMessageType,
   Conversation,
   GenerationParams,
+  GenerationStats,
   ModelSelection,
 } from "@/types";
 import { getVerifiedModelGenerationParams } from "@/config/verifiedModels";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/constants";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
+import { getModelChatPath } from "@/lib/modelRoutes";
 import { trackProductEvent, captureTelemetryError } from "@/lib/telemetry";
 import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
@@ -144,6 +146,19 @@ function clearNewChatRequestFromUrl() {
   window.history.replaceState(window.history.state, "", nextUrl);
 }
 
+function syncUrlToModel(modelId: string) {
+  if (typeof window === "undefined") return;
+
+  const url = new URL(window.location.href);
+  url.pathname = getModelChatPath(modelId);
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextUrl !== currentUrl) {
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
+}
+
 export default function HomeApp({
   initialModelId = null,
   forceNewChat = false,
@@ -184,6 +199,7 @@ export default function HomeApp({
   const launchNewChatHandledRef = useRef(false);
   const modelRouteChatHandledRef = useRef<string | null>(null);
   const appliedVerifiedParamsModelKeyRef = useRef<string | null>(null);
+  const pendingUrlModelKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -350,7 +366,8 @@ export default function HomeApp({
             ...lastMessage,
             content: "",
             thinking: undefined,
-            debug: { modelInput: "", rawOutput: "" },
+          stats: undefined,
+          debug: { modelInput: "", rawOutput: "" },
           },
         ]
       : [...conversation.messages, createAssistantMessage()];
@@ -432,16 +449,19 @@ export default function HomeApp({
   }, [updateLastAssistantMessage]);
 
   // eslint-disable-next-line react-hooks/immutability
-  worker.onCompleteRef.current = useCallback(() => {
+  worker.onCompleteRef.current = useCallback((stats: GenerationStats) => {
     streamingContentRef.current = "";
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
+    updateLastAssistantMessage((last) => ({ ...last, stats }));
     void storage.flushPendingSave();
     trackProductEvent("generation_complete", {
       model_id: storage.activeConversation?.modelId ?? worker.loadedModel,
       device: worker.loadedDevice,
+      generation_time: stats.generationTime,
+      stop_reason: stats.stopReason,
     });
-  }, [storage, worker.loadedDevice, worker.loadedModel]);
+  }, [storage, updateLastAssistantMessage, worker.loadedDevice, worker.loadedModel]);
 
   const activeModel = useMemo(
     () => buildModelSelectionFromConversation(storage.activeConversation),
@@ -486,6 +506,8 @@ export default function HomeApp({
     }
     setPendingGeneration(null);
     applyVerifiedParamsForModel(model);
+    pendingUrlModelKeyRef.current = getModelSelectionKey(model);
+    syncUrlToModel(model.id);
     const conversation = storage.createConversation(model);
     if (isMobile) setSidebarOpen(false);
     return conversation;
@@ -531,6 +553,32 @@ export default function HomeApp({
     initialRouteModel,
     launchNewChatRequested,
     storage.activeConversation,
+    storage.ready,
+  ]);
+
+  useEffect(() => {
+    if (!storage.ready) return;
+    if (launchNewChatRequested !== false) return;
+    if (
+      forceNewChat &&
+      initialRouteModelKey &&
+      modelRouteChatHandledRef.current !== initialRouteModelKey
+    ) {
+      return;
+    }
+
+    const activeModelKey = getModelSelectionKey(activeModel);
+    if (pendingUrlModelKeyRef.current) {
+      if (pendingUrlModelKeyRef.current !== activeModelKey) return;
+      pendingUrlModelKeyRef.current = null;
+    }
+
+    syncUrlToModel(activeModel.id);
+  }, [
+    activeModel,
+    forceNewChat,
+    initialRouteModelKey,
+    launchNewChatRequested,
     storage.ready,
   ]);
 
@@ -624,6 +672,7 @@ export default function HomeApp({
         ...lastMessage,
         content: "",
         thinking: undefined,
+        stats: undefined,
         debug: { modelInput: "", rawOutput: "" },
       },
     ];
@@ -690,6 +739,42 @@ export default function HomeApp({
     });
   }, [storage, worker.status]);
 
+  const handleEditLastMessage = useCallback((content: string) => {
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
+    if (worker.status === "loading" || worker.status === "processing" || worker.status === "generating") return;
+
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (!lastMessage) return;
+    if (content.trim().length === 0 && !lastMessage.images?.length) return;
+    if (lastMessage.content === content) return;
+
+    const messages = [
+      ...conversation.messages.slice(0, -1),
+      {
+        ...lastMessage,
+        content,
+      },
+    ];
+
+    const shouldRetitle =
+      conversation.messages.length === 1 &&
+      lastMessage.role === "user" &&
+      conversation.title === getConversationTitle(lastMessage.content, lastMessage.images);
+
+    storage.updateConversation({
+      ...conversation,
+      title: shouldRetitle ? getConversationTitle(content, lastMessage.images) : conversation.title,
+      messages,
+      updatedAt: Date.now(),
+    });
+
+    trackProductEvent("message_edit", {
+      model_id: conversation.modelId,
+      role: lastMessage.role,
+    });
+  }, [storage, worker.status]);
+
   const handleToggleThinking = useCallback(() => {
     if (!canToggleThinking(activeModel.id)) return;
     setParams((current) => ({ ...current, thinkingEnabled: !current.thinkingEnabled }));
@@ -701,6 +786,8 @@ export default function HomeApp({
     persistLastSelectedModel(selection);
     setPendingGeneration(null);
     applyVerifiedParamsForModel(selection);
+    pendingUrlModelKeyRef.current = getModelSelectionKey(selection);
+    syncUrlToModel(selection.id);
 
     if (storage.activeConversation) {
       storage.updateConversation({
@@ -738,8 +825,13 @@ export default function HomeApp({
 
   const handleSwitchConversation = useCallback((id: string) => {
     setPendingGeneration(null);
+    pendingUrlModelKeyRef.current = null;
     if (worker.status === "generating") {
       interruptActiveGeneration();
+    }
+    const conversationMeta = storage.index.find((conversation) => conversation.id === id);
+    if (conversationMeta) {
+      syncUrlToModel(conversationMeta.modelId);
     }
     storage.setActiveConversation(id);
     if (isMobile) setSidebarOpen(false);
@@ -1001,6 +1093,8 @@ export default function HomeApp({
           onStop={handleStop}
           tps={worker.tps}
           numTokens={worker.numTokens}
+          generationTime={worker.generationTime}
+          stopReason={worker.stopReason}
           device={worker.loadedDevice}
           isMobile={isMobile}
           allowImageInputs={allowImageInputs}
@@ -1011,6 +1105,7 @@ export default function HomeApp({
           showRawConversation={showRawConversation}
           onRegenerateLastAssistant={handleRegenerateLastAssistant}
           onDeleteLastAssistant={handleDeleteLastAssistant}
+          onEditLastMessage={handleEditLastMessage}
         />
       </main>
 

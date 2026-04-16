@@ -3,6 +3,20 @@ export interface MessageDebugData {
   rawOutput?: string;
 }
 
+export type GenerationStopReason =
+  | "eos_token"
+  | "max_new_tokens"
+  | "interrupted"
+  | "stale"
+  | "unknown";
+
+export interface GenerationStats {
+  tps: number;
+  numTokens: number;
+  generationTime: number;
+  stopReason: GenerationStopReason;
+}
+
 export type ModelSupportTier = "curated" | "experimental";
 
 export interface ModelSelection {
@@ -19,6 +33,7 @@ export interface ChatMessage {
   content: string;
   thinking?: string;
   images?: string[]; // Base64-encoded images for VLM support
+  stats?: GenerationStats;
   debug?: MessageDebugData;
 }
 
@@ -122,7 +137,7 @@ export type WorkerResponse =
   | { status: "raw_update"; token: string }
   | { status: "update"; token: string; tps: number; numTokens: number; inputTokens?: number; isThinking?: boolean }
   | { status: "thinking_complete"; thinking: string }
-  | { status: "complete"; tps: number; numTokens: number }
+  | ({ status: "complete" } & GenerationStats)
   | {
       status: "error";
       error: string;

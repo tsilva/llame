@@ -6,6 +6,8 @@ import {
   WorkerRequest,
   ChatMessage,
   GenerationParams,
+  GenerationStats,
+  GenerationStopReason,
   ProgressInfo,
   TotalProgressInfo,
   ModelSelection,
@@ -58,6 +60,8 @@ interface InferenceState {
   tps: number;
   numTokens: number;
   inputTokens: number;
+  generationTime: number;
+  stopReason: GenerationStopReason | null;
 }
 
 interface UseInferenceWorkerReturn extends InferenceState {
@@ -69,7 +73,7 @@ interface UseInferenceWorkerReturn extends InferenceState {
   onRawTokenRef: React.MutableRefObject<((token: string) => void) | null>;
   onTokenRef: React.MutableRefObject<((token: string, isThinking?: boolean) => void) | null>;
   onThinkingCompleteRef: React.MutableRefObject<((thinking: string) => void) | null>;
-  onCompleteRef: React.MutableRefObject<(() => void) | null>;
+  onCompleteRef: React.MutableRefObject<((stats: GenerationStats) => void) | null>;
   contextFullness: number;
   contextWindow: number;
 }
@@ -89,6 +93,8 @@ const INITIAL_STATE: InferenceState = {
   tps: 0,
   numTokens: 0,
   inputTokens: 0,
+  generationTime: 0,
+  stopReason: null,
 };
 
 export function useInferenceWorker(): UseInferenceWorkerReturn {
@@ -98,7 +104,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
   const onRawTokenRef = useRef<((token: string) => void) | null>(null);
   const onTokenRef = useRef<((token: string, isThinking?: boolean) => void) | null>(null);
   const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
-  const onCompleteRef = useRef<(() => void) | null>(null);
+  const onCompleteRef = useRef<((stats: GenerationStats) => void) | null>(null);
   const interruptedRef = useRef(false);
 
   const [state, setState] = useState<InferenceState>(INITIAL_STATE);
@@ -147,7 +153,16 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
         setState((current) => ({ ...current, status: "processing", processingMessage: response.message }));
       } else if (response.status === "generating") {
         interruptedRef.current = false;
-        setState((current) => ({ ...current, status: "generating", tps: 0, numTokens: 0, inputTokens: 0, error: null }));
+        setState((current) => ({
+          ...current,
+          status: "generating",
+          tps: 0,
+          numTokens: 0,
+          inputTokens: 0,
+          generationTime: 0,
+          stopReason: null,
+          error: null,
+        }));
       } else if (response.status === "prompt") {
         if (!interruptedRef.current) onPromptRef.current?.(response.inputText);
       } else if (response.status === "raw_update") {
@@ -164,9 +179,15 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
       } else if (response.status === "thinking_complete") {
         if (!interruptedRef.current) onThinkingCompleteRef.current?.(response.thinking);
       } else if (response.status === "complete") {
-        if (!interruptedRef.current) onCompleteRef.current?.();
+        const stats: GenerationStats = {
+          tps: response.tps,
+          numTokens: response.numTokens,
+          generationTime: response.generationTime,
+          stopReason: response.stopReason,
+        };
+        if (!interruptedRef.current) onCompleteRef.current?.(stats);
         interruptedRef.current = false;
-        setState((current) => ({ ...current, status: "loaded", tps: response.tps, numTokens: response.numTokens }));
+        setState((current) => ({ ...current, status: "loaded", ...stats }));
       } else if (response.status === "error") {
         interruptedRef.current = false;
         setState((current) => ({

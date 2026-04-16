@@ -26,9 +26,11 @@ vi.mock("@/components/ChatInterface", () => ({
   ChatInterface: ({
     onRegenerateLastAssistant,
     onDeleteLastAssistant,
+    onEditLastMessage,
   }: {
     onRegenerateLastAssistant: () => void;
     onDeleteLastAssistant: () => void;
+    onEditLastMessage: (content: string) => void;
   }) => (
     <div data-testid="chat-interface">
       <button data-testid="regenerate-answer" onClick={onRegenerateLastAssistant}>
@@ -36,6 +38,9 @@ vi.mock("@/components/ChatInterface", () => ({
       </button>
       <button data-testid="delete-answer" onClick={onDeleteLastAssistant}>
         Delete
+      </button>
+      <button data-testid="edit-message" onClick={() => onEditLastMessage("Edited answer")}>
+        Edit
       </button>
     </div>
   ),
@@ -100,6 +105,22 @@ function buildConversation(overrides: Partial<Conversation> = {}): Conversation 
   };
 }
 
+function buildConversationMeta(conversation: Conversation) {
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    createdAt: conversation.createdAt,
+    updatedAt: conversation.updatedAt,
+    modelId: conversation.modelId,
+    modelRevision: conversation.modelRevision ?? null,
+    modelSupportsImages: conversation.modelSupportsImages ?? null,
+    recommendedDevice: conversation.recommendedDevice,
+    supportTier: conversation.supportTier,
+    messageCount: conversation.messages.length,
+    sizeBytes: 0,
+  };
+}
+
 beforeAll(() => {
   Object.defineProperty(navigator, "gpu", {
     configurable: true,
@@ -126,6 +147,7 @@ beforeAll(() => {
 describe("HomeApp", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState({}, "", "/chat");
 
     mockedUseInferenceWorker.mockReturnValue({
       status: "idle",
@@ -211,7 +233,7 @@ describe("HomeApp", () => {
       recommendedDevice: existingConversation.recommendedDevice,
       supportTier: existingConversation.supportTier,
     }));
-    expect(window.location.pathname).toBe("/chat");
+    expect(window.location.pathname).toBe("/chat/onnx-community/Qwen2.5-0.5B-Instruct");
     expect(window.location.search).toBe("");
   });
 
@@ -276,6 +298,63 @@ describe("HomeApp", () => {
       recommendedDevice: "webgpu",
       supportTier: "curated",
     }));
+  });
+
+  it("keeps the URL synced when switching to a conversation with another model", async () => {
+    const firstConversation = buildConversation();
+    const secondConversation = buildConversation({
+      id: "conv-2",
+      title: "Second chat",
+      modelId: "HuggingFaceTB/SmolLM3-3B-ONNX",
+      modelRevision: "rev-2",
+      modelSupportsImages: false,
+      recommendedDevice: "webgpu",
+      supportTier: "curated",
+    });
+    const setActiveConversation = vi.fn();
+    const getStorageState = (activeConversation: Conversation) => ({
+      index: [
+        buildConversationMeta(firstConversation),
+        buildConversationMeta(secondConversation),
+      ],
+      activeConversation,
+      activeConversationId: activeConversation.id,
+      setActiveConversation,
+      createConversation: vi.fn(),
+      updateConversation: vi.fn(),
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 2,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    mockedUseStorage.mockReturnValue(getStorageState(firstConversation));
+
+    const { getByTestId, rerender } = render(<HomeApp />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/chat/onnx-community/Qwen2.5-0.5B-Instruct");
+    });
+
+    fireEvent.click(getByTestId("switch-conversation"));
+
+    expect(setActiveConversation).toHaveBeenCalledWith("conv-2");
+    expect(window.location.pathname).toBe("/chat/HuggingFaceTB/SmolLM3-3B-ONNX");
+
+    mockedUseStorage.mockReturnValue(getStorageState(secondConversation));
+    rerender(<HomeApp />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/chat/HuggingFaceTB/SmolLM3-3B-ONNX");
+    });
   });
 
   it("falls back to the default model when a restored conversation is missing model metadata", () => {
@@ -384,6 +463,7 @@ describe("HomeApp", () => {
       recommendedDevice: "webgpu",
       supportTier: "community",
     }));
+    expect(window.location.pathname).toBe("/chat/onnx-community/Llama-3.2-1B-Instruct-q4f16");
 
     mockedUseStorage.mockReturnValue({
       index: [
@@ -580,6 +660,60 @@ describe("HomeApp", () => {
 
     expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
       messages: [conversation.messages[0]],
+    }));
+  });
+
+  it("edits the last message in place", () => {
+    const conversation = buildConversation({
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "Hello",
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+        },
+      ],
+    });
+    const updateConversation = vi.fn();
+
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId } = render(<HomeApp />);
+
+    fireEvent.click(getByTestId("edit-message"));
+
+    expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [
+        conversation.messages[0],
+        expect.objectContaining({
+          id: "assistant-1",
+          role: "assistant",
+          content: "Edited answer",
+        }),
+      ],
     }));
   });
 });

@@ -27,6 +27,30 @@ describe("ChatMessage", () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
+  it("shows an edit button when requested and saves the edited content", () => {
+    const onEdit = vi.fn();
+
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+        }}
+        showEditAction
+        onEdit={onEdit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit message" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Edit message content" }), {
+      target: { value: "Edited answer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save edited message" }));
+
+    expect(onEdit).toHaveBeenCalledWith("Edited answer");
+  });
+
   it("does not show action buttons by default", () => {
     render(
       <ChatMessage

@@ -10,7 +10,7 @@ import {
   DragEvent,
   ChangeEvent,
 } from "react";
-import { ChatMessage as ChatMessageType, ProgressInfo, TotalProgressInfo } from "@/types";
+import { ChatMessage as ChatMessageType, GenerationStopReason, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
 import { siteDescription } from "@/lib/siteMetadata";
 import { ModelLoadingCard } from "./ModelLoadingCard";
@@ -33,6 +33,8 @@ interface ChatInterfaceProps {
   onStop: () => void;
   tps: number;
   numTokens: number;
+  generationTime: number;
+  stopReason: GenerationStopReason | null;
   device: string | null;
   isMobile: boolean;
   allowImageInputs: boolean;
@@ -43,6 +45,7 @@ interface ChatInterfaceProps {
   showRawConversation: boolean;
   onRegenerateLastAssistant: () => void;
   onDeleteLastAssistant: () => void;
+  onEditLastMessage: (content: string) => void;
 }
 
 interface PendingImage {
@@ -90,6 +93,8 @@ export function ChatInterface({
   onStop,
   tps,
   numTokens,
+  generationTime,
+  stopReason,
   device,
   isMobile,
   allowImageInputs,
@@ -100,6 +105,7 @@ export function ChatInterface({
   showRawConversation,
   onRegenerateLastAssistant,
   onDeleteLastAssistant,
+  onEditLastMessage,
 }: ChatInterfaceProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -321,8 +327,11 @@ export function ChatInterface({
         {hasMessages && (
           <div className="mx-auto max-w-[768px] space-y-6 px-3 py-4 md:px-4 md:py-6">
             {messages.map((msg, i) => {
+              const isLastMessage = i === messages.length - 1;
               const isLastAssistant =
-                msg.role === "assistant" && i === messages.length - 1;
+                msg.role === "assistant" && isLastMessage;
+              const canEditLastMessage =
+                isLastMessage && !isGenerating && !isLoading && !isProcessing;
               return (
                 <ChatMessage
                   key={msg.id}
@@ -334,10 +343,14 @@ export function ChatInterface({
                   }
                   tps={isLastAssistant ? tps : undefined}
                   numTokens={isLastAssistant ? numTokens : undefined}
+                  generationTime={isLastAssistant ? generationTime : undefined}
+                  stopReason={isLastAssistant ? stopReason : undefined}
                   showRaw={showRawConversation}
                   showActions={isLastAssistant && !isGenerating && !isLoading && !isProcessing}
+                  showEditAction={canEditLastMessage}
                   onRegenerate={onRegenerateLastAssistant}
                   onDelete={onDeleteLastAssistant}
+                  onEdit={onEditLastMessage}
                 />
               );
             })}

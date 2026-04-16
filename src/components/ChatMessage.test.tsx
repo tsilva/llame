@@ -1,0 +1,44 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ChatMessage } from "@/components/ChatMessage";
+
+describe("ChatMessage", () => {
+  it("shows assistant action buttons when requested", () => {
+    const onRegenerate = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+        }}
+        showActions
+        onRegenerate={onRegenerate}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate answer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete answer" }));
+
+    expect(onRegenerate).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show action buttons by default", () => {
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Regenerate answer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete answer" })).not.toBeInTheDocument();
+  });
+});

@@ -207,10 +207,10 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
 
 export const DEFAULT_PARAMS: GenerationParams = {
   max_new_tokens: 2048,
-  temperature: 0.7,
-  top_p: 0.9,
-  min_p: 0,
-  top_k: 50,
+  temperature: 0.8,
+  top_p: 0.95,
+  min_p: 0.05,
+  top_k: 40,
   repetition_penalty: 1.1,
   do_sample: true,
   thinkingEnabled: false,

@@ -77,6 +77,10 @@ function getConversationTitle(content: string, images?: string[]) {
   return "New chat";
 }
 
+function getGeneratableMessages(messages: ChatMessageType[]) {
+  return messages.filter((message) => message.content.length > 0 || (message.images && message.images.length > 0));
+}
+
 function buildModelSelectionFromConversation(conversation: Conversation | null): ModelSelection {
   if (!conversation) {
     return getModelSelection(DEFAULT_MODEL);
@@ -363,10 +367,7 @@ export default function HomeApp({
     };
     storage.updateConversation(updatedConversation);
 
-    worker.generate(
-      messages.filter((message) => message.content.length > 0 || (message.images && message.images.length > 0)),
-      params,
-    );
+    worker.generate(getGeneratableMessages(messages), params);
   }, [
     params,
     pendingGeneration,
@@ -598,10 +599,7 @@ export default function HomeApp({
     streamingRawOutputRef.current = "";
     setThinkingComplete(false);
     storage.updateConversation({ ...updatedConversation, messages, updatedAt: Date.now() });
-    worker.generate(
-      messages.filter((message) => message.content.length > 0 || (message.images && message.images.length > 0)),
-      params,
-    );
+    worker.generate(getGeneratableMessages(messages), params);
   }, [activeModel, createNewConversation, device, params, storage, worker]);
 
   const handleStop = useCallback(() => {
@@ -611,6 +609,86 @@ export default function HomeApp({
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
   }, [interruptActiveGeneration]);
+
+  const handleRegenerateLastAssistant = useCallback(() => {
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
+    if (worker.status === "loading" || worker.status === "processing" || worker.status === "generating") return;
+
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (lastMessage?.role !== "assistant") return;
+
+    const messages = [
+      ...conversation.messages.slice(0, -1),
+      {
+        ...lastMessage,
+        content: "",
+        thinking: undefined,
+        debug: { modelInput: "", rawOutput: "" },
+      },
+    ];
+
+    streamingContentRef.current = "";
+    streamingThinkingRef.current = "";
+    streamingRawOutputRef.current = "";
+    setThinkingComplete(false);
+    setDismissedWorkerErrorKey(null);
+
+    const updatedConversation = {
+      ...conversation,
+      messages,
+      updatedAt: Date.now(),
+      modelId: activeModel.id,
+      modelRevision: activeModel.revision ?? null,
+      modelSupportsImages: activeModel.supportsImages ?? null,
+      recommendedDevice: activeModel.recommendedDevice,
+      supportTier: activeModel.supportTier,
+    };
+    storage.updateConversation(updatedConversation);
+
+    trackProductEvent("generation_regenerate_start", {
+      model_id: updatedConversation.modelId,
+      model_revision: updatedConversation.modelRevision,
+      device,
+    });
+
+    const needsLoad = worker.status === "idle" || worker.status === "error";
+    const needsSwitch =
+      worker.loadedModel !== activeModel.id ||
+      (worker.loadedRevision ?? null) !== (activeModel.revision ?? null) ||
+      worker.loadedDevice !== device;
+
+    if (needsLoad || needsSwitch) {
+      setPendingGeneration({
+        conversationId: updatedConversation.id,
+        model: activeModel,
+        device,
+        reuseLastAssistant: true,
+      });
+      worker.loadModel(activeModel, device);
+      return;
+    }
+
+    worker.generate(getGeneratableMessages(messages), params);
+  }, [activeModel, device, params, storage, worker]);
+
+  const handleDeleteLastAssistant = useCallback(() => {
+    const conversation = storage.activeConversation;
+    if (!conversation) return;
+    if (worker.status === "loading" || worker.status === "processing" || worker.status === "generating") return;
+
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (lastMessage?.role !== "assistant") return;
+
+    storage.updateConversation({
+      ...conversation,
+      messages: conversation.messages.slice(0, -1),
+      updatedAt: Date.now(),
+    });
+    trackProductEvent("assistant_message_delete", {
+      model_id: conversation.modelId,
+    });
+  }, [storage, worker.status]);
 
   const handleToggleThinking = useCallback(() => {
     if (!canToggleThinking(activeModel.id)) return;
@@ -931,6 +1009,8 @@ export default function HomeApp({
           showThinkingToggle={showThinkingToggle}
           onToggleThinking={handleToggleThinking}
           showRawConversation={showRawConversation}
+          onRegenerateLastAssistant={handleRegenerateLastAssistant}
+          onDeleteLastAssistant={handleDeleteLastAssistant}
         />
       </main>
 

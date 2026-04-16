@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ChatMessage as ChatMessageType } from "@/types";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { Sparkles, X } from "lucide-react";
+import { RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -14,6 +14,9 @@ interface ChatMessageProps {
   tps?: number;
   numTokens?: number;
   showRaw?: boolean;
+  showActions?: boolean;
+  onRegenerate?: () => void;
+  onDelete?: () => void;
 }
 
 export function ChatMessage({
@@ -24,6 +27,9 @@ export function ChatMessage({
   tps,
   numTokens,
   showRaw,
+  showActions,
+  onRegenerate,
+  onDelete,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const hasThinking = message.thinking !== undefined && message.thinking !== null;
@@ -31,7 +37,14 @@ export function ChatMessage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (showRaw) {
-    return <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} tps={tps} numTokens={numTokens} />;
+    return (
+      <div className="animate-fade-in">
+        <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} tps={tps} numTokens={numTokens} />
+        {showActions && !isUser && (
+          <AssistantMessageActions onRegenerate={onRegenerate} onDelete={onDelete} />
+        )}
+      </div>
+    );
   }
 
   if (isUser) {
@@ -100,7 +113,42 @@ export function ChatMessage({
             {numTokens} tokens{tps && tps > 0 ? ` · ${tps.toFixed(1)} tokens/sec` : ""}
           </div>
         )}
+
+        {showActions && (
+          <AssistantMessageActions onRegenerate={onRegenerate} onDelete={onDelete} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function AssistantMessageActions({
+  onRegenerate,
+  onDelete,
+}: {
+  onRegenerate?: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div className="mt-3 flex items-center gap-1">
+      <button
+        type="button"
+        onClick={onRegenerate}
+        className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+        aria-label="Regenerate answer"
+        title="Regenerate answer"
+      >
+        <RefreshCw size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+        aria-label="Delete answer"
+        title="Delete answer"
+      >
+        <Trash2 size={18} />
+      </button>
     </div>
   );
 }
@@ -123,7 +171,7 @@ function RawChatMessage({
   const modelInputAvailable = typeof message.debug?.modelInput === "string";
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <div className="rounded-2xl border border-white/[0.08] bg-[#171717] p-4">
         <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[#6f6f6f]">
           {isUser ? "User" : "Assistant"}

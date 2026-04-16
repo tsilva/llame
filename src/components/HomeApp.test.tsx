@@ -23,7 +23,22 @@ vi.mock("@/lib/telemetry", () => ({
 }));
 
 vi.mock("@/components/ChatInterface", () => ({
-  ChatInterface: () => <div data-testid="chat-interface" />,
+  ChatInterface: ({
+    onRegenerateLastAssistant,
+    onDeleteLastAssistant,
+  }: {
+    onRegenerateLastAssistant: () => void;
+    onDeleteLastAssistant: () => void;
+  }) => (
+    <div data-testid="chat-interface">
+      <button data-testid="regenerate-answer" onClick={onRegenerateLastAssistant}>
+        Regenerate
+      </button>
+      <button data-testid="delete-answer" onClick={onDeleteLastAssistant}>
+        Delete
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/ModelSelector", () => ({
@@ -86,6 +101,13 @@ function buildConversation(overrides: Partial<Conversation> = {}): Conversation 
 }
 
 beforeAll(() => {
+  Object.defineProperty(navigator, "gpu", {
+    configurable: true,
+    value: {
+      requestAdapter: vi.fn(async () => ({})),
+    },
+  });
+
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation(() => ({
@@ -421,6 +443,143 @@ describe("HomeApp", () => {
       supportsImages: false,
       recommendedDevice: "webgpu",
       supportTier: "community",
+    }));
+  });
+
+  it("regenerates the last assistant answer in place", () => {
+    const conversation = buildConversation({
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "Hello",
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "Old answer",
+          thinking: "Old thinking",
+          debug: {
+            modelInput: "old input",
+            rawOutput: "old output",
+          },
+        },
+      ],
+    });
+    const updateConversation = vi.fn();
+    const generate = vi.fn();
+
+    mockedUseInferenceWorker.mockReturnValue({
+      status: "loaded",
+      error: null,
+      loadedModel: conversation.modelId,
+      loadedRevision: conversation.modelRevision ?? null,
+      loadedDevice: "webgpu",
+      loadedPrecision: "fp16",
+      loadedSupportsImages: false,
+      progress: null,
+      totalProgress: null,
+      loadingMessage: "",
+      processingMessage: "",
+      tps: 0,
+      numTokens: 0,
+      onPromptRef: { current: null },
+      onRawTokenRef: { current: null },
+      onTokenRef: { current: null },
+      onThinkingCompleteRef: { current: null },
+      onCompleteRef: { current: null },
+      loadModel: vi.fn(),
+      generate,
+      interrupt: vi.fn(),
+      reset: vi.fn(),
+    });
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId } = render(<HomeApp />);
+
+    fireEvent.click(getByTestId("regenerate-answer"));
+
+    expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [
+        conversation.messages[0],
+        expect.objectContaining({
+          id: "assistant-1",
+          role: "assistant",
+          content: "",
+          thinking: undefined,
+          debug: {
+            modelInput: "",
+            rawOutput: "",
+          },
+        }),
+      ],
+    }));
+    expect(generate).toHaveBeenCalledWith([conversation.messages[0]], expect.any(Object));
+  });
+
+  it("deletes only the last assistant answer", () => {
+    const conversation = buildConversation({
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "Hello",
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+        },
+      ],
+    });
+    const updateConversation = vi.fn();
+
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId } = render(<HomeApp />);
+
+    fireEvent.click(getByTestId("delete-answer"));
+
+    expect(updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [conversation.messages[0]],
     }));
   });
 });

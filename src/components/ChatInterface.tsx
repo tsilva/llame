@@ -41,6 +41,8 @@ interface ChatInterfaceProps {
   showThinkingToggle: boolean;
   onToggleThinking: () => void;
   showRawConversation: boolean;
+  onRegenerateLastAssistant: () => void;
+  onDeleteLastAssistant: () => void;
 }
 
 interface PendingImage {
@@ -96,6 +98,8 @@ export function ChatInterface({
   showThinkingToggle,
   onToggleThinking,
   showRawConversation,
+  onRegenerateLastAssistant,
+  onDeleteLastAssistant,
 }: ChatInterfaceProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -331,6 +335,9 @@ export function ChatInterface({
                   tps={isLastAssistant ? tps : undefined}
                   numTokens={isLastAssistant ? numTokens : undefined}
                   showRaw={showRawConversation}
+                  showActions={isLastAssistant && !isGenerating && !isLoading && !isProcessing}
+                  onRegenerate={onRegenerateLastAssistant}
+                  onDelete={onDeleteLastAssistant}
                 />
               );
             })}

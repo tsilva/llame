@@ -65,4 +65,28 @@ describe("ChatMessage", () => {
     expect(screen.queryByRole("button", { name: "Regenerate answer" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete answer" })).not.toBeInTheDocument();
   });
+
+  it("shows generation time and stop reason in assistant stats", () => {
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "Answer",
+          stats: {
+            tps: 47.85,
+            numTokens: 116,
+            generationTime: 0.28,
+            stopReason: "eos_token",
+          },
+        }}
+        isComplete
+      />,
+    );
+
+    expect(screen.getByText("116 tokens")).toBeInTheDocument();
+    expect(screen.getByText("47.9 tokens/sec")).toBeInTheDocument();
+    expect(screen.getByText("Generation time: 0.28s")).toBeInTheDocument();
+    expect(screen.getByText("Stop reason: EOS token found")).toBeInTheDocument();
+  });
 });

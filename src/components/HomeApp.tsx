@@ -500,15 +500,17 @@ export default function HomeApp({
     void storage.flushPendingSave();
   }, [storage, worker]);
 
-  const createNewConversation = useCallback((model = lastSelectedModel) => {
+  const createNewConversation = useCallback((model?: ModelSelection) => {
+    const selectedModel = model ?? lastSelectedModel;
+
     if (worker.status === "generating") {
       interruptActiveGeneration();
     }
     setPendingGeneration(null);
-    applyVerifiedParamsForModel(model);
-    pendingUrlModelKeyRef.current = getModelSelectionKey(model);
-    syncUrlToModel(model.id);
-    const conversation = storage.createConversation(model);
+    applyVerifiedParamsForModel(selectedModel);
+    pendingUrlModelKeyRef.current = getModelSelectionKey(selectedModel);
+    syncUrlToModel(selectedModel.id);
+    const conversation = storage.createConversation(selectedModel);
     if (isMobile) setSidebarOpen(false);
     return conversation;
   }, [applyVerifiedParamsForModel, interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
@@ -925,7 +927,9 @@ export default function HomeApp({
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
-        onNewChat={createNewConversation}
+        onNewChat={() => {
+          createNewConversation();
+        }}
         onOpenSettings={() => setSettingsOpen(true)}
         onClearAllChats={() => {
           void storage.clearAllChats();

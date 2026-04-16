@@ -62,7 +62,7 @@ export function Sidebar({
           <PanelLeft size={20} />
         </button>
         <button
-          onClick={onNewChat}
+          onClick={() => onNewChat()}
           className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="New chat"
           aria-label="Start a new chat"

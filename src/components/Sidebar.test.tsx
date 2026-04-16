@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Sidebar } from "@/components/Sidebar";
 import { ConversationMeta } from "@/types";
@@ -20,7 +21,7 @@ function buildConversation(overrides: Partial<ConversationMeta> = {}): Conversat
   };
 }
 
-function renderSidebar(conversations: ConversationMeta[]) {
+function renderSidebar(conversations: ConversationMeta[], overrides: Partial<ComponentProps<typeof Sidebar>> = {}) {
   render(
     <Sidebar
       isOpen
@@ -34,6 +35,7 @@ function renderSidebar(conversations: ConversationMeta[]) {
       onDeleteConversation={vi.fn()}
       isLoading={false}
       isGenerating={false}
+      {...overrides}
     />,
   );
 }
@@ -43,6 +45,15 @@ describe("Sidebar", () => {
     renderSidebar([buildConversation()]);
 
     expect(screen.queryByLabelText("Delete conversation New chat")).not.toBeInTheDocument();
+  });
+
+  it("calls the new chat callback without leaking the click event", () => {
+    const onNewChat = vi.fn();
+    renderSidebar([buildConversation()], { onNewChat });
+
+    fireEvent.click(screen.getAllByLabelText("Start a new chat")[0]);
+
+    expect(onNewChat).toHaveBeenCalledWith();
   });
 
   it("shows a delete button for a conversation with messages", () => {

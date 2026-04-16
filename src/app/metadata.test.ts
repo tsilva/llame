@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { metadata as chatMetadata } from "@/app/chat/layout";
 import { metadata as homeMetadata } from "@/app/page";
 import sitemap from "@/app/sitemap";
+import { MODEL_PRESETS } from "@/lib/constants";
+import { getModelChatPath } from "@/lib/modelRoutes";
 import {
   chatPageDescription,
   homePageJsonLd,
@@ -99,14 +101,23 @@ describe("SEO metadata", () => {
 });
 
 describe("sitemap", () => {
-  it("lists only the homepage route", () => {
-    expect(sitemap()).toEqual([
+  it("lists the homepage and every dropdown model route", () => {
+    const entries = sitemap();
+
+    expect(entries).toEqual([
       {
         url: siteUrl,
         lastModified: expect.any(Date),
         changeFrequency: "weekly",
         priority: 1,
       },
+      ...MODEL_PRESETS.map((preset) => ({
+        url: new URL(getModelChatPath(preset.id), siteUrl).toString(),
+        lastModified: expect.any(Date),
+        changeFrequency: "weekly",
+        priority: 0.8,
+      })),
     ]);
+    expect(entries).toHaveLength(MODEL_PRESETS.length + 1);
   });
 });

@@ -329,6 +329,8 @@ def resolve_vision_tensor_name(name: str) -> tuple[str, Transform | None] | None
 
 
 def resolve_decoder_tensor_name(name: str) -> tuple[str, Transform | None] | None:
+    if name == "lm_head.MatMul.weight":
+        return "model.language_model.embed_tokens.weight", transpose_2d
     if name == "model.layers.24.final_norm_layernorm.weight":
         return "model.language_model.norm.weight", None
 
@@ -431,7 +433,11 @@ def export_vision_encoder(reader: SafeTensorReader, reference_path: Path, output
 def export_decoder_fp16(reader: SafeTensorReader, reference_path: Path, output_path: Path) -> None:
     model = onnx.load_model(reference_path.as_posix(), load_external_data=True)
     replaced = 0
+    has_lm_head = False
+    replaced_lm_head = False
     for initializer in model.graph.initializer:
+        if initializer.name == "lm_head.MatMul.weight":
+            has_lm_head = True
         resolved = resolve_decoder_tensor_name(initializer.name)
         if resolved is None:
             continue
@@ -440,7 +446,11 @@ def export_decoder_fp16(reader: SafeTensorReader, reference_path: Path, output_p
         if transform is not None:
             tensor = transform(tensor)
         replace_initializer(initializer, tensor)
+        if initializer.name == "lm_head.MatMul.weight":
+            replaced_lm_head = True
         replaced += 1
+    if has_lm_head and not replaced_lm_head:
+        raise ValueError("Decoder graph has an lm_head projection, but it was not transplanted from the checkpoint")
     save_onnx_with_external_data(model, output_path)
     print(f"Wrote {output_path.name} with {replaced} transplanted tensors.")
     del model

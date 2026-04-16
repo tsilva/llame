@@ -103,6 +103,8 @@ beforeAll(() => {
 
 describe("HomeApp", () => {
   beforeEach(() => {
+    localStorage.clear();
+
     mockedUseInferenceWorker.mockReturnValue({
       status: "idle",
       error: null,
@@ -189,6 +191,69 @@ describe("HomeApp", () => {
     }));
     expect(window.location.pathname).toBe("/chat");
     expect(window.location.search).toBe("");
+  });
+
+  it("creates a fresh conversation with the model from a model route", async () => {
+    const existingConversation = buildConversation();
+    const createConversation = vi.fn(() => buildConversation({
+      id: "conv-2",
+      title: "New chat",
+      messages: [],
+      createdAt: 3,
+      updatedAt: 3,
+    }));
+
+    mockedUseStorage.mockReturnValue({
+      index: [
+        {
+          id: existingConversation.id,
+          title: existingConversation.title,
+          createdAt: existingConversation.createdAt,
+          updatedAt: existingConversation.updatedAt,
+          modelId: existingConversation.modelId,
+          modelRevision: existingConversation.modelRevision ?? null,
+          modelSupportsImages: existingConversation.modelSupportsImages ?? null,
+          recommendedDevice: existingConversation.recommendedDevice,
+          supportTier: existingConversation.supportTier,
+          messageCount: existingConversation.messages.length,
+          sizeBytes: 0,
+        },
+      ],
+      activeConversation: existingConversation,
+      activeConversationId: existingConversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation,
+      updateConversation: vi.fn(),
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    render(
+      <HomeApp
+        forceNewChat
+        initialModelId="onnx-community/Qwen3.5-2B-ONNX"
+      />,
+    );
+
+    await waitFor(() => expect(createConversation).toHaveBeenCalledTimes(1));
+
+    expect(createConversation).toHaveBeenCalledWith(expect.objectContaining({
+      id: "onnx-community/Qwen3.5-2B-ONNX",
+      revision: "d8ddc1cfd46bdefa6771b3a82097f3610a5b3ee4",
+      supportsImages: true,
+      recommendedDevice: "webgpu",
+      supportTier: "curated",
+    }));
   });
 
   it("falls back to the default model when a restored conversation is missing model metadata", () => {

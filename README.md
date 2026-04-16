@@ -69,6 +69,8 @@ Inference runs inside [`src/workers/inference.worker.ts`](src/workers/inference.
 
 The app ships with curated, revision-pinned presets and can search additional Hugging Face repos tagged with `onnx`, then filter to browser-ready chat and vision models that match the worker's supported architectures and required processor assets.
 
+Each curated preset also has a direct chat route using the full Hugging Face namespace, such as `/chat/onnx-community/Qwen3.5-0.8B-ONNX`. Opening one of these URLs starts a fresh chat with that model selected.
+
 | Preset | Params | Download |
 |--------|--------|----------|
 | Qwen3.5 0.8B | 0.8B | ~850MB |

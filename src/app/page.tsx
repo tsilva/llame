@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { homePageJsonLd, homePageMetadata, siteDescription } from "@/lib/siteMetadata";
 import { Sparkles, ChevronRight, Shield, Cpu, HardDrive, Github } from "lucide-react";
 import styles from "./page.module.css";
@@ -67,13 +68,13 @@ export default function Home() {
                   {siteDescription}
                 </p>
                 <div className={styles.ctaRow}>
-                  <a
+                  <Link
                     href="/chat?new=1"
                     className={styles.primaryCta}
                   >
                     Launch app
                     <ChevronRight size={16} />
-                  </a>
+                  </Link>
                 </div>
               </div>
 

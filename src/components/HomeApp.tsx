@@ -42,6 +42,11 @@ interface PendingGeneration {
 
 const LAST_SELECTED_MODEL_KEY = "llame-last-selected-model";
 
+interface HomeAppProps {
+  initialModelId?: string | null;
+  forceNewChat?: boolean;
+}
+
 function createAssistantMessage(): ChatMessageType {
   return {
     id: crypto.randomUUID(),
@@ -123,17 +128,38 @@ function persistLastSelectedModel(selection: ModelSelection) {
   }));
 }
 
-export default function HomeApp() {
+function clearNewChatRequestFromUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("new");
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
+
+export default function HomeApp({
+  initialModelId = null,
+  forceNewChat = false,
+}: HomeAppProps = {}) {
   const [webgpuSupported, setWebgpuSupported] = useState<boolean | null>(null);
   const worker = useInferenceWorker();
   const storage = useStorage();
+  const initialRouteModel = useMemo(
+    () => initialModelId ? getModelSelection(initialModelId) : null,
+    [initialModelId],
+  );
+  const initialRouteModelKey = initialRouteModel
+    ? `${initialRouteModel.id}\0${initialRouteModel.revision ?? ""}`
+    : null;
 
   const [launchNewChatRequested, setLaunchNewChatRequested] = useState<boolean | null>(null);
   const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
-  const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(() => loadLastSelectedModel() ?? getModelSelection(DEFAULT_MODEL));
-  const [hasExplicitLastSelectedModel, setHasExplicitLastSelectedModel] = useState(() => loadLastSelectedModel() !== null);
+  const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(() => (
+    initialRouteModel ?? loadLastSelectedModel() ?? getModelSelection(DEFAULT_MODEL)
+  ));
+  const [hasExplicitLastSelectedModel, setHasExplicitLastSelectedModel] = useState(() => (
+    initialRouteModel !== null || loadLastSelectedModel() !== null
+  ));
   const [dismissedWorkerErrorKey, setDismissedWorkerErrorKey] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -147,6 +173,7 @@ export default function HomeApp() {
   const streamingRawOutputRef = useRef("");
   const activeConversationIdRef = useRef<string | null>(null);
   const launchNewChatHandledRef = useRef(false);
+  const modelRouteChatHandledRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -227,6 +254,14 @@ export default function HomeApp() {
     activeConversationIdRef.current = storage.activeConversationId;
   }, [storage.activeConversationId]);
 
+  useEffect(() => {
+    if (!initialRouteModel) return;
+
+    setLastSelectedModel(initialRouteModel);
+    setHasExplicitLastSelectedModel(true);
+    persistLastSelectedModel(initialRouteModel);
+  }, [initialRouteModel, initialRouteModelKey]);
+
   const updateLastAssistantMessage = useCallback((updater: (message: ChatMessageType) => ChatMessageType) => {
     const conversation = storage.activeConversation;
     if (!conversation) return;
@@ -242,6 +277,7 @@ export default function HomeApp() {
     if (!storage.ready) return;
     if (launchNewChatRequested === null) return;
     if (launchNewChatRequested) return;
+    if (forceNewChat && initialRouteModel) return;
     if (storage.activeConversationId) return;
 
     const sortedConversations = [...storage.index].sort((left, right) => right.updatedAt - left.updatedAt);
@@ -255,7 +291,7 @@ export default function HomeApp() {
     const conversation = storage.createConversation(lastSelectedModel);
     setLastSelectedModel(buildModelSelectionFromConversation(conversation));
     if (isMobile) setSidebarOpen(false);
-  }, [isMobile, lastSelectedModel, launchNewChatRequested, storage]);
+  }, [forceNewChat, initialRouteModel, isMobile, lastSelectedModel, launchNewChatRequested, storage]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
@@ -436,19 +472,47 @@ export default function HomeApp() {
   }, [interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
 
   useEffect(() => {
+    if (!forceNewChat) return;
+    if (!initialRouteModel || !initialRouteModelKey) return;
+    if (!storage.ready) return;
+
+    if (launchNewChatRequested) {
+      clearNewChatRequestFromUrl();
+      setLaunchNewChatRequested(false);
+    }
+
+    if (modelRouteChatHandledRef.current === initialRouteModelKey) return;
+
+    modelRouteChatHandledRef.current = initialRouteModelKey;
+    createNewConversation(initialRouteModel);
+  }, [
+    createNewConversation,
+    forceNewChat,
+    initialRouteModel,
+    initialRouteModelKey,
+    launchNewChatRequested,
+    storage.ready,
+  ]);
+
+  useEffect(() => {
     if (!storage.ready) return;
     if (launchNewChatRequested !== true) return;
+    if (forceNewChat && initialRouteModel) return;
     if (launchNewChatHandledRef.current) return;
 
     launchNewChatHandledRef.current = true;
     createNewConversation(buildModelSelectionFromConversation(storage.activeConversation));
 
-    const url = new URL(window.location.href);
-    url.searchParams.delete("new");
-    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
+    clearNewChatRequestFromUrl();
     setLaunchNewChatRequested(false);
-  }, [createNewConversation, launchNewChatRequested, storage.activeConversation, storage.ready]);
+  }, [
+    createNewConversation,
+    forceNewChat,
+    initialRouteModel,
+    launchNewChatRequested,
+    storage.activeConversation,
+    storage.ready,
+  ]);
 
   const deleteConversation = useCallback((id: string) => {
     storage.deleteConversation(id);

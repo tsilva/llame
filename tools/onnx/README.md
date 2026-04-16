@@ -42,6 +42,7 @@ It then:
 - transplants fine-tuned weights into the reference `embed_tokens_fp16` graph
 - transplants fine-tuned vision weights into the reference `vision_encoder_fp16` graph
 - transplants fine-tuned decoder weights into the reference `decoder_model_merged_fp16` graph
+- rebuilds the tied decoder `lm_head` projection from the fine-tuned embedding weights
 - quantizes the decoder locally into `decoder_model_merged_q4f16.onnx`
 
 This avoids re-exporting the Qwen3.5 vision graph from PyTorch, which is brittle for this architecture.

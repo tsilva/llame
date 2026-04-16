@@ -195,11 +195,17 @@ export default function HomeApp({
   const streamingContentRef = useRef("");
   const streamingThinkingRef = useRef("");
   const streamingRawOutputRef = useRef("");
+  const activeConversationRef = useRef<Conversation | null>(null);
   const activeConversationIdRef = useRef<string | null>(null);
   const launchNewChatHandledRef = useRef(false);
   const modelRouteChatHandledRef = useRef<string | null>(null);
   const appliedVerifiedParamsModelKeyRef = useRef<string | null>(null);
   const pendingUrlModelKeyRef = useRef<string | null>(null);
+
+  const updateActiveConversation = useCallback((conversation: Conversation) => {
+    activeConversationRef.current = conversation;
+    storage.updateConversation(conversation);
+  }, [storage]);
 
   useEffect(() => {
     (async () => {
@@ -245,7 +251,7 @@ export default function HomeApp({
     const conversationModel = buildModelSelectionFromConversation(conversation);
     if (!shouldPreferWasmFallbackModel(conversationModel)) return;
 
-    storage.updateConversation({
+    updateActiveConversation({
       ...conversation,
       modelId: fallbackModel.id,
       modelRevision: fallbackModel.revision ?? null,
@@ -254,7 +260,7 @@ export default function HomeApp({
       supportTier: fallbackModel.supportTier,
       updatedAt: Date.now(),
     });
-  }, [storage, storage.activeConversation, webgpuSupported]);
+  }, [storage, storage.activeConversation, updateActiveConversation, webgpuSupported]);
 
   useEffect(() => {
     const savedThinking = localStorage.getItem("llame-thinking-enabled");
@@ -281,6 +287,10 @@ export default function HomeApp({
   }, [storage.activeConversationId]);
 
   useEffect(() => {
+    activeConversationRef.current = storage.activeConversation;
+  }, [storage.activeConversation]);
+
+  useEffect(() => {
     if (!initialRouteModel) return;
 
     setLastSelectedModel(initialRouteModel);
@@ -289,15 +299,15 @@ export default function HomeApp({
   }, [initialRouteModel, initialRouteModelKey]);
 
   const updateLastAssistantMessage = useCallback((updater: (message: ChatMessageType) => ChatMessageType) => {
-    const conversation = storage.activeConversation;
+    const conversation = activeConversationRef.current;
     if (!conversation) return;
 
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     if (lastMessage?.role !== "assistant") return;
 
     const updatedMessages = [...conversation.messages.slice(0, -1), updater(lastMessage)];
-    storage.updateConversation({ ...conversation, messages: updatedMessages, updatedAt: Date.now() });
-  }, [storage]);
+    updateActiveConversation({ ...conversation, messages: updatedMessages, updatedAt: Date.now() });
+  }, [updateActiveConversation]);
 
   useEffect(() => {
     if (!storage.ready) return;
@@ -315,6 +325,7 @@ export default function HomeApp({
     }
 
     const conversation = storage.createConversation(lastSelectedModel);
+    activeConversationRef.current = conversation;
     setLastSelectedModel(buildModelSelectionFromConversation(conversation));
     if (isMobile) setSidebarOpen(false);
   }, [forceNewChat, initialRouteModel, isMobile, lastSelectedModel, launchNewChatRequested, storage]);
@@ -366,8 +377,8 @@ export default function HomeApp({
             ...lastMessage,
             content: "",
             thinking: undefined,
-          stats: undefined,
-          debug: { modelInput: "", rawOutput: "" },
+            stats: undefined,
+            debug: { modelInput: "", rawOutput: "" },
           },
         ]
       : [...conversation.messages, createAssistantMessage()];
@@ -382,13 +393,14 @@ export default function HomeApp({
       messages,
       updatedAt: Date.now(),
     };
-    storage.updateConversation(updatedConversation);
+    updateActiveConversation(updatedConversation);
 
     worker.generate(getGeneratableMessages(messages), params);
   }, [
     params,
     pendingGeneration,
     storage,
+    updateActiveConversation,
     worker,
   ]);
 
@@ -494,11 +506,11 @@ export default function HomeApp({
 
     const nextConversation = removeEmptyTrailingAssistantMessage(conversation);
     if (nextConversation !== conversation) {
-      storage.updateConversation(nextConversation);
+      updateActiveConversation(nextConversation);
     }
 
     void storage.flushPendingSave();
-  }, [storage, worker]);
+  }, [storage, updateActiveConversation, worker]);
 
   const createNewConversation = useCallback((model?: ModelSelection) => {
     const selectedModel = model ?? lastSelectedModel;
@@ -511,6 +523,7 @@ export default function HomeApp({
     pendingUrlModelKeyRef.current = getModelSelectionKey(selectedModel);
     syncUrlToModel(selectedModel.id);
     const conversation = storage.createConversation(selectedModel);
+    activeConversationRef.current = conversation;
     if (isMobile) setSidebarOpen(false);
     return conversation;
   }, [applyVerifiedParamsForModel, interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
@@ -618,7 +631,7 @@ export default function HomeApp({
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
     };
-    storage.updateConversation(updatedConversation);
+    updateActiveConversation(updatedConversation);
     setDismissedWorkerErrorKey(null);
     trackProductEvent("generation_start", {
       model_id: updatedConversation.modelId,
@@ -648,9 +661,9 @@ export default function HomeApp({
     streamingThinkingRef.current = "";
     streamingRawOutputRef.current = "";
     setThinkingComplete(false);
-    storage.updateConversation({ ...updatedConversation, messages, updatedAt: Date.now() });
+    updateActiveConversation({ ...updatedConversation, messages, updatedAt: Date.now() });
     worker.generate(getGeneratableMessages(messages), params);
-  }, [activeModel, createNewConversation, device, params, storage, worker]);
+  }, [activeModel, createNewConversation, device, params, storage, updateActiveConversation, worker]);
 
   const handleStop = useCallback(() => {
     interruptActiveGeneration();
@@ -695,7 +708,7 @@ export default function HomeApp({
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
     };
-    storage.updateConversation(updatedConversation);
+    updateActiveConversation(updatedConversation);
 
     trackProductEvent("generation_regenerate_start", {
       model_id: updatedConversation.modelId,
@@ -721,7 +734,7 @@ export default function HomeApp({
     }
 
     worker.generate(getGeneratableMessages(messages), params);
-  }, [activeModel, device, params, storage, worker]);
+  }, [activeModel, device, params, storage, updateActiveConversation, worker]);
 
   const handleDeleteLastAssistant = useCallback(() => {
     const conversation = storage.activeConversation;
@@ -731,7 +744,7 @@ export default function HomeApp({
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     if (lastMessage?.role !== "assistant") return;
 
-    storage.updateConversation({
+    updateActiveConversation({
       ...conversation,
       messages: conversation.messages.slice(0, -1),
       updatedAt: Date.now(),
@@ -739,7 +752,7 @@ export default function HomeApp({
     trackProductEvent("assistant_message_delete", {
       model_id: conversation.modelId,
     });
-  }, [storage, worker.status]);
+  }, [storage, updateActiveConversation, worker.status]);
 
   const handleEditLastMessage = useCallback((content: string) => {
     const conversation = storage.activeConversation;
@@ -764,7 +777,7 @@ export default function HomeApp({
       lastMessage.role === "user" &&
       conversation.title === getConversationTitle(lastMessage.content, lastMessage.images);
 
-    storage.updateConversation({
+    updateActiveConversation({
       ...conversation,
       title: shouldRetitle ? getConversationTitle(content, lastMessage.images) : conversation.title,
       messages,
@@ -775,7 +788,7 @@ export default function HomeApp({
       model_id: conversation.modelId,
       role: lastMessage.role,
     });
-  }, [storage, worker.status]);
+  }, [storage, updateActiveConversation, worker.status]);
 
   const handleToggleThinking = useCallback(() => {
     if (!canToggleThinking(activeModel.id)) return;
@@ -792,7 +805,7 @@ export default function HomeApp({
     syncUrlToModel(selection.id);
 
     if (storage.activeConversation) {
-      storage.updateConversation({
+      updateActiveConversation({
         ...storage.activeConversation,
         modelId: selection.id,
         modelRevision: selection.revision ?? null,
@@ -808,7 +821,7 @@ export default function HomeApp({
     ) {
       worker.reset();
     }
-  }, [applyVerifiedParamsForModel, storage, worker]);
+  }, [applyVerifiedParamsForModel, storage, updateActiveConversation, worker]);
 
   const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
     const nextModel = nextDevice === "wasm" && shouldPreferWasmFallbackModel(activeModel)

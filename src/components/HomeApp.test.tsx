@@ -1,9 +1,9 @@
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeApp from "@/components/HomeApp";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
-import { Conversation, ModelSelection } from "@/types";
+import { Conversation, GenerationStats, ModelSelection } from "@/types";
 
 vi.mock("next/dynamic", () => ({
   default: () => () => null,
@@ -715,5 +715,104 @@ describe("HomeApp", () => {
         }),
       ],
     }));
+  });
+
+  it("preserves streamed assistant content when completion arrives before a rerender", () => {
+    const conversation = buildConversation({
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "Hello",
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "",
+          debug: {
+            modelInput: "",
+            rawOutput: "",
+          },
+        },
+      ],
+    });
+    const updateConversation = vi.fn();
+    const flushPendingSave = vi.fn();
+    const onTokenRef = { current: null as ((token: string, isThinking?: boolean) => void) | null };
+    const onCompleteRef = { current: null as ((stats: GenerationStats) => void) | null };
+
+    mockedUseInferenceWorker.mockReturnValue({
+      status: "generating",
+      error: null,
+      loadedModel: conversation.modelId,
+      loadedRevision: conversation.modelRevision ?? null,
+      loadedDevice: "webgpu",
+      loadedPrecision: "fp16",
+      loadedSupportsImages: false,
+      progress: null,
+      totalProgress: null,
+      loadingMessage: "",
+      processingMessage: "",
+      tps: 0,
+      numTokens: 0,
+      onPromptRef: { current: null },
+      onRawTokenRef: { current: null },
+      onTokenRef,
+      onThinkingCompleteRef: { current: null },
+      onCompleteRef,
+      loadModel: vi.fn(),
+      generate: vi.fn(),
+      interrupt: vi.fn(),
+      reset: vi.fn(),
+    });
+    mockedUseStorage.mockReturnValue({
+      index: [],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation,
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave,
+    });
+
+    render(<HomeApp />);
+
+    act(() => {
+      onTokenRef.current?.("Visible answer");
+      onCompleteRef.current?.({
+        tps: 4,
+        numTokens: 4,
+        generationTime: 1.8,
+        stopReason: "eos_token",
+      });
+    });
+
+    expect(updateConversation).toHaveBeenLastCalledWith(expect.objectContaining({
+      messages: [
+        conversation.messages[0],
+        expect.objectContaining({
+          id: "assistant-1",
+          content: "Visible answer",
+          stats: {
+            tps: 4,
+            numTokens: 4,
+            generationTime: 1.8,
+            stopReason: "eos_token",
+          },
+        }),
+      ],
+    }));
+    expect(flushPendingSave).toHaveBeenCalled();
   });
 });

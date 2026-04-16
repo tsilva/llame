@@ -21,13 +21,14 @@ export function ModelLoadingCard({
   const entries = Array.from(progress.values());
   const normalizedProgress = entries.map(p => ({
     ...p,
-    progress: p.total > 0
+    progress: clampPercent(p.total > 0
       ? (p.loaded / p.total) * 100
-      : (p.progress <= 1 ? p.progress * 100 : p.progress),
+      : (p.progress <= 1 ? p.progress * 100 : p.progress)),
   }));
-  const loadedBytes = totalProgress?.loaded ?? entries.reduce((sum, p) => sum + p.loaded, 0);
-  const totalBytes = totalProgress?.total ?? entries.reduce((sum, p) => sum + p.total, 0);
-  const overallPercent = totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0;
+  const hasOverallProgress = totalProgress !== null && totalProgress.total > 0;
+  const loadedBytes = hasOverallProgress ? totalProgress.loaded : 0;
+  const totalBytes = hasOverallProgress ? totalProgress.total : 0;
+  const overallPercent = hasOverallProgress ? clampPercent((loadedBytes / totalBytes) * 100) : 0;
 
   const displayModelName = modelName.split("/").pop() || modelName;
 
@@ -54,18 +55,20 @@ export function ModelLoadingCard({
           {entries.length > 0 && (
             <>
               {/* Overall progress */}
-              <div className="mb-3">
-                <div className="mb-1 flex justify-between text-xs text-[#8e8e8e]">
-                  <span>Overall</span>
-                  <span>{overallPercent.toFixed(0)}%</span>
+              {hasOverallProgress && (
+                <div className="mb-3">
+                  <div className="mb-1 flex justify-between text-xs text-[#8e8e8e]">
+                    <span>Overall</span>
+                    <span>{overallPercent.toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full bg-[#10a37f] transition-all duration-200"
+                      style={{ width: `${overallPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                  <div
-                    className="h-full rounded-full bg-[#10a37f] transition-all duration-200"
-                    style={{ width: `${overallPercent}%` }}
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Expand/collapse toggle */}
               <button
@@ -107,9 +110,11 @@ export function ModelLoadingCard({
               )}
 
               {/* Total size */}
-              <div className="text-center text-xs text-[#8e8e8e]">
-                {formatBytes(loadedBytes)} / {formatBytes(totalBytes)}
-              </div>
+              {hasOverallProgress && (
+                <div className="text-center text-xs text-[#8e8e8e]">
+                  {formatBytes(loadedBytes)} / {formatBytes(totalBytes)}
+                </div>
+              )}
             </>
           )}
 
@@ -123,6 +128,11 @@ export function ModelLoadingCard({
       </div>
     </div>
   );
+}
+
+function clampPercent(percent: number): number {
+  if (!Number.isFinite(percent)) return 0;
+  return Math.min(100, Math.max(0, percent));
 }
 
 function formatBytes(bytes: number): string {

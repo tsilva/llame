@@ -12,6 +12,12 @@ export interface VerifiedModel {
   sampling?: VerifiedModelSamplingSettings;
 }
 
+export interface BrokenModel {
+  id: string;
+  testedUrl?: string;
+  reason: string;
+}
+
 export const VERIFIED_MODELS = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
@@ -29,21 +35,28 @@ export const VERIFIED_MODELS = [
     id: "Xenova/distilgpt2",
     testedUrl: "https://llame.tsilva.eu/chat/Xenova/distilgpt2",
   },
+] satisfies VerifiedModel[];
+
+export const BROKEN_MODELS = [
   {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
     testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-    sampling: {
-      temperature: 0.8,
-      top_k: 40,
-      repetition_penalty: 1.1,
-      top_p: 0.95,
-      min_p: 0.05,
-      do_sample: true,
-    },
+    reason: "Loaded to 100% locally but never reached generation.",
   },
-] satisfies VerifiedModel[];
+  {
+    id: "onnx-community/Qwen3.5-2B-ONNX",
+    testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-2B-ONNX",
+    reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
+  },
+  {
+    id: "HuggingFaceTB/SmolLM3-3B-ONNX",
+    testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM3-3B-ONNX",
+    reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
+  },
+] satisfies BrokenModel[];
 
 const VERIFIED_MODEL_IDS = new Set(VERIFIED_MODELS.map((model) => model.id));
+const BROKEN_MODEL_IDS = new Set(BROKEN_MODELS.map((model) => model.id));
 
 export function getVerifiedModel(modelId?: string | null) {
   if (typeof modelId !== "string") return null;
@@ -56,6 +69,19 @@ export function isVerifiedModel(modelId?: string | null) {
   if (typeof modelId !== "string") return false;
 
   return VERIFIED_MODEL_IDS.has(modelId.trim());
+}
+
+export function getBrokenModel(modelId?: string | null) {
+  if (typeof modelId !== "string") return null;
+
+  const normalizedModelId = modelId.trim();
+  return BROKEN_MODELS.find((model) => model.id === normalizedModelId) ?? null;
+}
+
+export function isBrokenModel(modelId?: string | null) {
+  if (typeof modelId !== "string") return false;
+
+  return BROKEN_MODEL_IDS.has(modelId.trim());
 }
 
 export function getVerifiedModelGenerationParams(

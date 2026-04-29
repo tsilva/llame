@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BadgeCheck, ExternalLink, Loader2, Search, X } from "lucide-react";
-import { getVerifiedModel } from "@/config/verifiedModels";
+import { BadgeCheck, BadgeX, ExternalLink, Loader2, Search, X } from "lucide-react";
+import { getBrokenModel, getVerifiedModel } from "@/config/verifiedModels";
 import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
 import { getModelInteractionLabel } from "@/lib/modelInteraction";
 import { InferenceDevice, ModelSelection } from "@/types";
@@ -443,6 +443,7 @@ export function ModelBrowserModal({
             const downloadSizeLabel = formatDownloadSizeLabel(model.estimatedDownloadGb);
             const active = model.id === currentModelId;
             const verifiedModel = getVerifiedModel(model.id);
+            const brokenModel = getBrokenModel(model.id);
             const interactionLabel = getModelInteractionLabel(model.interactionMode);
 
             return (
@@ -486,6 +487,15 @@ export function ModelBrowserModal({
                           >
                             <BadgeCheck size={11} className="shrink-0" />
                             Verified
+                          </span>
+                        )}
+                        {brokenModel && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border border-red-400/25 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-200"
+                            title={brokenModel.reason}
+                          >
+                            <BadgeX size={11} className="shrink-0" />
+                            Broken
                           </span>
                         )}
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${compatibilityClasses(compatibility.tone)}`}>

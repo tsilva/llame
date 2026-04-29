@@ -18,14 +18,26 @@ export interface BrokenModel {
   reason: string;
 }
 
-export const VERIFIED_MODELS = [
+export const VERIFIED_MODELS: VerifiedModel[] = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
     testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-0.8B-ONNX",
   },
   {
+    id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+    testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+  },
+  {
+    id: "onnx-community/Qwen3.5-2B-ONNX",
+    testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-2B-ONNX",
+  },
+  {
     id: "onnx-community/gemma-4-E2B-it-ONNX",
     testedUrl: "https://llame.tsilva.eu/chat/onnx-community/gemma-4-E2B-it-ONNX",
+  },
+  {
+    id: "HuggingFaceTB/SmolLM3-3B-ONNX",
+    testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM3-3B-ONNX",
   },
   {
     id: "HuggingFaceTB/SmolLM2-135M-Instruct",
@@ -35,25 +47,9 @@ export const VERIFIED_MODELS = [
     id: "Xenova/distilgpt2",
     testedUrl: "https://llame.tsilva.eu/chat/Xenova/distilgpt2",
   },
-] satisfies VerifiedModel[];
+];
 
-export const BROKEN_MODELS = [
-  {
-    id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-    testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-    reason: "Loaded to 100% locally but never reached generation.",
-  },
-  {
-    id: "onnx-community/Qwen3.5-2B-ONNX",
-    testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-2B-ONNX",
-    reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
-  },
-  {
-    id: "HuggingFaceTB/SmolLM3-3B-ONNX",
-    testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM3-3B-ONNX",
-    reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
-  },
-] satisfies BrokenModel[];
+export const BROKEN_MODELS: BrokenModel[] = [];
 
 const VERIFIED_MODEL_IDS = new Set(VERIFIED_MODELS.map((model) => model.id));
 const BROKEN_MODEL_IDS = new Set(BROKEN_MODELS.map((model) => model.id));

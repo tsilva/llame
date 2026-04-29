@@ -34,6 +34,18 @@ function resolveBrowserModelId(modelId?: string | null) {
 
 export const MODEL_PRESETS: ModelPreset[] = [
   {
+    id: "onnx-community/LFM2.5-350M-ONNX",
+    revision: "2c07371c2e84776cad597f3d813b7d306d292aea",
+    label: "LFM2.5-350M",
+    thinkingMode: "unsupported",
+    parameterCountLabel: "350M",
+    quantizationLabel: "fp16",
+    downloadSizeLabel: "692MB",
+    supportsImages: false,
+    recommendedDevice: "webgpu",
+    supportTier: "curated",
+  },
+  {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
     revision: "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6",
     label: "Qwen3.5 0.8B",
@@ -212,6 +224,7 @@ export function canToggleThinking(modelId: string | null | undefined): boolean {
 
 export const CONTEXT_WINDOWS: Record<string, number> = {
   "openai-community/gpt2": 1024,
+  "onnx-community/LFM2.5-350M-ONNX": 32768, // 32k context window
   "onnx-community/Qwen3.5-0.8B-ONNX": 32768, // 32k context window
   "tsilva/unsloth_Qwen3.5-0.8B_uncensored": 32768, // 32k context window
   "onnx-community/Qwen3.5-2B-ONNX": 32768, // 32k context window

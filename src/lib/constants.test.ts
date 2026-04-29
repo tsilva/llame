@@ -5,8 +5,8 @@ import {
   DEFAULT_PARAMS,
   MODEL_PRESETS,
   getDefaultParamsForModel,
+  getModelCardMeta,
   getModelDisplayName,
-  getModelQuantizationLabel,
   getModelSelection,
   getModelThinkingMode,
   isVlmModel,
@@ -18,13 +18,35 @@ describe("constants", () => {
     expect(MODEL_PRESETS.map((preset) => preset.id)).not.toContain("onnx-community/Qwen2.5-0.5B-Instruct");
   });
 
+  it("includes LFM2.5 350M as a curated WebGPU chat preset", () => {
+    const modelId = "onnx-community/LFM2.5-350M-ONNX";
+
+    expect(getModelDisplayName(modelId)).toBe("LFM2.5-350M");
+    expect(getModelCardMeta(modelId)).toEqual(["350M", "fp16", "692MB"]);
+    expect(getModelThinkingMode(modelId)).toBe("unsupported");
+    expect(MODEL_PRESETS.find((preset) => preset.id === modelId)).toMatchObject({
+      revision: "2c07371c2e84776cad597f3d813b7d306d292aea",
+      parameterCountLabel: "350M",
+      downloadSizeLabel: "692MB",
+      supportsImages: false,
+      recommendedDevice: "webgpu",
+      supportTier: "curated",
+    });
+    expect(getModelSelection(modelId)).toMatchObject({
+      id: modelId,
+      revision: "2c07371c2e84776cad597f3d813b7d306d292aea",
+      interactionMode: "chat",
+    });
+    expect(CONTEXT_WINDOWS[modelId]).toBe(32768);
+  });
+
   it("recognizes Gemma 4 E2B as a vision model with optional thinking", () => {
     const modelId = "onnx-community/gemma-4-E2B-it-ONNX";
 
     expect(isVlmModel(modelId)).toBe(true);
     expect(getModelThinkingMode(modelId)).toBe("optional");
     expect(getModelDisplayName(modelId)).toBe("Gemma 4 E2B");
-    expect(getModelQuantizationLabel(modelId, true)).toBe("q4f16");
+    expect(getModelCardMeta(modelId)).toContain("q4f16");
     expect(MODEL_PRESETS.find((preset) => preset.id === modelId)?.downloadSizeLabel).toBe("3.4GB");
     expect(CONTEXT_WINDOWS[modelId]).toBe(131072);
   });

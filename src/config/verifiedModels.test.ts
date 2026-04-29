@@ -17,8 +17,20 @@ describe("verified model config", () => {
         testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-0.8B-ONNX",
       },
       {
+        id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+        testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+      },
+      {
+        id: "onnx-community/Qwen3.5-2B-ONNX",
+        testedUrl: "https://llame.tsilva.eu/chat/onnx-community/Qwen3.5-2B-ONNX",
+      },
+      {
         id: "onnx-community/gemma-4-E2B-it-ONNX",
         testedUrl: "https://llame.tsilva.eu/chat/onnx-community/gemma-4-E2B-it-ONNX",
+      },
+      {
+        id: "HuggingFaceTB/SmolLM3-3B-ONNX",
+        testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM3-3B-ONNX",
       },
       {
         id: "HuggingFaceTB/SmolLM2-135M-Instruct",
@@ -38,36 +50,25 @@ describe("verified model config", () => {
   });
 
   it("does not verify unlisted models", () => {
-    expect(isVerifiedModel("onnx-community/Qwen3.5-2B-ONNX")).toBe(false);
-    expect(getVerifiedModel("onnx-community/Qwen3.5-2B-ONNX")).toBeNull();
+    expect(isVerifiedModel("onnx-community/LFM2.5-350M-ONNX")).toBe(false);
+    expect(getVerifiedModel("onnx-community/LFM2.5-350M-ONNX")).toBeNull();
   });
 
-  it("marks locally tested failing models as broken", () => {
-    const brokenModels = [
-      {
-        id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
-        reason: "Loaded to 100% locally but never reached generation.",
-      },
-      {
-        id: "onnx-community/Qwen3.5-2B-ONNX",
-        reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
-      },
-      {
-        id: "HuggingFaceTB/SmolLM3-3B-ONNX",
-        reason: "Loads on WebGPU, but generation produced only special-token scaffold with no answer text.",
-      },
-    ];
+  it("has no currently broken models", () => {
+    expect(BROKEN_MODELS).toEqual([]);
+  });
 
-    brokenModels.forEach((model) => {
-      expect(BROKEN_MODELS.map((brokenModel) => brokenModel.id)).toContain(model.id);
-      expect(isBrokenModel(model.id)).toBe(true);
-      expect(getBrokenModel(model.id)).toMatchObject(model);
+  it("does not mark confirmed verified models as broken", () => {
+    [
+      "onnx-community/Qwen3.5-0.8B-ONNX",
+      "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
+      "onnx-community/Qwen3.5-2B-ONNX",
+      "onnx-community/gemma-4-E2B-it-ONNX",
+      "HuggingFaceTB/SmolLM3-3B-ONNX",
+    ].forEach((modelId) => {
+      expect(isBrokenModel(modelId)).toBe(false);
+      expect(getBrokenModel(modelId)).toBeNull();
     });
-  });
-
-  it("does not mark verified models as broken", () => {
-    expect(isBrokenModel("onnx-community/Qwen3.5-0.8B-ONNX")).toBe(false);
-    expect(getBrokenModel("onnx-community/Qwen3.5-0.8B-ONNX")).toBeNull();
   });
 
   it("keeps verified and broken model lists disjoint", () => {

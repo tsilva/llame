@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildChatTemplateMessages, buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
+import {
+  buildChatTemplateMessages,
+  buildCompletionPrompt,
+  buildFallbackTextPrompt,
+  buildTextOnlyModelPrompt,
+  hasTokenizerChatTemplate,
+} from "@/lib/chatPrompt";
 
 describe("chatPrompt", () => {
   it("detects tokenizer chat templates", () => {
@@ -23,6 +29,74 @@ describe("chatPrompt", () => {
     ])).toBe(
       "System: Be concise.\nUser: Reply with one short sentence about browsers.\nAssistant:",
     );
+  });
+
+  it("builds a completion prompt from the latest user message", () => {
+    expect(buildCompletionPrompt([
+      {
+        id: "1",
+        role: "user",
+        content: "First prompt",
+      },
+      {
+        id: "2",
+        role: "assistant",
+        content: "First continuation",
+      },
+      {
+        id: "3",
+        role: "user",
+        content: "  Continue this story  ",
+      },
+    ])).toBe("Continue this story");
+  });
+
+  it("returns an empty completion prompt without user content", () => {
+    expect(buildCompletionPrompt([
+      {
+        id: "1",
+        role: "assistant",
+        content: "Only assistant content",
+      },
+    ])).toBe("");
+  });
+
+  it("uses completion formatting for text models without chat templates", () => {
+    expect(buildTextOnlyModelPrompt([
+      {
+        id: "1",
+        role: "user",
+        content: "First prompt",
+      },
+      {
+        id: "2",
+        role: "user",
+        content: "Second prompt",
+      },
+    ], {}, "completion")).toBe("Second prompt");
+  });
+
+  it("keeps fallback chat formatting for chat models without templates", () => {
+    expect(buildTextOnlyModelPrompt([
+      {
+        id: "1",
+        role: "user",
+        content: "Reply briefly.",
+      },
+    ], {}, "chat")).toBe("User: Reply briefly.\nAssistant:");
+  });
+
+  it("applies tokenizer chat templates before interaction fallback", () => {
+    expect(buildTextOnlyModelPrompt([
+      {
+        id: "1",
+        role: "user",
+        content: "Hello",
+      },
+    ], {
+      chat_template: "{{ messages }}",
+      apply_chat_template: (messages) => `${messages[0]!.role}: ${messages[0]!.content}`,
+    }, "completion")).toBe("user: Hello");
   });
 
   it("keeps text-only model messages as string content", () => {

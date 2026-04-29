@@ -1,4 +1,4 @@
-import { ChatMessage } from "@/types";
+import { ChatMessage, ModelInteractionMode } from "@/types";
 
 export type ChatTemplateContent =
   | { type: "image"; image: string }
@@ -15,6 +15,15 @@ function normalizeMessageContent(content: string) {
 
 export function hasTokenizerChatTemplate(tokenizer: { chat_template?: string | null }) {
   return Boolean(tokenizer.chat_template);
+}
+
+export interface TextPromptTokenizer {
+  chat_template?: string | null;
+  apply_chat_template?: (messages: ChatTemplateMessage[], options: {
+    tokenize: false;
+    add_generation_prompt: true;
+    enable_thinking?: boolean;
+  }) => string;
 }
 
 export function buildChatTemplateMessages(messages: ChatMessage[], supportsImages: boolean): ChatTemplateMessage[] {
@@ -55,4 +64,43 @@ export function buildFallbackTextPrompt(messages: ChatMessage[]) {
 
   promptLines.push("Assistant:");
   return promptLines.join("\n");
+}
+
+export function buildCompletionPrompt(messages: ChatMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "user") continue;
+
+    const content = normalizeMessageContent(message.content);
+    if (content) return content;
+  }
+
+  return "";
+}
+
+export function buildTextOnlyModelPrompt(
+  messages: ChatMessage[],
+  tokenizer: TextPromptTokenizer,
+  interactionMode: ModelInteractionMode,
+  options: {
+    enableThinking?: boolean;
+    supportsThinking?: boolean;
+  } = {},
+) {
+  if (hasTokenizerChatTemplate(tokenizer) && tokenizer.apply_chat_template) {
+    return tokenizer.apply_chat_template(
+      buildChatTemplateMessages(messages, false),
+      {
+        tokenize: false,
+        add_generation_prompt: true,
+        ...(options.supportsThinking ? { enable_thinking: Boolean(options.enableThinking) } : {}),
+      },
+    );
+  }
+
+  if (interactionMode === "completion") {
+    return buildCompletionPrompt(messages);
+  }
+
+  return buildFallbackTextPrompt(messages);
 }

@@ -10,7 +10,7 @@ import {
   DragEvent,
   ChangeEvent,
 } from "react";
-import { ChatMessage as ChatMessageType, GenerationStopReason, ProgressInfo, TotalProgressInfo } from "@/types";
+import { ChatMessage as ChatMessageType, GenerationStopReason, ModelInteractionMode, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
 import { siteDescription, siteTagline } from "@/lib/siteMetadata";
 import { ModelLoadingCard } from "./ModelLoadingCard";
@@ -29,6 +29,7 @@ interface ChatInterfaceProps {
   processingMessage: string;
   isModelLoaded: boolean;
   modelId: string;
+  interactionMode: ModelInteractionMode;
   isLoading: boolean;
   loadingProgress: Map<string, ProgressInfo>;
   loadingTotalProgress: TotalProgressInfo | null;
@@ -81,6 +82,13 @@ const STATIC_SUGGESTIONS: Suggestion[] = [
   },
 ];
 
+const COMPLETION_SUGGESTIONS: Suggestion[] = [
+  { text: "Once upon a time" },
+  { text: "The future of browser-based AI is" },
+  { text: "Write a short product tagline for" },
+  { text: "In a world where" },
+];
+
 export function ChatInterface({
   conversationId,
   messages,
@@ -89,6 +97,7 @@ export function ChatInterface({
   processingMessage,
   isModelLoaded,
   modelId,
+  interactionMode,
   isLoading,
   loadingProgress,
   loadingTotalProgress,
@@ -275,9 +284,13 @@ export function ChatInterface({
   const modelName = getModelDisplayName(modelId) || "Unknown model";
   const needsLoad = !isModelLoaded;
   const activePendingImages = allowImageInputs ? pendingImages : [];
-  const suggestions = allowImageInputs
+  const isCompletionMode = interactionMode === "completion";
+  const suggestions = isCompletionMode
+    ? COMPLETION_SUGGESTIONS
+    : allowImageInputs
     ? imageSuggestions
     : imageSuggestions.filter((suggestion) => !suggestion.image);
+  const inputLabel = isCompletionMode ? "Prompt" : "Message";
 
   return (
     <div
@@ -314,7 +327,7 @@ export function ChatInterface({
             </p>
             {modelName && (
               <p className="mb-8 mt-3 text-sm text-[#8e8e8e]">
-                Ready to start with {modelName}
+                {isCompletionMode ? "Ready for text completion with" : "Ready to start with"} {modelName}
               </p>
             )}
             <div className="grid max-w-[500px] grid-cols-1 sm:grid-cols-2 gap-2">
@@ -462,8 +475,8 @@ export function ChatInterface({
               onKeyDown={handleKeyDown}
               placeholder={
                 needsLoad
-                  ? `Message (will load ${modelName}...)...`
-                  : "Message..."
+                  ? `${inputLabel} (will load ${modelName}...)...`
+                  : `${inputLabel}...`
               }
               rows={1}
               className="max-h-[200px] flex-1 resize-none self-center bg-transparent text-sm text-[#ececec] placeholder-[#8e8e8e] outline-none"
@@ -494,7 +507,7 @@ export function ChatInterface({
           {isLoading
             ? `Loading ${modelName}...`
             : needsLoad
-              ? `First message will load ${modelName}`
+              ? `First ${inputLabel.toLowerCase()} will load ${modelName}`
               : isMobile
                 ? `Running locally via ${device?.toUpperCase() || "browser"}.`
                 : `Running locally via ${device?.toUpperCase() || "browser"}. Enter to send, Shift+Enter for new line.`}

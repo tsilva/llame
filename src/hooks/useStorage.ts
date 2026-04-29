@@ -24,6 +24,7 @@ function createConversationRecord(model?: string | ModelSelection): Conversation
     modelSupportsImages: selection.supportsImages ?? null,
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
+    modelInteractionMode: selection.interactionMode ?? null,
   };
 }
 
@@ -37,6 +38,7 @@ function getConversationSelection(conversation: Conversation | null): ModelSelec
     supportsImages: conversation.modelSupportsImages ?? null,
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
+    interactionMode: conversation.modelInteractionMode ?? null,
   });
 }
 
@@ -68,6 +70,7 @@ function applyModelSelection(
     modelSupportsImages: selection.supportsImages ?? null,
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
+    modelInteractionMode: selection.interactionMode ?? null,
   };
 }
 

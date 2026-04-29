@@ -88,6 +88,67 @@ describe("model browser search", () => {
     });
   });
 
+  it("accepts GPT-2-like base models as completion models", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "openai-community/gpt2",
+              sha: "gpt2-rev",
+              tags: ["onnx", "gpt2", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: {
+                model_type: "gpt2",
+                tokenizer_config: {},
+              },
+              siblings: [{ rfilename: "onnx/decoder_model_merged.onnx" }],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchBrowserReadyModels("gpt2");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "openai-community/gpt2",
+      isVisionModel: false,
+      interactionMode: "completion",
+    });
+  });
+
+  it("keeps instruct text-generation models in chat mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "onnx-community/Qwen2.5-0.5B-Instruct",
+              sha: "chat-rev",
+              tags: ["onnx", "qwen2", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: { model_type: "qwen2" },
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchBrowserReadyModels("qwen");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "onnx-community/Qwen2.5-0.5B-Instruct",
+      interactionMode: "chat",
+    });
+  });
+
   it("hides models that only ship a generic onnx/model.onnx artifact", async () => {
     vi.stubGlobal(
       "fetch",
@@ -372,6 +433,7 @@ describe("model browser search", () => {
         parameterCountB: 1.5,
         estimatedDownloadGb: 1.4,
         isVisionModel: false,
+        interactionMode: "chat",
       },
       {
         device: "webgpu",

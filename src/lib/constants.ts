@@ -1,4 +1,5 @@
 import { GenerationParams, ModelSelection } from "@/types";
+import { getModelInteractionMode } from "@/lib/modelInteraction";
 
 export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 export const DEFAULT_MODEL_REVISION = "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6";
@@ -21,7 +22,7 @@ function normalizeModelId(modelId?: string | null) {
   return trimmedModelId.length > 0 ? trimmedModelId : DEFAULT_MODEL;
 }
 
-export const MODEL_PRESETS = [
+export const MODEL_PRESETS: ModelPreset[] = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
     revision: "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6",
@@ -82,7 +83,7 @@ export const MODEL_PRESETS = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
   },
-] satisfies ModelPreset[];
+];
 
 const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
   "onnx-community/gemma-4-E2B-it-ONNX": "Gemma 4 E2B",
@@ -125,6 +126,7 @@ export function getModelDisplayName(modelId?: string | null) {
 export function getModelSelection(modelId?: string | null, overrides?: Partial<ModelSelection>): ModelSelection {
   const normalizedModelId = normalizeModelId(modelId);
   const preset = getModelPreset(normalizedModelId);
+  const supportsImages = overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(normalizedModelId);
   const revision = preset?.supportTier === "curated"
     ? preset.revision ?? overrides?.revision ?? null
     : overrides?.revision ?? preset?.revision ?? null;
@@ -132,9 +134,13 @@ export function getModelSelection(modelId?: string | null, overrides?: Partial<M
   return {
     id: normalizedModelId,
     revision,
-    supportsImages: overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(normalizedModelId),
+    supportsImages,
     recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
     supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",
+    interactionMode: overrides?.interactionMode ?? preset?.interactionMode ?? getModelInteractionMode({
+      modelId: normalizedModelId,
+      supportsImages,
+    }),
   };
 }
 
@@ -191,6 +197,7 @@ export function canToggleThinking(modelId: string | null | undefined): boolean {
 }
 
 export const CONTEXT_WINDOWS: Record<string, number> = {
+  "openai-community/gpt2": 1024,
   "onnx-community/Qwen3.5-0.8B-ONNX": 32768, // 32k context window
   "tsilva/unsloth_Qwen3.5-0.8B_uncensored": 32768, // 32k context window
   "onnx-community/Qwen3.5-2B-ONNX": 32768, // 32k context window

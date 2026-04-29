@@ -9,6 +9,9 @@
 llame is a fully client-side chat app for running ONNX language and vision models with WebGPU. No backend, no API key, no hosted inference.
 
 Pick a model, wait for the browser download, and chat locally on your device.
+Chat-tuned models use their tokenizer chat template when available. Base causal
+language models such as GPT-2 are supported as text-completion models, so llame
+prompts them with plain continuation text instead of chat roles.
 
 ## Install
 

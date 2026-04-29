@@ -14,6 +14,7 @@ import {
   WorkerErrorCode,
   WorkerErrorStage,
   InferenceDevice,
+  ModelInteractionMode,
 } from "@/types";
 import { CONTEXT_WINDOWS } from "@/lib/constants";
 
@@ -58,6 +59,7 @@ interface InferenceState {
   loadedDevice: string | null;
   loadedPrecision: string | null;
   loadedSupportsImages: boolean | null;
+  loadedInteractionMode: ModelInteractionMode | null;
   tps: number;
   numTokens: number;
   inputTokens: number;
@@ -91,6 +93,7 @@ const INITIAL_STATE: InferenceState = {
   loadedDevice: null,
   loadedPrecision: null,
   loadedSupportsImages: null,
+  loadedInteractionMode: null,
   tps: 0,
   numTokens: 0,
   inputTokens: 0,
@@ -146,6 +149,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           loadedDevice: response.device,
           loadedPrecision: response.precision,
           loadedSupportsImages: response.supportsImages,
+          loadedInteractionMode: response.interactionMode,
           progress: new Map(),
           totalProgress: null,
           error: null,
@@ -212,6 +216,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
           loadedDevice: null,
           loadedPrecision: null,
           loadedSupportsImages: null,
+          loadedInteractionMode: null,
         }));
       }
     };

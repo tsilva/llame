@@ -40,6 +40,7 @@ export function buildMeta(conv: Conversation): ConversationMeta {
     modelSupportsImages: conv.modelSupportsImages ?? null,
     recommendedDevice: conv.recommendedDevice,
     supportTier: conv.supportTier,
+    modelInteractionMode: conv.modelInteractionMode ?? null,
     messageCount: conv.messages.length,
     sizeBytes: new Blob([serialized]).size,
   };

@@ -14,8 +14,9 @@ import {
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason, InferenceDevice } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
-import { buildChatTemplateMessages, buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
+import { buildChatTemplateMessages, buildTextOnlyModelPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
+import { getModelInteractionMode } from "@/lib/modelInteraction";
 import { pickDtypeForModel } from "@/lib/modelDtype";
 import {
   AvailableCausalLmArtifact,
@@ -83,6 +84,7 @@ let currentRevision: string | null = null;
 let currentDevice: InferenceDevice | null = null;
 let currentPrecision: string | null = null;
 let currentSupportsImages = false;
+let currentInteractionMode = getModelInteractionMode({});
 let shouldInterrupt = false;
 let generationId = 0;
 
@@ -168,6 +170,7 @@ async function dispose() {
   currentDevice = null;
   currentPrecision = null;
   currentSupportsImages = false;
+  currentInteractionMode = getModelInteractionMode({});
 }
 
 function supportsModelType(autoModelClass: { supports?: (modelType: string) => boolean }, modelType: string) {
@@ -232,6 +235,7 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
       device,
       precision: currentPrecision,
       supportsImages: currentSupportsImages,
+      interactionMode: currentInteractionMode,
     });
     return;
   }
@@ -286,6 +290,12 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
       currentSupportsImages = true;
       processor = await AutoProcessor.from_pretrained(modelId, commonOptions);
       tokenizer = processor.tokenizer;
+      currentInteractionMode = getModelInteractionMode({
+        modelId,
+        supportsImages: true,
+        modelType,
+        hasChatTemplate: hasTokenizerChatTemplate(tokenizer as unknown as { chat_template?: string | null }),
+      });
 
       post({ status: "loading", message: "Loading model..." });
 
@@ -306,6 +316,12 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
     } else if (supportsCausalLM) {
       currentSupportsImages = false;
       tokenizer = await AutoTokenizer.from_pretrained(modelId, commonOptions);
+      currentInteractionMode = getModelInteractionMode({
+        modelId,
+        supportsImages: false,
+        modelType,
+        hasChatTemplate: hasTokenizerChatTemplate(tokenizer as unknown as { chat_template?: string | null }),
+      });
 
       post({ status: "loading", message: "Loading model..." });
 
@@ -344,6 +360,7 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
       device,
       precision: currentPrecision!,
       supportsImages: currentSupportsImages,
+      interactionMode: currentInteractionMode,
     });
   } catch (error) {
     const message = getErrorMessage(error);
@@ -384,6 +401,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const hasImages = supportsImages && messages.some((message) => message.images && message.images.length > 0);
 
     const chatMessages = buildChatTemplateMessages(messages, supportsImages);
+    const interactionMode = currentInteractionMode;
 
     const thinkingMode = currentModelId ? getModelThinkingMode(currentModelId) : "unsupported";
     const thinkingEnabled = currentModelId
@@ -397,15 +415,16 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
             ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
           })
         : hasTokenizerChatTemplate(tokenizer as unknown as { chat_template?: string | null })
-          ? tokenizer.apply_chat_template(
-            chatMessages as unknown as Parameters<typeof tokenizer.apply_chat_template>[0],
+          ? buildTextOnlyModelPrompt(
+            messages,
+            tokenizer as unknown as Parameters<typeof buildTextOnlyModelPrompt>[1],
+            interactionMode,
             {
-              tokenize: false,
-              add_generation_prompt: true,
-              ...(thinkingMode !== "unsupported" ? { enable_thinking: thinkingEnabled } : {}),
+              enableThinking: thinkingEnabled,
+              supportsThinking: thinkingMode !== "unsupported",
             },
           )
-          : buildFallbackTextPrompt(messages)
+          : buildTextOnlyModelPrompt(messages, {}, interactionMode)
     ) as string;
     post({ status: "prompt", inputText });
 

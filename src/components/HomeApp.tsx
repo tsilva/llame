@@ -8,6 +8,7 @@ import {
   GenerationParams,
   GenerationStats,
   InferenceDevice,
+  ModelInteractionMode,
   ModelSelection,
 } from "@/types";
 import { getVerifiedModelGenerationParams } from "@/config/verifiedModels";
@@ -22,6 +23,7 @@ import {
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
 import { getModelChatPath, getModelIdFromChatPath } from "@/lib/modelRoutes";
+import { getModelInteractionMode } from "@/lib/modelInteraction";
 import { trackProductEvent, captureTelemetryError } from "@/lib/telemetry";
 import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
@@ -93,6 +95,7 @@ function buildModelSelectionFromConversation(conversation: Conversation | null):
     supportsImages: conversation.modelSupportsImages ?? null,
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
+    interactionMode: conversation.modelInteractionMode ?? null,
   });
 }
 
@@ -117,6 +120,7 @@ function loadLastSelectedModel(): ModelSelection | null {
       supportsImages: parsed.supportsImages ?? null,
       recommendedDevice: parsed.recommendedDevice,
       supportTier: parsed.supportTier,
+      interactionMode: parsed.interactionMode ?? null,
     });
   } catch {
     return null;
@@ -132,6 +136,7 @@ function persistLastSelectedModel(selection: ModelSelection) {
     supportsImages: selection.supportsImages ?? null,
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
+    interactionMode: selection.interactionMode ?? null,
   }));
 }
 
@@ -608,6 +613,7 @@ export default function HomeApp({
       modelSupportsImages: activeModel.supportsImages ?? null,
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
+      modelInteractionMode: activeModel.interactionMode ?? null,
     };
     updateActiveConversation(updatedConversation);
     setDismissedWorkerErrorKey(null);
@@ -685,6 +691,7 @@ export default function HomeApp({
       modelSupportsImages: activeModel.supportsImages ?? null,
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
+      modelInteractionMode: activeModel.interactionMode ?? null,
     };
     updateActiveConversation(updatedConversation);
 
@@ -791,6 +798,7 @@ export default function HomeApp({
         modelSupportsImages: selection.supportsImages ?? null,
         recommendedDevice: selection.recommendedDevice,
         supportTier: selection.supportTier,
+        modelInteractionMode: selection.interactionMode ?? null,
       });
     }
 
@@ -865,11 +873,24 @@ export default function HomeApp({
   const isProcessing = worker.status === "processing";
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
-  const allowImageInputs = worker.loadedModel === activeModel.id
+  const loadedActiveModel =
+    worker.loadedModel === activeModel.id &&
+    (worker.loadedRevision ?? null) === (activeModel.revision ?? null);
+  const activeInteractionMode: ModelInteractionMode = loadedActiveModel
+    ? worker.loadedInteractionMode ?? activeModel.interactionMode ?? getModelInteractionMode({
+        modelId: activeModel.id,
+        supportsImages: activeModel.supportsImages,
+      })
+    : activeModel.interactionMode ?? getModelInteractionMode({
+        modelId: activeModel.id,
+        supportsImages: activeModel.supportsImages,
+      });
+  const modelSupportsImages = loadedActiveModel
     ? worker.loadedSupportsImages ?? activeModel.supportsImages ?? isVlmModel(activeModel.id)
     : activeModel.supportsImages ?? isVlmModel(activeModel.id);
-  const thinkingEnabled = getEffectiveThinkingEnabled(activeModel.id, params.thinkingEnabled);
-  const showThinkingToggle = canToggleThinking(activeModel.id);
+  const allowImageInputs = activeInteractionMode === "chat" && modelSupportsImages;
+  const thinkingEnabled = activeInteractionMode === "chat" && getEffectiveThinkingEnabled(activeModel.id, params.thinkingEnabled);
+  const showThinkingToggle = activeInteractionMode === "chat" && canToggleThinking(activeModel.id);
   const currentMessages = storage.activeConversation?.messages ?? [];
   const currentWorkerErrorKey = worker.error
     ? `${worker.error.stage}:${worker.error.code}:${worker.error.modelId ?? "unknown"}:${worker.error.revision ?? "none"}:${worker.error.device ?? "unknown"}`
@@ -915,6 +936,7 @@ export default function HomeApp({
             webgpuSupported={webgpuSupported}
             isLoading={isLoading}
             model={activeModel}
+            interactionMode={activeInteractionMode}
             onModelChange={handleModelChange}
             onOpenModelBrowser={() => setModelBrowserOpen(true)}
             isGenerating={isGenerating}
@@ -1048,6 +1070,7 @@ export default function HomeApp({
           processingMessage={worker.processingMessage}
           isModelLoaded={isModelLoaded}
           modelId={activeModel.id}
+          interactionMode={activeInteractionMode}
           isLoading={isLoading}
           loadingProgress={worker.progress}
           loadingTotalProgress={worker.totalProgress}

@@ -36,4 +36,11 @@ describe("constants", () => {
 
     expect(selection.revision).toBe("2333f32297e44073d7f7e5259034b4a24c166c67");
   });
+
+  it("defaults GPT-2 route selections to completion mode", () => {
+    const selection = getModelSelection("openai-community/gpt2");
+
+    expect(selection.interactionMode).toBe("completion");
+    expect(CONTEXT_WINDOWS[selection.id]).toBe(1024);
+  });
 });

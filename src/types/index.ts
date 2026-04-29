@@ -19,6 +19,7 @@ export interface GenerationStats {
 
 export type ModelSupportTier = "curated" | "experimental";
 export type InferenceDevice = "webgpu";
+export type ModelInteractionMode = "chat" | "completion";
 
 export interface ModelSelection {
   id: string;
@@ -26,6 +27,7 @@ export interface ModelSelection {
   supportsImages?: boolean | null;
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
+  interactionMode?: ModelInteractionMode | null;
 }
 
 export interface ChatMessage {
@@ -49,6 +51,7 @@ export interface Conversation {
   modelSupportsImages?: boolean | null;
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
+  modelInteractionMode?: ModelInteractionMode | null;
 }
 
 export interface ConversationMeta {
@@ -61,6 +64,7 @@ export interface ConversationMeta {
   modelSupportsImages?: boolean | null;
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
+  modelInteractionMode?: ModelInteractionMode | null;
   messageCount: number;
   sizeBytes: number;
 }
@@ -131,7 +135,7 @@ export type WorkerResponse =
   | { status: "loading"; message: string }
   | { status: "progress"; progress: ProgressInfo }
   | { status: "progress_total"; progress: TotalProgressInfo }
-  | { status: "loaded"; modelId: string; revision?: string | null; device: string; precision: string; supportsImages: boolean }
+  | { status: "loaded"; modelId: string; revision?: string | null; device: string; precision: string; supportsImages: boolean; interactionMode: ModelInteractionMode }
   | { status: "processing"; message: string }
   | { status: "generating" }
   | { status: "prompt"; inputText: string }

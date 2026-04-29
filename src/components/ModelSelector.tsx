@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS, ModelPreset } from "@/lib/constants";
-import { InferenceDevice, ModelSelection } from "@/types";
+import { getModelInteractionLabel } from "@/lib/modelInteraction";
+import { InferenceDevice, ModelInteractionMode, ModelSelection } from "@/types";
 
 interface ModelSelectorProps {
   isLoading: boolean;
@@ -12,6 +13,7 @@ interface ModelSelectorProps {
   device: InferenceDevice;
   webgpuSupported: boolean | null;
   model: ModelSelection;
+  interactionMode: ModelInteractionMode;
   onModelChange: (model: ModelSelection) => void;
   onOpenModelBrowser: () => void;
   isGenerating: boolean;
@@ -24,6 +26,7 @@ function presetToSelection(preset: ModelPreset): ModelSelection {
     supportsImages: preset.supportsImages ?? null,
     recommendedDevice: preset.recommendedDevice,
     supportTier: preset.supportTier,
+    interactionMode: preset.interactionMode ?? "chat",
   };
 }
 
@@ -34,6 +37,7 @@ export function ModelSelector({
   device,
   webgpuSupported,
   model,
+  interactionMode,
   onModelChange,
   onOpenModelBrowser,
   isGenerating,
@@ -69,6 +73,7 @@ export function ModelSelector({
     : webgpuSupported
       ? device.toUpperCase()
       : "WebGPU unavailable";
+  const interactionLabel = getModelInteractionLabel(interactionMode);
 
   return (
     <div className="relative" ref={ref}>
@@ -96,6 +101,11 @@ export function ModelSelector({
             · {loadedPrecision}
           </span>
         )}
+        {interactionMode === "completion" && !isLoading && (
+          <span className="text-xs text-[#8e8e8e] ml-1">
+            · {interactionLabel}
+          </span>
+        )}
         <span className="text-xs text-[#8e8e8e] ml-1">
           · {runtimeLabel}
         </span>
@@ -119,7 +129,7 @@ export function ModelSelector({
               <span className="min-w-0">
                 <span className="block truncate">{preset.label}</span>
                 <span className="block truncate text-[11px] text-[#8e8e8e]">
-                  {getModelCardMeta(preset.id).join(" · ")}
+                  {[...getModelCardMeta(preset.id), getModelInteractionLabel(preset.interactionMode ?? "chat")].join(" · ")}
                 </span>
               </span>
             </button>

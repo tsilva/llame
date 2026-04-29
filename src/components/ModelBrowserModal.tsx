@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BadgeCheck, ExternalLink, Loader2, Search, X } from "lucide-react";
 import { getVerifiedModel } from "@/config/verifiedModels";
 import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
+import { getModelInteractionLabel } from "@/lib/modelInteraction";
 import { InferenceDevice, ModelSelection } from "@/types";
 import {
   assessModelCompatibility,
@@ -442,6 +443,7 @@ export function ModelBrowserModal({
             const downloadSizeLabel = formatDownloadSizeLabel(model.estimatedDownloadGb);
             const active = model.id === currentModelId;
             const verifiedModel = getVerifiedModel(model.id);
+            const interactionLabel = getModelInteractionLabel(model.interactionMode);
 
             return (
               <div
@@ -474,6 +476,9 @@ export function ModelBrowserModal({
                             {downloadSizeLabel}
                           </span>
                         )}
+                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                          {interactionLabel}
+                        </span>
                         {verifiedModel && (
                           <span
                             className="inline-flex items-center gap-1 rounded-full border border-[#10a37f]/30 bg-[#10a37f]/12 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]"
@@ -507,6 +512,7 @@ export function ModelBrowserModal({
                           supportsImages: model.isVisionModel,
                           recommendedDevice: device,
                           supportTier: "experimental",
+                          interactionMode: model.interactionMode,
                         })}
                         disabled={disabled || active}
                         className="rounded-lg bg-[#10a37f] px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
@@ -520,6 +526,9 @@ export function ModelBrowserModal({
                     <div className="flex flex-wrap gap-1 text-[10px] text-[#8e8e8e]">
                       <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                         {model.isVisionModel ? "Vision" : "Text"}
+                      </span>
+                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
+                        {interactionLabel}
                       </span>
                       {model.pipelineTag && (
                         <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">

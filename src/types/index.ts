@@ -146,13 +146,13 @@ export type WorkerResponse =
       stage: WorkerErrorStage;
       modelId?: string | null;
       revision?: string | null;
-      device?: "webgpu" | "wasm" | null;
+      device?: InferenceDevice | null;
     }
   | { status: "unloaded" };
 
 // Main thread -> Worker messages
 export type WorkerRequest =
-  | { type: "load"; modelId: string; revision?: string | null; device: "webgpu" | "wasm" }
+  | { type: "load"; modelId: string; revision?: string | null; device: InferenceDevice }
   | { type: "generate"; messages: ChatMessage[]; params: GenerationParams }
   | { type: "interrupt" }
   | { type: "reset" };

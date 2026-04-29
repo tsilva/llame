@@ -7,6 +7,7 @@ import {
   Conversation,
   GenerationParams,
   GenerationStats,
+  InferenceDevice,
   ModelSelection,
 } from "@/types";
 import { getVerifiedModelGenerationParams } from "@/config/verifiedModels";
@@ -15,7 +16,6 @@ import {
   DEFAULT_PARAMS,
   canToggleThinking,
   getEffectiveThinkingEnabled,
-  getDefaultModelSelectionForDevice,
   getModelSelection,
   isVlmModel,
 } from "@/lib/constants";
@@ -39,7 +39,7 @@ const ModelBrowserModal = dynamic(
 interface PendingGeneration {
   conversationId: string;
   model: ModelSelection;
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   reuseLastAssistant?: boolean;
 }
 
@@ -94,10 +94,6 @@ function buildModelSelectionFromConversation(conversation: Conversation | null):
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
   });
-}
-
-function shouldPreferWasmFallbackModel(model: ModelSelection) {
-  return model.supportsImages ?? isVlmModel(model.id);
 }
 
 function getModelSelectionKey(model: ModelSelection) {
@@ -177,7 +173,7 @@ export default function HomeApp({
   const [launchNewChatRequested, setLaunchNewChatRequested] = useState<boolean | null>(null);
   const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
   const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS);
-  const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
+  const device: InferenceDevice = "webgpu";
   const [lastSelectedModel, setLastSelectedModel] = useState<ModelSelection>(() => (
     initialRouteModel ?? loadLastSelectedModel() ?? getModelSelection(DEFAULT_MODEL)
   ));
@@ -230,37 +226,10 @@ export default function HomeApp({
 
   useEffect(() => {
     if (webgpuSupported === false) {
-      setDevice("wasm");
       captureTelemetryError("WebGPU unavailable", { webgpu_supported: false });
       trackProductEvent("browser_webgpu_unavailable", {});
     }
   }, [webgpuSupported]);
-
-  useEffect(() => {
-    if (webgpuSupported !== false) return;
-
-    const fallbackModel = getDefaultModelSelectionForDevice("wasm");
-
-    setLastSelectedModel((current) => (
-      shouldPreferWasmFallbackModel(current) ? fallbackModel : current
-    ));
-
-    const conversation = storage.activeConversation;
-    if (!conversation || conversation.messages.length > 0) return;
-
-    const conversationModel = buildModelSelectionFromConversation(conversation);
-    if (!shouldPreferWasmFallbackModel(conversationModel)) return;
-
-    updateActiveConversation({
-      ...conversation,
-      modelId: fallbackModel.id,
-      modelRevision: fallbackModel.revision ?? null,
-      modelSupportsImages: fallbackModel.supportsImages ?? null,
-      recommendedDevice: fallbackModel.recommendedDevice,
-      supportTier: fallbackModel.supportTier,
-      updatedAt: Date.now(),
-    });
-  }, [storage, storage.activeConversation, updateActiveConversation, webgpuSupported]);
 
   useEffect(() => {
     const savedThinking = localStorage.getItem("llame-thinking-enabled");
@@ -824,21 +793,6 @@ export default function HomeApp({
     }
   }, [applyVerifiedParamsForModel, storage, updateActiveConversation, worker]);
 
-  const handleDeviceChange = useCallback((nextDevice: "webgpu" | "wasm") => {
-    const nextModel = nextDevice === "wasm" && shouldPreferWasmFallbackModel(activeModel)
-      ? getDefaultModelSelectionForDevice("wasm")
-      : activeModel;
-
-    setDevice(nextDevice);
-    setDismissedWorkerErrorKey(null);
-    if (nextModel.id !== activeModel.id || (nextModel.revision ?? null) !== (activeModel.revision ?? null)) {
-      handleModelChange(nextModel);
-    }
-    if (worker.loadedModel || storage.activeConversation) {
-      worker.loadModel(nextModel, nextDevice);
-    }
-  }, [activeModel, handleModelChange, storage.activeConversation, worker]);
-
   const handleSwitchConversation = useCallback((id: string) => {
     setPendingGeneration(null);
     pendingUrlModelKeyRef.current = null;
@@ -865,42 +819,19 @@ export default function HomeApp({
   }, [activeModel, device, pendingGeneration, worker]);
 
   const fallbackToDefaultModel = useCallback(() => {
-    const fallbackDevice = webgpuSupported === false ? "wasm" : device;
-    const fallbackModel = getDefaultModelSelectionForDevice(fallbackDevice);
+    const fallbackModel = getModelSelection(DEFAULT_MODEL);
     handleModelChange(fallbackModel);
     setPendingGeneration((current) => (
       current
-        ? { ...current, model: fallbackModel, device: fallbackDevice }
+        ? { ...current, model: fallbackModel, device }
         : current
     ));
-    worker.loadModel(fallbackModel, fallbackDevice);
+    worker.loadModel(fallbackModel, device);
     trackProductEvent("recovery_fallback_default_model", {
       model_id: fallbackModel.id,
-      device: fallbackDevice,
+      device,
     });
-  }, [device, handleModelChange, webgpuSupported, worker]);
-
-  const switchToWasmAndRetry = useCallback(() => {
-    const targetModel = pendingGeneration?.model ?? activeModel;
-    const nextModel = shouldPreferWasmFallbackModel(targetModel)
-      ? getDefaultModelSelectionForDevice("wasm")
-      : targetModel;
-
-    setDevice("wasm");
-    setDismissedWorkerErrorKey(null);
-    if (nextModel.id !== activeModel.id || (nextModel.revision ?? null) !== (activeModel.revision ?? null)) {
-      handleModelChange(nextModel);
-    }
-    if (pendingGeneration) {
-      setPendingGeneration({ ...pendingGeneration, model: nextModel, device: "wasm" });
-      worker.loadModel(nextModel, "wasm");
-    } else {
-      worker.loadModel(nextModel, "wasm");
-    }
-    trackProductEvent("recovery_switch_wasm", {
-      model_id: nextModel.id,
-    });
-  }, [activeModel, handleModelChange, pendingGeneration, worker]);
+  }, [device, handleModelChange, worker]);
 
   const retryLastPrompt = useCallback(() => {
     if (!storage.activeConversation) return;
@@ -1040,6 +971,19 @@ export default function HomeApp({
           </div>
         )}
 
+        {webgpuSupported === false && (
+          <div
+            className="mx-3 mb-2 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3"
+            role="alert"
+            aria-live="polite"
+          >
+            <span className="mt-0.5 text-amber-300">&#x26A0;</span>
+            <p className="text-sm text-amber-100">
+              WebGPU is unavailable in this browser. Local inference requires a WebGPU-capable browser.
+            </p>
+          </div>
+        )}
+
         {visibleWorkerError && (
           <div
             className="mx-3 mb-2 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3"
@@ -1056,14 +1000,6 @@ export default function HomeApp({
                     className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
                   >
                     Retry
-                  </button>
-                )}
-                {visibleWorkerError.code === "INSUFFICIENT_RESOURCES" && device === "webgpu" && (
-                  <button
-                    onClick={switchToWasmAndRetry}
-                    className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
-                  >
-                    Switch to WASM
                   </button>
                 )}
                 {(visibleWorkerError.code === "MODEL_ARTIFACT_ERROR" || visibleWorkerError.code === "UNSUPPORTED_MODEL") && (
@@ -1132,9 +1068,6 @@ export default function HomeApp({
         onClose={() => setSettingsOpen(false)}
         params={params}
         onChange={setParams}
-        device={device}
-        onDeviceChange={handleDeviceChange}
-        webgpuAvailable={webgpuSupported ?? false}
         storageStats={storage.storageStats}
         isGenerating={isGenerating}
       />

@@ -10,9 +10,6 @@ interface SettingsModalProps {
   onClose: () => void;
   params: GenerationParams;
   onChange: (params: GenerationParams) => void;
-  device: "webgpu" | "wasm";
-  onDeviceChange: (device: "webgpu" | "wasm") => void;
-  webgpuAvailable: boolean;
   storageStats: StorageStats;
   isGenerating: boolean;
 }
@@ -83,9 +80,6 @@ export function SettingsModal({
   onClose,
   params,
   onChange,
-  device,
-  onDeviceChange,
-  webgpuAvailable,
   storageStats,
   isGenerating,
 }: SettingsModalProps) {
@@ -138,46 +132,6 @@ export function SettingsModal({
           {/* RUNTIME section */}
           <div className="space-y-4">
             <SectionHeader label="Runtime" icon={<Cpu size={13} />} />
-
-            {/* Segmented device selector */}
-            <div className="space-y-2">
-              <label className="text-xs text-[#8e8e8e]">Device</label>
-              <div className="relative flex rounded-lg bg-[#212121] p-1">
-                {/* Sliding indicator */}
-                <div
-                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-md transition-[left] duration-200 ease-out"
-                  style={{
-                    left: device === "webgpu" ? "4px" : "calc(50% + 0px)",
-                    background:
-                      device === "webgpu"
-                        ? "rgba(16, 163, 127, 0.15)"
-                        : "rgba(245, 158, 11, 0.15)",
-                  }}
-                />
-                <button
-                  onClick={() => onDeviceChange("webgpu")}
-                  disabled={!webgpuAvailable || isGenerating}
-                  className={`relative z-10 flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
-                    device === "webgpu"
-                      ? "text-[#10a37f]"
-                      : "text-[#8e8e8e] hover:text-[#b4b4b4]"
-                  } disabled:opacity-30`}
-                >
-                  WebGPU
-                </button>
-                <button
-                  onClick={() => onDeviceChange("wasm")}
-                  disabled={isGenerating}
-                  className={`relative z-10 flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
-                    device === "wasm"
-                      ? "text-amber-400"
-                      : "text-[#8e8e8e] hover:text-[#b4b4b4]"
-                  } ${isGenerating ? 'disabled:opacity-30' : ''}`}
-                >
-                  WASM
-                </button>
-              </div>
-            </div>
 
             {/* Sampling toggle card */}
             <div className="flex items-center justify-between rounded-lg border border-white/[0.08] bg-[#212121] px-3.5 py-3">

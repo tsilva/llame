@@ -13,6 +13,7 @@ import {
   ModelSelection,
   WorkerErrorCode,
   WorkerErrorStage,
+  InferenceDevice,
 } from "@/types";
 import { CONTEXT_WINDOWS } from "@/lib/constants";
 
@@ -30,7 +31,7 @@ export interface WorkerErrorState {
   stage: WorkerErrorStage;
   modelId?: string | null;
   revision?: string | null;
-  device?: "webgpu" | "wasm" | null;
+  device?: InferenceDevice | null;
 }
 
 interface WorkerLike {
@@ -65,7 +66,7 @@ interface InferenceState {
 }
 
 interface UseInferenceWorkerReturn extends InferenceState {
-  loadModel: (model: ModelSelection, device: "webgpu" | "wasm") => void;
+  loadModel: (model: ModelSelection, device: InferenceDevice) => void;
   generate: (messages: ChatMessage[], params: GenerationParams) => void;
   interrupt: () => void;
   reset: () => void;
@@ -252,7 +253,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     workerRef.current?.postMessage(message);
   }, []);
 
-  const loadModel = useCallback((model: ModelSelection, device: "webgpu" | "wasm") => {
+  const loadModel = useCallback((model: ModelSelection, device: InferenceDevice) => {
     const current = stateRef.current;
     const needsFreshWorker =
       current.status === "loading" ||

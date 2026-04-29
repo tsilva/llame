@@ -50,7 +50,7 @@ describe("SEO metadata", () => {
   });
 
   it("exports noindex metadata for the chat workspace", () => {
-    expect(chatMetadata.title).toBe(`llame Chat | ${siteTagline}`);
+    expect(chatMetadata.title).toBe(`llame | ${siteTagline}`);
     expect(chatMetadata.description).toBe(chatPageDescription);
     expect(chatMetadata.alternates?.canonical).toBe("/chat");
     expect(chatMetadata.robots).toMatchObject({

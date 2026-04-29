@@ -75,7 +75,7 @@ function resolveMetadataKeywords(keywords: Metadata["keywords"] | undefined): st
 export const siteTitle = resolveMetadataTitle(generatedMetadata.title);
 export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DESCRIPTION;
 export const siteTagline = "Private AI chats in your browser";
-export const chatPageTitle = `llame Chat | ${siteTagline}`;
+export const chatPageTitle = `llame | ${siteTagline}`;
 export const chatPageDescription =
   `Open llame for ${siteTagline} with local models on your device.`;
 

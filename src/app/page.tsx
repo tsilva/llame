@@ -59,7 +59,7 @@ export default function Home() {
             <div className={styles.heroGrid}>
               <div className={styles.copyColumn}>
                 <p className={styles.eyebrow}>
-                  Private inference in one URL
+                  On-device ONNX via WebGPU
                 </p>
                 <h1 className={styles.title}>
                   {siteTagline}

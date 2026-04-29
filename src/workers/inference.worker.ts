@@ -5,16 +5,23 @@ import {
   AutoModelForCausalLM,
   AutoModelForImageTextToText,
   AutoProcessor,
+  ModelRegistry,
   TextStreamer,
   PreTrainedTokenizer,
   PreTrainedModel,
   RawImage,
+  DataType,
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason, InferenceDevice } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
 import { pickDtypeForModel } from "@/lib/modelDtype";
+import {
+  AvailableCausalLmArtifact,
+  CAUSAL_LM_MODEL_FILE_CANDIDATES,
+  selectCausalLmLoadArtifact,
+} from "@/lib/modelArtifacts";
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { GeneratedTextSanitizer } from "@/lib/generatedTextSanitizer";
 import { withRetry } from "@/lib/network";
@@ -165,6 +172,46 @@ async function loadConfig(modelId: string, revision: string | null) {
   return withRetry(() => AutoConfig.from_pretrained(modelId, revision ? { revision } : undefined), 3);
 }
 
+async function getAvailableCausalLmArtifactDtypes(
+  modelId: string,
+  revision: string | null,
+  config: Awaited<ReturnType<typeof AutoConfig.from_pretrained>>,
+  modelFileName: (typeof CAUSAL_LM_MODEL_FILE_CANDIDATES)[number],
+) {
+  return withRetry(
+    async () => ModelRegistry.get_available_dtypes(modelId, {
+      config,
+      ...(revision ? { revision } : {}),
+      ...(modelFileName ? { model_file_name: modelFileName } : {}),
+    }) as Promise<DataType[]>,
+    2,
+  );
+}
+
+async function resolveCausalLmLoadArtifact(
+  modelId: string,
+  revision: string | null,
+  config: Awaited<ReturnType<typeof AutoConfig.from_pretrained>>,
+  device: InferenceDevice,
+) {
+  const artifacts = await Promise.all(
+    CAUSAL_LM_MODEL_FILE_CANDIDATES.map(async (modelFileName): Promise<AvailableCausalLmArtifact> => ({
+      modelFileName,
+      dtypes: await getAvailableCausalLmArtifactDtypes(modelId, revision, config, modelFileName),
+    })),
+  );
+  const artifact = selectCausalLmLoadArtifact(modelId, device, artifacts);
+
+  if (!artifact) {
+    throw new Error(
+      `No browser-compatible ONNX model artifacts found for ${modelId}. ` +
+      "Expected onnx/model*.onnx or onnx/decoder_model_merged*.onnx files.",
+    );
+  }
+
+  return artifact;
+}
+
 async function loadModel(modelId: string, revision: string | null, device: InferenceDevice) {
   if (
     currentModelId === modelId &&
@@ -256,13 +303,14 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
 
       post({ status: "loading", message: "Loading model..." });
 
-      const dtype = pickDtypeForModel(modelId, device);
+      const { dtype, modelFileName } = await resolveCausalLmLoadArtifact(modelId, revision, config, device);
       currentPrecision = dtype;
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {
         ...commonOptions,
         device,
         dtype,
+        ...(modelFileName ? { model_file_name: modelFileName } : {}),
       } as Parameters<typeof AutoModelForCausalLM.from_pretrained>[1]);
     } else {
       throw new Error(`Unsupported model type: ${modelType}`);

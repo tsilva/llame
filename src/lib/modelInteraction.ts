@@ -11,7 +11,7 @@ interface ModelInteractionInput {
 }
 
 const CHAT_ID_PATTERN = /(?:^|[/_.-])(?:chat|instruct|instruction|it)(?:$|[/_.-])/i;
-const COMPLETION_ID_PATTERN = /(?:^|[/_.-])(?:distilgpt2|gpt2|gpt-?neo|gpt-?j|gpt-?neox|opt)(?:$|[/_.-])/i;
+const COMPLETION_ID_PATTERN = /(?:^|[/_.-])(?:bloomz?|distilgpt2|gpt2|gpt-?neo|gpt-?j|gpt-?neox|opt)(?:$|[/_.-])/i;
 const TEXT_GENERATION_MODEL_TYPES = new Set([
   "afmoe",
   "apertus",

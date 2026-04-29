@@ -25,6 +25,7 @@ import {
 } from "@/lib/modelArtifacts";
 import { ThinkingParser } from "@/lib/thinkingParser";
 import { GeneratedTextSanitizer } from "@/lib/generatedTextSanitizer";
+import { getRuntimeGenerationOverrides } from "@/lib/generationRuntime";
 import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
 import {
@@ -447,16 +448,18 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       inputs = tokenizer(inputText, { return_tensor: true }) as Record<string, unknown>;
     }
 
-    let numTokens = 0;
+    let emittedChunks = 0;
     const generatedTokenIds: bigint[] = [];
     const eosTokenIds = getEosTokenIds(tokenizer, model);
     let stopReason: GenerationStopReason = "unknown";
     const startTime = performance.now();
+    const getGeneratedTokenCount = () => generatedTokenIds.length || emittedChunks;
     const emitChunk = (chunk: string) => {
       if (!chunk) return;
 
-      numTokens += 1;
+      emittedChunks += 1;
       const elapsed = Math.max((performance.now() - startTime) / 1000, 0.001);
+      const numTokens = getGeneratedTokenCount();
       const tps = numTokens / elapsed;
       const result = parser.processToken(chunk);
 
@@ -493,10 +496,12 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
       }
       return new Array(inputIds.length).fill(stop);
     };
+    const runtimeOverrides = getRuntimeGenerationOverrides(currentModelId, params);
 
     await (model as { generate: (args: Record<string, unknown>) => Promise<unknown> }).generate({
       ...inputs,
       ...params,
+      ...runtimeOverrides,
       streamer,
       stopping_criteria: [stoppingCriteria],
     });
@@ -507,20 +512,22 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
 
     const remaining = parser.flush();
     if (remaining) {
-      const finalTps = numTokens / ((performance.now() - startTime) / 1000);
+      const finalNumTokens = getGeneratedTokenCount();
+      const finalTps = finalNumTokens / ((performance.now() - startTime) / 1000);
       if (remaining.type === "thinking") {
         if (thinkingEnabled) {
-          post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: true });
+          post({ status: "update", token: remaining.content, tps: finalTps, numTokens: finalNumTokens, inputTokens, isThinking: true });
           post({ status: "thinking_complete", thinking: parser.getThinkingContent() });
         } else {
-          post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: false });
+          post({ status: "update", token: remaining.content, tps: finalTps, numTokens: finalNumTokens, inputTokens, isThinking: false });
         }
       } else {
-        post({ status: "update", token: remaining.content, tps: finalTps, numTokens, inputTokens, isThinking: false });
+        post({ status: "update", token: remaining.content, tps: finalTps, numTokens: finalNumTokens, inputTokens, isThinking: false });
       }
     }
 
     const elapsed = Math.max((performance.now() - startTime) / 1000, 0.001);
+    const numTokens = getGeneratedTokenCount();
     const finalTokenId = generatedTokenIds.at(-1);
     if (stopReason === "unknown" && finalTokenId !== undefined && eosTokenIds.has(finalTokenId)) {
       stopReason = "eos_token";

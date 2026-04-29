@@ -210,13 +210,17 @@ function hasUsableOnnxArtifacts(entry: HubModelApiEntry) {
     ?.map((sibling) => sibling.rfilename)
     .filter((name): name is string => Boolean(name)) ?? [];
 
+  if (entry.siblings && filenames.length === 0) {
+    return false;
+  }
+
   if (filenames.length === 0) {
     return true;
   }
 
   const onnxFiles = filenames.filter((name) => name.startsWith("onnx/"));
   if (onnxFiles.length === 0) {
-    return true;
+    return false;
   }
 
   const onnxFileSet = new Set(onnxFiles);

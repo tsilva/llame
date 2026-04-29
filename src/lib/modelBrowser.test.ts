@@ -121,7 +121,7 @@ describe("model browser search", () => {
     });
   });
 
-  it("hides external-data-only text exports while keeping quantized browser clones", async () => {
+  it("hides non-browser Bloom exports while keeping quantized browser clones", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -149,6 +149,14 @@ describe("model browser search", () => {
                 { rfilename: "onnx/decoder_model_merged.onnx_data" },
                 { rfilename: "onnx/decoder_model_merged_quantized.onnx" },
               ],
+            },
+            {
+              id: "ingo-m/bloom-560m-onnx",
+              sha: "empty-rev",
+              tags: ["onnx", "bloom", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: { model_type: "bloom" },
+              siblings: [],
             },
           ]),
           { status: 200 },

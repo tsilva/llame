@@ -47,7 +47,7 @@ describe("constants", () => {
     expect(CONTEXT_WINDOWS[selection.id]).toBe(1024);
   });
 
-  it("maps upstream Bloom routes to browser-ready Transformers.js exports", () => {
+  it("maps upstream Bloom routes to browser-ready Bloom exports", () => {
     const selection = getModelSelection("bigscience/bloom-560m", {
       revision: "upstream-revision",
       interactionMode: "completion",
@@ -56,6 +56,11 @@ describe("constants", () => {
     expect(selection).toMatchObject({
       id: "Xenova/bloom-560m",
       revision: null,
+      interactionMode: "completion",
+    });
+
+    expect(getModelSelection("Xenova/bloom-560m")).toMatchObject({
+      id: "Xenova/bloom-560m",
       interactionMode: "completion",
     });
   });

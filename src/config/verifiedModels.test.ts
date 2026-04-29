@@ -17,6 +17,10 @@ describe("verified model config", () => {
         id: "onnx-community/gemma-4-E2B-it-ONNX",
         testedUrl: "https://llame.tsilva.eu/chat/onnx-community/gemma-4-E2B-it-ONNX",
       },
+      {
+        id: "HuggingFaceTB/SmolLM2-135M-Instruct",
+        testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM2-135M-Instruct",
+      },
     ];
 
     verifiedModels.forEach((model) => {

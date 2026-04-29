@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
+import { buildChatTemplateMessages, buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 
 describe("chatPrompt", () => {
   it("detects tokenizer chat templates", () => {
@@ -23,5 +23,50 @@ describe("chatPrompt", () => {
     ])).toBe(
       "System: Be concise.\nUser: Reply with one short sentence about browsers.\nAssistant:",
     );
+  });
+
+  it("keeps text-only model messages as string content", () => {
+    expect(buildChatTemplateMessages([
+      {
+        id: "1",
+        role: "user",
+        content: "Say hello.",
+      },
+    ], false)).toEqual([
+      {
+        role: "user",
+        content: "Say hello.",
+      },
+    ]);
+  });
+
+  it("uses multimodal content arrays for vision model chat templates", () => {
+    expect(buildChatTemplateMessages([
+      {
+        id: "1",
+        role: "user",
+        content: "Describe this image.",
+        images: ["data:image/png;base64,abc"],
+      },
+      {
+        id: "2",
+        role: "assistant",
+        content: "It is a chart.",
+      },
+    ], true)).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "image", image: "data:image/png;base64,abc" },
+          { type: "text", text: "Describe this image." },
+        ],
+      },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "It is a chart." },
+        ],
+      },
+    ]);
   });
 });

@@ -14,7 +14,7 @@ import {
 } from "@huggingface/transformers";
 import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason, InferenceDevice } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
-import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
+import { buildChatTemplateMessages, buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
 import { pickDtypeForModel } from "@/lib/modelDtype";
 import {
@@ -383,16 +383,7 @@ async function generate(messages: ChatMessage[], params: GenerationParams) {
     const supportsImages = currentSupportsImages || (currentModelId ? isVlmModel(currentModelId) : false);
     const hasImages = supportsImages && messages.some((message) => message.images && message.images.length > 0);
 
-    const chatMessages = messages.map((message) => {
-      if (message.images && message.images.length > 0 && supportsImages) {
-        const content = [
-          ...message.images.map((image) => ({ type: "image" as const, image })),
-          { type: "text" as const, text: message.content },
-        ];
-        return { role: message.role, content };
-      }
-      return { role: message.role, content: message.content };
-    });
+    const chatMessages = buildChatTemplateMessages(messages, supportsImages);
 
     const thinkingMode = currentModelId ? getModelThinkingMode(currentModelId) : "unsupported";
     const thinkingEnabled = currentModelId

@@ -219,12 +219,21 @@ function hasUsableOnnxArtifacts(entry: HubModelApiEntry) {
     return true;
   }
 
-  return onnxFiles.some((name) => (
-    name.startsWith("onnx/model_") ||
-    name.startsWith("onnx/decoder_model") ||
-    name.startsWith("onnx/embed_tokens") ||
-    name.startsWith("onnx/vision_encoder")
-  ));
+  const onnxFileSet = new Set(onnxFiles);
+  const typedTextArtifact = /^onnx\/(?:model|decoder_model(?:_merged)?|decoder_with_past_model)_(?:quantized|fp16|q[1248](?:f16)?|int8|uint8|bnb4)\.onnx$/i;
+  const plainTextArtifact = /^onnx\/(?:decoder_model(?:_merged)?|decoder_with_past_model)\.onnx$/i;
+
+  return onnxFiles.some((name) => {
+    if (
+      name.startsWith("onnx/embed_tokens") ||
+      name.startsWith("onnx/vision_encoder") ||
+      typedTextArtifact.test(name)
+    ) {
+      return true;
+    }
+
+    return plainTextArtifact.test(name) && !onnxFileSet.has(`${name}_data`);
+  });
 }
 
 function hasRequiredVisionProcessorAssets(entry: HubModelApiEntry) {

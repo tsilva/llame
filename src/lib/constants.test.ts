@@ -47,6 +47,19 @@ describe("constants", () => {
     expect(CONTEXT_WINDOWS[selection.id]).toBe(1024);
   });
 
+  it("maps upstream Bloom routes to browser-ready Transformers.js exports", () => {
+    const selection = getModelSelection("bigscience/bloom-560m", {
+      revision: "upstream-revision",
+      interactionMode: "completion",
+    });
+
+    expect(selection).toMatchObject({
+      id: "Xenova/bloom-560m",
+      revision: null,
+      interactionMode: "completion",
+    });
+  });
+
   it("uses completion generation defaults for completion models", () => {
     expect(getDefaultParamsForModel(getModelSelection("openai-community/gpt2"))).toEqual(COMPLETION_PARAMS);
     expect(getDefaultParamsForModel(getModelSelection("onnx-community/Qwen3.5-0.8B-ONNX"))).toEqual(DEFAULT_PARAMS);

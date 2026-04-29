@@ -22,6 +22,16 @@ function normalizeModelId(modelId?: string | null) {
   return trimmedModelId.length > 0 ? trimmedModelId : DEFAULT_MODEL;
 }
 
+const BROWSER_MODEL_ALIASES: Record<string, string> = {
+  "bigscience/bloom-560m": "Xenova/bloom-560m",
+  "bigscience/bloomz-560m": "Xenova/bloomz-560m",
+};
+
+function resolveBrowserModelId(modelId?: string | null) {
+  const normalizedModelId = normalizeModelId(modelId);
+  return BROWSER_MODEL_ALIASES[normalizedModelId] ?? normalizedModelId;
+}
+
 export const MODEL_PRESETS: ModelPreset[] = [
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
@@ -103,12 +113,12 @@ export function isVlmModel(modelId?: string | null) {
 }
 
 export function getModelPreset(modelId?: string | null) {
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(modelId);
   return MODEL_PRESETS.find((preset) => preset.id === normalizedModelId);
 }
 
 export function getModelDisplayName(modelId?: string | null) {
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(modelId);
   const preset = getModelPreset(normalizedModelId);
   if (preset) {
     return preset.label;
@@ -124,12 +134,16 @@ export function getModelDisplayName(modelId?: string | null) {
 }
 
 export function getModelSelection(modelId?: string | null, overrides?: Partial<ModelSelection>): ModelSelection {
-  const normalizedModelId = normalizeModelId(modelId);
+  const requestedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(requestedModelId);
+  const modelWasAliased = normalizedModelId !== requestedModelId;
   const preset = getModelPreset(normalizedModelId);
   const supportsImages = overrides?.supportsImages ?? preset?.supportsImages ?? isVlmModel(normalizedModelId);
   const revision = preset?.supportTier === "curated"
     ? preset.revision ?? overrides?.revision ?? null
-    : overrides?.revision ?? preset?.revision ?? null;
+    : modelWasAliased
+      ? preset?.revision ?? null
+      : overrides?.revision ?? preset?.revision ?? null;
 
   return {
     id: normalizedModelId,
@@ -145,7 +159,7 @@ export function getModelSelection(modelId?: string | null, overrides?: Partial<M
 }
 
 export function getModelQuantizationLabel(modelId?: string | null, isVisionModel = isVlmModel(modelId)) {
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(modelId);
   if (/gemma-4/i.test(normalizedModelId)) return "q4f16";
   if (isVisionModel) return "q4+fp16";
 
@@ -166,7 +180,7 @@ export function getModelCardMeta(modelId?: string | null, options?: {
   downloadSizeLabel?: string | null;
   isVisionModel?: boolean;
 }) {
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(modelId);
   const preset = getModelPreset(normalizedModelId);
 
   return [
@@ -177,7 +191,7 @@ export function getModelCardMeta(modelId?: string | null, options?: {
 }
 
 export function getModelThinkingMode(modelId?: string | null): ThinkingMode {
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = resolveBrowserModelId(modelId);
   const presetMode = getModelPreset(normalizedModelId)?.thinkingMode;
   if (presetMode) return presetMode;
   if (normalizedModelId.includes("Qwen3.5")) return "optional";

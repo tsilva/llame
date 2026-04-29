@@ -21,6 +21,10 @@ describe("verified model config", () => {
         id: "HuggingFaceTB/SmolLM2-135M-Instruct",
         testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM2-135M-Instruct",
       },
+      {
+        id: "Xenova/distilgpt2",
+        testedUrl: "https://llame.tsilva.eu/chat/Xenova/distilgpt2",
+      },
     ];
 
     verifiedModels.forEach((model) => {

@@ -121,6 +121,50 @@ describe("model browser search", () => {
     });
   });
 
+  it("hides external-data-only text exports while keeping quantized browser clones", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              id: "bigscience/bloom-560m",
+              sha: "upstream-rev",
+              tags: ["onnx", "bloom", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: { model_type: "bloom" },
+              siblings: [
+                { rfilename: "onnx/decoder_model_merged.onnx" },
+                { rfilename: "onnx/decoder_model_merged.onnx_data" },
+              ],
+            },
+            {
+              id: "Xenova/bloom-560m",
+              sha: "xenova-rev",
+              tags: ["transformers.js", "onnx", "bloom", "text-generation"],
+              pipeline_tag: "text-generation",
+              config: { model_type: "bloom" },
+              siblings: [
+                { rfilename: "onnx/decoder_model_merged.onnx" },
+                { rfilename: "onnx/decoder_model_merged.onnx_data" },
+                { rfilename: "onnx/decoder_model_merged_quantized.onnx" },
+              ],
+            },
+          ]),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const page = await searchBrowserReadyModels("bloom-560m");
+
+    expect(page.models).toHaveLength(1);
+    expect(page.models[0]).toMatchObject({
+      id: "Xenova/bloom-560m",
+      interactionMode: "completion",
+    });
+  });
+
   it("keeps instruct text-generation models in chat mode", async () => {
     vi.stubGlobal(
       "fetch",

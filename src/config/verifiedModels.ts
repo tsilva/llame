@@ -26,6 +26,10 @@ export const VERIFIED_MODELS = [
     testedUrl: "https://llame.tsilva.eu/chat/HuggingFaceTB/SmolLM2-135M-Instruct",
   },
   {
+    id: "Xenova/distilgpt2",
+    testedUrl: "https://llame.tsilva.eu/chat/Xenova/distilgpt2",
+  },
+  {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
     testedUrl: "https://llame.tsilva.eu/chat/tsilva/unsloth_Qwen3.5-0.8B_uncensored",
     sampling: {

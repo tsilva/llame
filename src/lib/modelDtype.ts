@@ -1,4 +1,5 @@
 import { getPreferredDtypePolicy } from "@/lib/modelPolicies";
+import { InferenceDevice } from "@/types";
 
 function parseModelParameterCountB(modelId: string) {
   const match = modelId.match(/(\d+(?:\.\d+)?)B/i);
@@ -8,9 +9,7 @@ function parseModelParameterCountB(modelId: string) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-export function pickDtypeForModel(modelId: string, device: "webgpu" | "wasm") {
-  if (device !== "webgpu") return "q4";
-
+export function pickDtypeForModel(modelId: string, device: InferenceDevice) {
   const parameterCountB = parseModelParameterCountB(modelId);
   const policyDtype = getPreferredDtypePolicy(
     {

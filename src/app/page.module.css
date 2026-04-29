@@ -54,8 +54,8 @@
 .brandKicker {
   margin: 0;
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+  line-height: 1.25;
+  letter-spacing: 0;
   color: #8e8e8e;
 }
 

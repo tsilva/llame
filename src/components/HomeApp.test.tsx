@@ -99,7 +99,7 @@ function buildConversation(overrides: Partial<Conversation> = {}): Conversation 
     modelId: "onnx-community/Qwen2.5-0.5B-Instruct",
     modelRevision: "rev-1",
     modelSupportsImages: false,
-    recommendedDevice: "wasm",
+    recommendedDevice: "webgpu",
     supportTier: "curated",
     ...overrides,
   };

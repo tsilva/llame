@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 const payload: Omit<Metadata, "metadataBase"> = {
-  "title": "Private AI Chat in Your Browser | llame",
+  "title": "Private AI chats in your browser | llame",
   "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
   "keywords": [
     "private-ai-chat",
@@ -17,20 +17,20 @@ const payload: Omit<Metadata, "metadataBase"> = {
     "transformers-js"
   ],
   "openGraph": {
-    "title": "Private AI Chat in Your Browser | llame",
+    "title": "Private AI chats in your browser | llame",
     "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     "images": [
       {
         "url": "/brand/web-seo/og-image-1200x630.png",
         "width": 1200,
         "height": 630,
-        "alt": "llame social card for private AI chat that runs in your browser"
+        "alt": "llame social card for Private AI chats in your browser"
       }
     ]
   },
   "twitter": {
     "card": "summary_large_image",
-    "title": "Private AI Chat in Your Browser | llame",
+    "title": "Private AI chats in your browser | llame",
     "description": "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     "images": [
       "/brand/web-seo/og-image-1200x630.png"

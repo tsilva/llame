@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BadgeCheck, ExternalLink, Loader2, Search, X } from "lucide-react";
 import { getVerifiedModel } from "@/config/verifiedModels";
 import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
-import { ModelSelection } from "@/types";
+import { InferenceDevice, ModelSelection } from "@/types";
 import {
   assessModelCompatibility,
   CompatibilityContext,
@@ -18,7 +18,7 @@ interface ModelBrowserModalProps {
   onClose: () => void;
   onSelectModel: (model: ModelSelection) => void;
   currentModelId: string;
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   webgpuSupported: boolean | null;
   disabled?: boolean;
 }
@@ -70,12 +70,12 @@ function compatibilityClasses(tone: ReturnType<typeof assessModelCompatibility>[
 }
 
 function BrowserProfileLine({ device, webgpuSupported, profile }: {
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   webgpuSupported: boolean | null;
   profile: BrowserProfile;
 }) {
   const parts = [
-    `Runtime: ${device === "webgpu" ? "WebGPU" : "WASM"}`,
+    `Runtime: ${device.toUpperCase()}`,
     webgpuSupported === null ? "WebGPU: checking" : `WebGPU: ${webgpuSupported ? "available" : "unavailable"}`,
     profile.deviceMemoryGb ? `${profile.deviceMemoryGb} GB RAM hint` : "RAM hint unavailable",
     profile.hardwareConcurrency ? `${profile.hardwareConcurrency} CPU threads` : "CPU hint unavailable",

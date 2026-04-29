@@ -242,7 +242,7 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
             vision_encoder: "fp16",
             decoder_model_merged: "q4f16",
           }
-        : pickDtypeForModel(modelId);
+        : pickDtypeForModel(modelId, device);
       currentPrecision = typeof dtype === "string" ? dtype : "q4f16+fp16";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
@@ -256,7 +256,7 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
 
       post({ status: "loading", message: "Loading model..." });
 
-      const dtype = pickDtypeForModel(modelId);
+      const dtype = pickDtypeForModel(modelId, device);
       currentPrecision = dtype;
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {

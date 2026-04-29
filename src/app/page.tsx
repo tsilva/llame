@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { homePageJsonLd, homePageMetadata, siteDescription } from "@/lib/siteMetadata";
+import { homePageJsonLd, homePageMetadata, siteDescription, siteTagline } from "@/lib/siteMetadata";
 import { Sparkles, ChevronRight, Shield, Cpu, HardDrive, Github } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -14,8 +14,8 @@ const SHELL_POINTS = [
   },
   {
     icon: Cpu,
-    label: "WebGPU first",
-    detail: "Automatic WASM fallback when acceleration is unavailable.",
+    label: "WebGPU required",
+    detail: "GPU-accelerated inference in supported browsers.",
   },
   {
     icon: HardDrive,
@@ -40,7 +40,7 @@ export default function Home() {
               </div>
               <div>
                 <p className={styles.brandName}>llame</p>
-                <p className={styles.brandKicker}>In-browser AI</p>
+                <p className={styles.brandKicker}>{siteTagline}</p>
               </div>
             </div>
             <a
@@ -62,7 +62,7 @@ export default function Home() {
                   Private inference in one URL
                 </p>
                 <h1 className={styles.title}>
-                  Run private AI models directly in your browser.
+                  {siteTagline}
                 </h1>
                 <p className={styles.description}>
                   {siteDescription}

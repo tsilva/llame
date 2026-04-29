@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { metadata as chatMetadata } from "@/app/chat/layout";
+import { generateMetadata as generateModelChatMetadata } from "@/app/chat/[...modelSlug]/page";
 import { metadata as homeMetadata } from "@/app/page";
 import sitemap from "@/app/sitemap";
 import { MODEL_PRESETS } from "@/lib/constants";
@@ -10,6 +11,7 @@ import {
   chatPageDescription,
   homePageJsonLd,
   siteDescription,
+  siteTagline,
   siteKeywords,
   siteTitle,
   socialImage,
@@ -29,7 +31,7 @@ const stackFirstTermsPattern = /\b(transformers(?:\.js|-js)?|onnx|webgpu|wasm|we
 
 describe("SEO metadata", () => {
   it("exports homepage metadata with value-first copy, canonical, and meaningful OG alt text", () => {
-    expect(homeMetadata.title).toBe("Private AI Chat in Your Browser | llame");
+    expect(homeMetadata.title).toBe("Private AI chats in your browser | llame");
     expect(homeMetadata.description).toBe(
       "Run local AI models in your browser. No installs, no API keys, and your chats stay on your device.",
     );
@@ -41,14 +43,14 @@ describe("SEO metadata", () => {
     const firstHomeImage = homeImages[0];
 
     expect(firstHomeImage).toMatchObject({
-      alt: "llame social card for private AI chat that runs in your browser",
+      alt: `llame social card for ${siteTagline}`,
     });
     expect(String(homeMetadata.title)).not.toMatch(stackFirstTermsPattern);
     expect(homeMetadata.description).not.toMatch(stackFirstTermsPattern);
   });
 
   it("exports noindex metadata for the chat workspace", () => {
-    expect(chatMetadata.title).toBe("llame Chat | Private Browser AI Workspace");
+    expect(chatMetadata.title).toBe(`llame Chat | ${siteTagline}`);
     expect(chatMetadata.description).toBe(chatPageDescription);
     expect(chatMetadata.alternates?.canonical).toBe("/chat");
     expect(chatMetadata.robots).toMatchObject({
@@ -59,6 +61,44 @@ describe("SEO metadata", () => {
       url: "/chat",
       images: [socialImage],
     });
+  });
+
+  it("exports model-specific metadata for model chat routes", async () => {
+    const modelMetadata = await generateModelChatMetadata({
+      params: Promise.resolve({
+        modelSlug: ["onnx-community", "Qwen3.5-0.8B-ONNX"],
+      }),
+    });
+
+    expect(modelMetadata.title).toBe(`Qwen3.5 0.8B | ${siteTagline}`);
+    expect(modelMetadata.description).toBe(
+      `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+    );
+    expect(modelMetadata.alternates?.canonical).toBe("/chat/onnx-community/Qwen3.5-0.8B-ONNX");
+    expect(modelMetadata.robots).toMatchObject({
+      index: true,
+      follow: true,
+    });
+    expect(modelMetadata.openGraph).toMatchObject({
+      title: `Qwen3.5 0.8B | ${siteTagline}`,
+      description:
+        `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+      url: "/chat/onnx-community/Qwen3.5-0.8B-ONNX",
+      images: [
+        expect.objectContaining({
+          url: socialImage.url,
+          alt: `Qwen3.5 0.8B chat card for ${siteTagline} on llame`,
+        }),
+      ],
+    });
+    expect(modelMetadata.twitter).toMatchObject({
+      title: `Qwen3.5 0.8B | ${siteTagline}`,
+      description:
+        `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+      images: [socialImage.url],
+    });
+    expect(modelMetadata.title).not.toBe(chatMetadata.title);
+    expect(modelMetadata.description).not.toBe(chatMetadata.description);
   });
 
   it("keeps generated metadata and manifest surfaces aligned with the homepage copy", () => {

@@ -1,3 +1,5 @@
+import { InferenceDevice } from "@/types";
+
 export interface BrowserExclusionContext {
   id: string;
   tags?: string[];
@@ -10,7 +12,7 @@ export interface RuntimePolicyContext {
 }
 
 export interface CompatibilityPolicyContext extends RuntimePolicyContext {
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   deviceMemoryGb: number | null;
 }
 
@@ -25,9 +27,9 @@ interface RuntimePolicyRule {
   modelIdPattern: RegExp;
   minParameterCountB?: number;
   excludeVisionModels?: boolean;
-  preferredDtype?: Partial<Record<"webgpu" | "wasm", string>>;
+  preferredDtype?: Partial<Record<InferenceDevice, string>>;
   compatibilityPenalty?: {
-    device: "webgpu" | "wasm";
+    device: InferenceDevice;
     maxDeviceMemoryGb?: number;
     scoreDelta: number;
   }[];
@@ -93,7 +95,7 @@ export function isModelExcludedFromBrowser(context: BrowserExclusionContext) {
 
 export function getPreferredDtypePolicy(
   context: RuntimePolicyContext,
-  device: "webgpu" | "wasm",
+  device: InferenceDevice,
 ) {
   for (const rule of RUNTIME_POLICY_RULES) {
     if (!matchesRuntimePolicyRule(rule, context)) continue;

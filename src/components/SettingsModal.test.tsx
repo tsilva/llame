@@ -16,9 +16,6 @@ describe("SettingsModal", () => {
         onClose={onClose}
         params={DEFAULT_PARAMS}
         onChange={vi.fn()}
-        device="webgpu"
-        onDeviceChange={vi.fn()}
-        webgpuAvailable
         storageStats={{
           usedBytes: 1024,
           quotaBytes: 1024 * 1024,
@@ -37,9 +34,6 @@ describe("SettingsModal", () => {
         onClose={onClose}
         params={DEFAULT_PARAMS}
         onChange={vi.fn()}
-        device="webgpu"
-        onDeviceChange={vi.fn()}
-        webgpuAvailable
         storageStats={{
           usedBytes: 1024,
           quotaBytes: 1024 * 1024,

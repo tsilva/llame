@@ -1,6 +1,7 @@
 "use client";
 
 import { getCompatibilityScoreAdjustment, isModelExcludedFromBrowser } from "@/lib/modelPolicies";
+import { InferenceDevice } from "@/types";
 
 export interface HubModelApiEntry {
   id: string;
@@ -46,7 +47,7 @@ export interface ModelSearchPage {
 export type ModelBrowserSort = "relevance" | "downloads" | "recency";
 
 export interface CompatibilityContext {
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   webgpuSupported: boolean | null;
   deviceMemoryGb: number | null;
   hardwareConcurrency: number | null;
@@ -416,28 +417,20 @@ export async function searchBrowserReadyModels(
   };
 }
 
-function estimateWorkingSetGb(model: DiscoveredModel, context: CompatibilityContext) {
+function estimateWorkingSetGb(model: DiscoveredModel) {
   if (model.parameterCountB === null && model.estimatedDownloadGb === null) return null;
 
   if (model.estimatedDownloadGb !== null) {
-    const multiplier = context.device === "webgpu"
-      ? model.isVisionModel ? 1.6 : 1.35
-      : 1.85;
+    const multiplier = model.isVisionModel ? 1.6 : 1.35;
     return model.estimatedDownloadGb * multiplier;
   }
 
   const size = model.parameterCountB ?? 0;
 
-  if (context.device === "webgpu") {
-    if (model.isVisionModel) return size * 1.8;
-    if (size <= 1) return size * 1.3;
-    if (size <= 3) return size * 1.55;
-    return size * 1.85;
-  }
-
-  if (size <= 1) return size * 0.9;
-  if (size <= 3) return size * 1.15;
-  return size * 1.45;
+  if (model.isVisionModel) return size * 1.8;
+  if (size <= 1) return size * 1.3;
+  if (size <= 3) return size * 1.55;
+  return size * 1.85;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -445,19 +438,19 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function assessModelCompatibility(model: DiscoveredModel, context: CompatibilityContext): ModelCompatibility {
-  if (context.device === "webgpu" && context.webgpuSupported === false) {
+  if (context.webgpuSupported === false) {
     return {
       score: 10,
       label: "Unlikely",
       tone: "red",
-      summary: "WebGPU is unavailable in this browser. Switch to WASM for this model.",
+      summary: "WebGPU is unavailable in this browser. Local inference requires WebGPU.",
     };
   }
 
-  let score = context.device === "webgpu" ? 72 : 56;
+  let score = 72;
 
   const size = model.parameterCountB;
-  const workingSetGb = estimateWorkingSetGb(model, context);
+  const workingSetGb = estimateWorkingSetGb(model);
 
   if (size !== null) {
     if (size <= 1) score += 15;
@@ -480,23 +473,13 @@ export function assessModelCompatibility(model: DiscoveredModel, context: Compat
     deviceMemoryGb: context.deviceMemoryGb,
   });
 
-  if (context.device === "wasm" && size !== null) {
-    if (size > 2) score -= 18;
-    if (size > 4) score -= 16;
-  }
-
   if (context.deviceMemoryGb !== null && workingSetGb !== null) {
-    const browserBudgetGb = context.deviceMemoryGb * (context.device === "webgpu" ? 0.45 : 0.35);
+    const browserBudgetGb = context.deviceMemoryGb * 0.45;
 
     if (workingSetGb <= browserBudgetGb * 0.75) score += 10;
     else if (workingSetGb <= browserBudgetGb) score += 2;
     else if (workingSetGb <= browserBudgetGb * 1.25) score -= 12;
     else score -= 26;
-  }
-
-  if (context.hardwareConcurrency !== null) {
-    if (context.device === "wasm" && context.hardwareConcurrency <= 4) score -= 10;
-    if (context.device === "wasm" && context.hardwareConcurrency >= 8 && (size ?? 0) <= 2) score += 4;
   }
 
   score = clamp(score, 5, 95);

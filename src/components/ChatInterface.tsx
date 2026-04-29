@@ -12,7 +12,7 @@ import {
 } from "react";
 import { ChatMessage as ChatMessageType, GenerationStopReason, ProgressInfo, TotalProgressInfo } from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
-import { siteDescription } from "@/lib/siteMetadata";
+import { siteDescription, siteTagline } from "@/lib/siteMetadata";
 import { ModelLoadingCard } from "./ModelLoadingCard";
 import {
   MAX_PENDING_IMAGES,
@@ -307,7 +307,7 @@ export function ChatInterface({
               <Sparkles size={24} className="text-white" />
             </div>
             <h1 className="mb-3 max-w-[700px] text-center text-2xl font-semibold text-[#ececec] md:text-3xl">
-              Run private AI models in one tab
+              {siteTagline}
             </h1>
             <p className="max-w-[640px] text-center text-sm leading-6 text-[#b4b4b4] md:text-base">
               {siteDescription}

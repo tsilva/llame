@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getModelChatPath } from "@/lib/modelRoutes";
+import { getModelDisplayName } from "@/lib/constants";
 import createGeneratedMetadata from "../../web-seo-metadata";
 
 export const siteName = "llame";
@@ -72,11 +74,10 @@ function resolveMetadataKeywords(keywords: Metadata["keywords"] | undefined): st
 
 export const siteTitle = resolveMetadataTitle(generatedMetadata.title);
 export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DESCRIPTION;
-export const siteTagline =
-  "Private AI chat in your browser. No installs. No setup. Your chats stay on your device.";
-export const chatPageTitle = "llame Chat | Private Browser AI Workspace";
+export const siteTagline = "Private AI chats in your browser";
+export const chatPageTitle = `llame Chat | ${siteTagline}`;
 export const chatPageDescription =
-  "Open llame's private browser AI workspace to chat with local models on your device.";
+  `Open llame for ${siteTagline} with local models on your device.`;
 
 function normalizeMetadataUrl(value: string | URL): string {
   return value instanceof URL ? value.toString() : value;
@@ -95,7 +96,7 @@ function getGeneratedSocialImage() {
       url: "/brand/web-seo/og-image-1200x630.png",
       width: 1200,
       height: 630,
-      alt: "llame social card for private AI chat that runs in your browser",
+      alt: `llame social card for ${siteTagline}`,
     };
   }
 
@@ -104,7 +105,7 @@ function getGeneratedSocialImage() {
       url: normalizeMetadataUrl(firstImage),
       width: 1200,
       height: 630,
-      alt: "llame social card for private AI chat that runs in your browser",
+      alt: `llame social card for ${siteTagline}`,
     };
   }
 
@@ -112,7 +113,7 @@ function getGeneratedSocialImage() {
     url: normalizeMetadataUrl(firstImage.url),
     width: firstImage.width ?? 1200,
     height: firstImage.height ?? 630,
-    alt: firstImage.alt ?? "llame social card for private AI chat that runs in your browser",
+    alt: firstImage.alt ?? `llame social card for ${siteTagline}`,
   };
 }
 
@@ -156,9 +157,11 @@ export const sharedSiteMetadata: Metadata = {
 type PageMetadataOptions = {
   title: string;
   description: string;
-  canonicalPath: "/" | "/chat";
+  canonicalPath: string;
   robots?: Metadata["robots"];
   includeLanguages?: boolean;
+  keywords?: string[];
+  image?: typeof socialImage;
 };
 
 function createPageMetadata({
@@ -167,11 +170,13 @@ function createPageMetadata({
   canonicalPath,
   robots,
   includeLanguages = false,
+  keywords = siteKeywords,
+  image = socialImage,
 }: PageMetadataOptions): Metadata {
   return {
     title,
     description,
-    keywords: siteKeywords,
+    keywords,
     alternates: {
       canonical: canonicalPath,
       ...(includeLanguages
@@ -189,7 +194,7 @@ function createPageMetadata({
       type: "website",
       siteName,
       locale: siteLocale,
-      images: [socialImage],
+      images: [image],
     },
     twitter: {
       card: "summary_large_image",
@@ -197,7 +202,7 @@ function createPageMetadata({
       description,
       creator: socialHandle,
       site: socialHandle,
-      images: [socialImage.url],
+      images: [image.url],
     },
     ...(robots ? { robots } : {}),
   };
@@ -238,6 +243,47 @@ export const chatPageMetadata = createPageMetadata({
   },
 });
 
+export function createModelChatPageMetadata(modelId?: string | null): Metadata {
+  const normalizedModelId = modelId?.trim();
+
+  if (!normalizedModelId) {
+    return chatPageMetadata;
+  }
+
+  const modelDisplayName = getModelDisplayName(normalizedModelId);
+  const title = `${modelDisplayName} | ${siteTagline}`;
+  const description =
+    `Start ${siteTagline} with ${modelDisplayName} on llame. Run the model on your device with no installs or API keys.`;
+  const modelSocialImage = {
+    ...socialImage,
+    alt: `${modelDisplayName} chat card for ${siteTagline} on llame`,
+  };
+
+  return createPageMetadata({
+    title,
+    description,
+    canonicalPath: getModelChatPath(normalizedModelId),
+    image: modelSocialImage,
+    keywords: [
+      `${modelDisplayName} chat`,
+      `${modelDisplayName} browser chat`,
+      normalizedModelId,
+      ...siteKeywords,
+    ],
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
+  });
+}
+
 export const homePageJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -264,7 +310,7 @@ export const homePageJsonLd = {
       image: resolveAbsoluteUrl(socialImage.url),
       screenshot: resolveAbsoluteUrl(socialImage.url),
       slogan: siteTagline,
-      browserRequirements: "Requires JavaScript. WebGPU recommended, WASM supported.",
+      browserRequirements: "Requires JavaScript and WebGPU.",
       isAccessibleForFree: true,
       featureList: [
         "Run local AI models directly in your browser",

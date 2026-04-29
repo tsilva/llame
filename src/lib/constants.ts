@@ -2,8 +2,6 @@ import { GenerationParams, ModelSelection } from "@/types";
 
 export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 export const DEFAULT_MODEL_REVISION = "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6";
-export const DEFAULT_WASM_MODEL = "onnx-community/Qwen2.5-0.5B-Instruct";
-export const DEFAULT_WASM_MODEL_REVISION = "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0";
 
 export type ThinkingMode = "unsupported" | "optional" | "required";
 
@@ -138,10 +136,6 @@ export function getModelSelection(modelId?: string | null, overrides?: Partial<M
     recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
     supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",
   };
-}
-
-export function getDefaultModelSelectionForDevice(device: "webgpu" | "wasm") {
-  return getModelSelection(device === "wasm" ? DEFAULT_WASM_MODEL : DEFAULT_MODEL);
 }
 
 export function getModelQuantizationLabel(modelId?: string | null, isVisionModel = isVlmModel(modelId)) {

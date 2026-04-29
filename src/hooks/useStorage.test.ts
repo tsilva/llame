@@ -109,7 +109,7 @@ describe("useStorage", () => {
         id: "onnx-community/Qwen2.5-0.5B-Instruct",
         revision: "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0",
         supportsImages: false,
-        recommendedDevice: "wasm",
+        recommendedDevice: "webgpu",
         supportTier: "curated",
       });
     });
@@ -141,7 +141,7 @@ describe("useStorage", () => {
     expect(result.current.activeConversation?.title).toBe("New chat");
     expect(result.current.activeConversation?.messages).toEqual([]);
     expect(result.current.activeConversation?.modelId).toBe("onnx-community/Qwen2.5-0.5B-Instruct");
-    expect(result.current.activeConversation?.recommendedDevice).toBe("wasm");
+    expect(result.current.activeConversation?.recommendedDevice).toBe("webgpu");
     expect(result.current.activeConversation?.supportTier).toBe("curated");
   });
 
@@ -201,7 +201,7 @@ describe("useStorage", () => {
       modelId: "onnx-community/Qwen2.5-0.5B-Instruct",
       modelRevision: "rev-1",
       modelSupportsImages: false,
-      recommendedDevice: "wasm" as const,
+      recommendedDevice: "webgpu" as const,
       supportTier: "curated" as const,
     };
     const deletedDraft = {
@@ -235,7 +235,7 @@ describe("useStorage", () => {
         id: "onnx-community/Qwen2.5-0.5B-Instruct",
         revision: "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0",
         supportsImages: false,
-        recommendedDevice: "wasm",
+        recommendedDevice: "webgpu",
         supportTier: "curated",
       });
     });
@@ -249,7 +249,7 @@ describe("useStorage", () => {
     expect(result.current.index).toHaveLength(1);
     expect(result.current.activeConversation?.title).toBe("New chat");
     expect(result.current.activeConversation?.modelId).toBe("onnx-community/Qwen2.5-0.5B-Instruct");
-    expect(result.current.activeConversation?.recommendedDevice).toBe("wasm");
+    expect(result.current.activeConversation?.recommendedDevice).toBe("webgpu");
     expect(result.current.activeConversation?.supportTier).toBe("curated");
   });
 });

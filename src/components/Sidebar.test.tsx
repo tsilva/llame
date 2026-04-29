@@ -41,10 +41,10 @@ function renderSidebar(conversations: ConversationMeta[], overrides: Partial<Com
 }
 
 describe("Sidebar", () => {
-  it("does not show a delete button for an empty draft conversation", () => {
+  it("shows a delete button for an empty draft conversation", () => {
     renderSidebar([buildConversation()]);
 
-    expect(screen.queryByLabelText("Delete conversation New chat")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Delete conversation New chat")).not.toHaveLength(0);
   });
 
   it("calls the new chat callback without leaking the click event", () => {
@@ -68,7 +68,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByLabelText("Delete conversation Hello world")).not.toHaveLength(0);
   });
 
-  it("keeps the delete button visible on touch layouts while preserving desktop hover behavior", () => {
+  it("keeps the delete button faint until hover or focus", () => {
     renderSidebar([
       buildConversation({
         id: "conv-3",
@@ -78,8 +78,8 @@ describe("Sidebar", () => {
     ]);
 
     expect(screen.getAllByLabelText("Delete conversation Touch chat")[0]).toHaveClass(
-      "opacity-100",
-      "md:opacity-0",
+      "opacity-25",
+      "md:opacity-20",
       "md:group-hover:opacity-100",
     );
   });

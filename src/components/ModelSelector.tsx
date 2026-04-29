@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS, ModelPreset } from "@/lib/constants";
-import { ModelSelection } from "@/types";
+import { InferenceDevice, ModelSelection } from "@/types";
 
 interface ModelSelectorProps {
   isLoading: boolean;
   loadedModel: string | null;
   loadedPrecision: string | null;
-  device: "webgpu" | "wasm";
+  device: InferenceDevice;
   webgpuSupported: boolean | null;
   model: ModelSelection;
   onModelChange: (model: ModelSelection) => void;
@@ -66,9 +66,9 @@ export function ModelSelector({
 
   const runtimeLabel = webgpuSupported === null
     ? "Checking..."
-    : device === "webgpu" && webgpuSupported
-      ? "WebGPU"
-      : "WASM";
+    : webgpuSupported
+      ? device.toUpperCase()
+      : "WebGPU unavailable";
 
   return (
     <div className="relative" ref={ref}>

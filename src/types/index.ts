@@ -24,7 +24,7 @@ export interface ModelSelection {
   id: string;
   revision?: string | null;
   supportsImages?: boolean | null;
-  recommendedDevice?: "webgpu" | "wasm";
+  recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
 }
 
@@ -47,7 +47,7 @@ export interface Conversation {
   modelId: string;
   modelRevision?: string | null;
   modelSupportsImages?: boolean | null;
-  recommendedDevice?: "webgpu" | "wasm";
+  recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
 }
 
@@ -59,7 +59,7 @@ export interface ConversationMeta {
   modelId: string;
   modelRevision?: string | null;
   modelSupportsImages?: boolean | null;
-  recommendedDevice?: "webgpu" | "wasm";
+  recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
   messageCount: number;
   sizeBytes: number;

@@ -1,12 +1,10 @@
 <div align="center">
   <img src="./public/brand/logo/logo-1024.png" alt="llame" width="420" />
 
-  **Private AI chat that runs in your browser.**
+  **Private AI chats in your browser**
 
   [Live Demo](https://llame.tsilva.eu) · [GitHub](https://github.com/tsilva/llame)
 </div>
-
-## What
 
 llame is a fully client-side chat app for running ONNX language and vision models with WebGPU. No backend, no API key, no hosted inference.
 
@@ -22,8 +20,6 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
-
-This repo uses `pnpm@10.27.0`.
 
 ## Commands
 

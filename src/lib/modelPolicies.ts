@@ -49,6 +49,14 @@ const BROWSER_EXCLUSION_RULES: BrowserExclusionRule[] = [
 
 const RUNTIME_POLICY_RULES: RuntimePolicyRule[] = [
   {
+    id: "gpt2-family-webgpu-fp32",
+    modelIdPattern: /(?:^|\/)(?:distilgpt2|gpt2)(?:$|[-_/])/i,
+    excludeVisionModels: true,
+    preferredDtype: {
+      webgpu: "fp32",
+    },
+  },
+  {
     id: "large-qwen2-webgpu",
     modelIdPattern: /(?:^|\/)Qwen2(?:\.5)?-/i,
     minParameterCountB: 1,

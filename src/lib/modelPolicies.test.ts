@@ -14,6 +14,12 @@ describe("modelPolicies", () => {
 
   it("applies the WebGPU dtype override for larger Qwen2 family models", () => {
     expect(getPreferredDtypePolicy({
+      id: "Xenova/distilgpt2",
+      parameterCountB: null,
+      isVisionModel: false,
+    }, "webgpu")).toBe("fp32");
+
+    expect(getPreferredDtypePolicy({
       id: "onnx-community/Qwen2.5-1.5B-Instruct",
       parameterCountB: 1.5,
       isVisionModel: false,

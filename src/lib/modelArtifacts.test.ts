@@ -22,6 +22,16 @@ describe("selectCausalLmLoadArtifact", () => {
     });
   });
 
+  it("prefers fp32 artifacts for GPT-2 family models when fp16 is available", () => {
+    expect(selectCausalLmLoadArtifact("Xenova/distilgpt2", "webgpu", [
+      { modelFileName: null, dtypes: ["fp16", "fp32"] },
+      { modelFileName: "decoder_model_merged", dtypes: ["fp16", "fp32"] },
+    ])).toEqual({
+      modelFileName: null,
+      dtype: "fp32",
+    });
+  });
+
   it("returns null when no candidate artifact has a usable dtype", () => {
     expect(selectCausalLmLoadArtifact("owner/model", "webgpu", [
       { modelFileName: null, dtypes: [] },

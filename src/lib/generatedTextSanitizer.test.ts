@@ -26,6 +26,18 @@ describe("GeneratedTextSanitizer", () => {
     expect(sanitizer.flush()).toBe("ABC");
   });
 
+  it("removes SmolVLM end-of-utterance tokens from streamed output", () => {
+    const sanitizer = new GeneratedTextSanitizer();
+
+    const output = [
+      sanitizer.processChunk("Quantum systems.<end_"),
+      sanitizer.processChunk("of_utterance>"),
+      sanitizer.flush(),
+    ].join("");
+
+    expect(output).toBe("Quantum systems.");
+  });
+
   it("preserves thinking tags for the downstream parser", () => {
     const sanitizer = new GeneratedTextSanitizer();
 

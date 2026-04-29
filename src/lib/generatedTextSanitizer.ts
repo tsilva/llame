@@ -1,4 +1,16 @@
-const CONTROL_TOKEN_RE = /<(?:\|[^<>\s|]+(?:\|)?|[^<>\s|]+\||bos|eos|pad|mask|unk)>/g;
+const NAMED_CONTROL_TOKENS = [
+  "bos",
+  "eos",
+  "end_of_utterance",
+  "mask",
+  "pad",
+  "start_of_utterance",
+  "unk",
+].join("|");
+const CONTROL_TOKEN_RE = new RegExp(
+  `<(?:\\|[^<>\\s|]+(?:\\|)?|[^<>\\s|]+\\||${NAMED_CONTROL_TOKENS})>`,
+  "g",
+);
 const CONTROL_TOKEN_TAIL_LENGTH = 20;
 const THINKING_CHANNEL_TOKENS = new Set(["<|channel>", "<channel|>"]);
 

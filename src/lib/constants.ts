@@ -217,6 +217,22 @@ export const DEFAULT_PARAMS: GenerationParams = {
   thinkingEnabled: false,
 };
 
+export const COMPLETION_PARAMS: GenerationParams = {
+  ...DEFAULT_PARAMS,
+  max_new_tokens: 256,
+  temperature: 0.7,
+  top_p: 0.9,
+  min_p: 0,
+  top_k: 50,
+  repetition_penalty: 1.0,
+  do_sample: true,
+  thinkingEnabled: false,
+};
+
+export function getDefaultParamsForModel(model: ModelSelection): GenerationParams {
+  return model.interactionMode === "completion" ? COMPLETION_PARAMS : DEFAULT_PARAMS;
+}
+
 export const PARAM_RANGES = {
   max_new_tokens: { min: 16, max: 2048, step: 16 },
   temperature: { min: 0.0, max: 2.0, step: 0.05 },

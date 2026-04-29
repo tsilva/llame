@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { GenerationParams, StorageStats } from "@/types";
-import { DEFAULT_PARAMS, PARAM_RANGES, SLIDER_CONFIGS } from "@/lib/constants";
+import { PARAM_RANGES, SLIDER_CONFIGS } from "@/lib/constants";
 import { X, Cpu, RotateCcw, HardDrive } from "lucide-react";
 
 interface SettingsModalProps {
@@ -10,6 +10,7 @@ interface SettingsModalProps {
   onClose: () => void;
   params: GenerationParams;
   onChange: (params: GenerationParams) => void;
+  defaultParams: GenerationParams;
   storageStats: StorageStats;
   isGenerating: boolean;
 }
@@ -80,6 +81,7 @@ export function SettingsModal({
   onClose,
   params,
   onChange,
+  defaultParams,
   storageStats,
   isGenerating,
 }: SettingsModalProps) {
@@ -232,7 +234,7 @@ export function SettingsModal({
           {/* Footer */}
           <div className="space-y-3 pt-1">
             <button
-              onClick={() => onChange(DEFAULT_PARAMS)}
+              onClick={() => onChange(defaultParams)}
               disabled={isGenerating}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#8e8e8e] hover:text-[#b4b4b4] hover:border-white/[0.15] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >

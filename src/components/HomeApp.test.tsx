@@ -4,6 +4,7 @@ import HomeApp from "@/components/HomeApp";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
 import { Conversation, GenerationStats, ModelSelection } from "@/types";
+import { COMPLETION_PARAMS } from "@/lib/constants";
 
 vi.mock("next/dynamic", () => ({
   default: () => () => null,
@@ -24,15 +25,20 @@ vi.mock("@/lib/telemetry", () => ({
 
 vi.mock("@/components/ChatInterface", () => ({
   ChatInterface: ({
+    onSend,
     onRegenerateLastAssistant,
     onDeleteLastMessage,
     onEditLastMessage,
   }: {
+    onSend: (content: string) => void;
     onRegenerateLastAssistant: () => void;
     onDeleteLastMessage: () => void;
     onEditLastMessage: (content: string) => void;
   }) => (
     <div data-testid="chat-interface">
+      <button data-testid="send-message" onClick={() => onSend("Once upon a time")}>
+        Send
+      </button>
       <button data-testid="regenerate-answer" onClick={onRegenerateLastAssistant}>
         Regenerate
       </button>
@@ -390,6 +396,69 @@ describe("HomeApp", () => {
     });
 
     expect(() => render(<HomeApp />)).not.toThrow();
+  });
+
+  it("uses completion defaults when generating with a completion model", async () => {
+    const conversation = buildConversation({
+      modelId: "openai-community/gpt2",
+      modelRevision: null,
+      modelInteractionMode: "completion",
+    });
+    const generate = vi.fn();
+
+    mockedUseInferenceWorker.mockReturnValue({
+      status: "loaded",
+      error: null,
+      loadedModel: conversation.modelId,
+      loadedRevision: null,
+      loadedDevice: "webgpu",
+      loadedPrecision: "fp32",
+      loadedSupportsImages: false,
+      loadedInteractionMode: "completion",
+      progress: null,
+      totalProgress: null,
+      loadingMessage: "",
+      processingMessage: "",
+      tps: 0,
+      numTokens: 0,
+      onPromptRef: { current: null },
+      onRawTokenRef: { current: null },
+      onTokenRef: { current: null },
+      onThinkingCompleteRef: { current: null },
+      onCompleteRef: { current: null },
+      loadModel: vi.fn(),
+      generate,
+      interrupt: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    mockedUseStorage.mockReturnValue({
+      index: [buildConversationMeta(conversation)],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation: vi.fn(),
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    const { getByTestId } = render(<HomeApp />);
+
+    await act(async () => {});
+    fireEvent.click(getByTestId("send-message"));
+
+    expect(generate).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining(COMPLETION_PARAMS));
   });
 
   it("uses the last model selected from the dropdown for a new chat after switching conversations", async () => {

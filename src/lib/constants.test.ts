@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CONTEXT_WINDOWS,
+  COMPLETION_PARAMS,
+  DEFAULT_PARAMS,
   MODEL_PRESETS,
+  getDefaultParamsForModel,
   getModelDisplayName,
   getModelQuantizationLabel,
   getModelSelection,
@@ -42,5 +45,10 @@ describe("constants", () => {
 
     expect(selection.interactionMode).toBe("completion");
     expect(CONTEXT_WINDOWS[selection.id]).toBe(1024);
+  });
+
+  it("uses completion generation defaults for completion models", () => {
+    expect(getDefaultParamsForModel(getModelSelection("openai-community/gpt2"))).toEqual(COMPLETION_PARAMS);
+    expect(getDefaultParamsForModel(getModelSelection("onnx-community/Qwen3.5-0.8B-ONNX"))).toEqual(DEFAULT_PARAMS);
   });
 });

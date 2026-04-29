@@ -337,7 +337,7 @@ function RawChatMessage({
     <div>
       <div className="rounded-2xl border border-white/[0.08] bg-[#171717] p-4">
         <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[#6f6f6f]">
-          {isUser ? "User" : "Assistant"}
+          {isUser ? "User" : "Assistant generation"}
         </div>
 
         {isUser ? (
@@ -359,21 +359,21 @@ function RawChatMessage({
         ) : (
           <>
             <RawSection
-              label="model input"
+              label="prompt sent to model"
               content={
                 modelInputAvailable
-                  ? (message.debug?.modelInput ?? "")
-                  : "Raw model input is unavailable for this older message."
+                  ? message.debug?.modelInput ?? ""
+                  : "Prompt sent to model is unavailable for this older message."
               }
               muted={!modelInputAvailable}
             />
             <div className="mt-3">
               <RawSection
-                label="model output"
+                label="raw generated output"
                 content={
                   rawOutputAvailable
-                    ? (message.debug?.rawOutput ?? "")
-                    : "Raw model output is unavailable for this older message."
+                    ? message.debug?.rawOutput ?? ""
+                    : "Raw generated output is unavailable for this older message."
                 }
                 muted={!rawOutputAvailable}
               />

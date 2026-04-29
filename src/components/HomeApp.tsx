@@ -16,6 +16,7 @@ import {
   DEFAULT_MODEL,
   DEFAULT_PARAMS,
   canToggleThinking,
+  getDefaultParamsForModel,
   getEffectiveThinkingEnabled,
   getModelSelection,
   isVlmModel,
@@ -465,7 +466,10 @@ export default function HomeApp({
 
   const applyVerifiedParamsForModel = useCallback((model: ModelSelection) => {
     appliedVerifiedParamsModelKeyRef.current = getModelSelectionKey(model);
-    setParams((current) => getVerifiedModelGenerationParams(model.id, current));
+    setParams((current) => ({
+      ...getVerifiedModelGenerationParams(model.id, getDefaultParamsForModel(model)),
+      thinkingEnabled: current.thinkingEnabled,
+    }));
   }, []);
 
   useEffect(() => {
@@ -1100,6 +1104,7 @@ export default function HomeApp({
         onClose={() => setSettingsOpen(false)}
         params={params}
         onChange={setParams}
+        defaultParams={getDefaultParamsForModel(activeModel)}
         storageStats={storage.storageStats}
         isGenerating={isGenerating}
       />

@@ -78,6 +78,7 @@ describe("Sidebar", () => {
     ]);
 
     expect(screen.getAllByLabelText("Delete conversation Touch chat")[0]).toHaveClass(
+      "cursor-pointer",
       "opacity-25",
       "md:opacity-20",
       "md:group-hover:opacity-100",

@@ -32,6 +32,21 @@ export function getModelIdFromRouteSlug(modelSlug?: string | string[] | null) {
     .join("/");
 }
 
+export function getModelIdFromChatPath(pathname?: string | null) {
+  if (typeof pathname !== "string") return "";
+
+  const segments = pathname
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+
+  if (segments[0] !== CHAT_ROUTE_PREFIX.slice(1)) {
+    return "";
+  }
+
+  return getModelIdFromRouteSlug(segments.slice(1));
+}
+
 export function getModelRouteSlug(modelId: string) {
   return normalizeModelRouteSegments(modelId);
 }

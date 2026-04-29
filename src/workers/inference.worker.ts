@@ -32,8 +32,14 @@ import {
   validateModelSelection,
 } from "@/lib/workerRequestValidation";
 import { ACCEPTED_IMAGE_MIME_TYPES, MAX_COMPRESSED_IMAGE_BYTES } from "@/lib/imageUtils";
+import { getOnnxWasmAssetPaths } from "@/lib/workerBootstrap";
 env.allowLocalModels = false;
 env.logLevel = 40;
+
+const onnxWasmAssetPaths = getOnnxWasmAssetPaths(self.location);
+if (onnxWasmAssetPaths && env.backends?.onnx?.wasm) {
+  env.backends.onnx.wasm.wasmPaths = onnxWasmAssetPaths;
+}
 
 env.fetch = async (input, init) => {
   const requestLike = input as { url?: string; toString(): string };

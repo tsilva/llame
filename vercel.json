@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/chat/:model*",
+      "destination": "/chat"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

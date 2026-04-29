@@ -22,3 +22,13 @@ export function getOnnxWasmAssetBaseUrl(locationLike: WorkerLocationLike | null 
 
   return null;
 }
+
+export function getOnnxWasmAssetPaths(locationLike: WorkerLocationLike | null | undefined) {
+  const baseUrl = getOnnxWasmAssetBaseUrl(locationLike);
+  if (!baseUrl) return null;
+
+  return {
+    mjs: new URL("ort-wasm-simd-threaded.asyncify.mjs", baseUrl).toString(),
+    wasm: new URL("ort-wasm-simd-threaded.asyncify.wasm", baseUrl).toString(),
+  };
+}

@@ -21,7 +21,7 @@ import {
 } from "@/lib/constants";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
 import { useStorage } from "@/hooks/useStorage";
-import { getModelChatPath } from "@/lib/modelRoutes";
+import { getModelChatPath, getModelIdFromChatPath } from "@/lib/modelRoutes";
 import { trackProductEvent, captureTelemetryError } from "@/lib/telemetry";
 import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
@@ -162,9 +162,12 @@ export default function HomeApp({
   const [webgpuSupported, setWebgpuSupported] = useState<boolean | null>(null);
   const worker = useInferenceWorker();
   const storage = useStorage();
+  const [clientRouteModelId, setClientRouteModelId] = useState<string | null>(null);
+  const routeModelId = initialModelId ?? clientRouteModelId;
+  const routeForceNewChat = forceNewChat || clientRouteModelId !== null;
   const initialRouteModel = useMemo(
-    () => initialModelId ? getModelSelection(initialModelId) : null,
-    [initialModelId],
+    () => routeModelId ? getModelSelection(routeModelId) : null,
+    [routeModelId],
   );
   const initialRouteModelKey = initialRouteModel
     ? `${initialRouteModel.id}\0${initialRouteModel.revision ?? ""}`
@@ -221,8 +224,14 @@ export default function HomeApp({
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
+    if (!initialModelId) {
+      const modelIdFromPath = getModelIdFromChatPath(window.location.pathname);
+      if (modelIdFromPath) {
+        setClientRouteModelId(modelIdFromPath);
+      }
+    }
     setLaunchNewChatRequested(searchParams.get("new") === "1");
-  }, []);
+  }, [initialModelId]);
 
   useEffect(() => {
     if (webgpuSupported === false) {
@@ -282,7 +291,7 @@ export default function HomeApp({
     if (!storage.ready) return;
     if (launchNewChatRequested === null) return;
     if (launchNewChatRequested) return;
-    if (forceNewChat && initialRouteModel) return;
+    if (routeForceNewChat && initialRouteModel) return;
     if (storage.activeConversationId) return;
 
     const sortedConversations = [...storage.index].sort((left, right) => right.updatedAt - left.updatedAt);
@@ -297,7 +306,7 @@ export default function HomeApp({
     activeConversationRef.current = conversation;
     setLastSelectedModel(buildModelSelectionFromConversation(conversation));
     if (isMobile) setSidebarOpen(false);
-  }, [forceNewChat, initialRouteModel, isMobile, lastSelectedModel, launchNewChatRequested, storage]);
+  }, [initialRouteModel, isMobile, lastSelectedModel, launchNewChatRequested, routeForceNewChat, storage]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
@@ -498,7 +507,7 @@ export default function HomeApp({
   }, [applyVerifiedParamsForModel, interruptActiveGeneration, isMobile, lastSelectedModel, storage, worker.status]);
 
   useEffect(() => {
-    if (!forceNewChat) return;
+    if (!routeForceNewChat) return;
     if (!initialRouteModel || !initialRouteModelKey) return;
     if (!storage.ready) return;
 
@@ -513,17 +522,17 @@ export default function HomeApp({
     createNewConversation(initialRouteModel);
   }, [
     createNewConversation,
-    forceNewChat,
     initialRouteModel,
     initialRouteModelKey,
     launchNewChatRequested,
+    routeForceNewChat,
     storage.ready,
   ]);
 
   useEffect(() => {
     if (!storage.ready) return;
     if (launchNewChatRequested !== true) return;
-    if (forceNewChat && initialRouteModel) return;
+    if (routeForceNewChat && initialRouteModel) return;
     if (launchNewChatHandledRef.current) return;
 
     launchNewChatHandledRef.current = true;
@@ -533,9 +542,9 @@ export default function HomeApp({
     setLaunchNewChatRequested(false);
   }, [
     createNewConversation,
-    forceNewChat,
     initialRouteModel,
     launchNewChatRequested,
+    routeForceNewChat,
     storage.activeConversation,
     storage.ready,
   ]);
@@ -544,7 +553,7 @@ export default function HomeApp({
     if (!storage.ready) return;
     if (launchNewChatRequested !== false) return;
     if (
-      forceNewChat &&
+      routeForceNewChat &&
       initialRouteModelKey &&
       modelRouteChatHandledRef.current !== initialRouteModelKey
     ) {
@@ -560,9 +569,9 @@ export default function HomeApp({
     syncUrlToModel(activeModel.id);
   }, [
     activeModel,
-    forceNewChat,
     initialRouteModelKey,
     launchNewChatRequested,
+    routeForceNewChat,
     storage.ready,
   ]);
 

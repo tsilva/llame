@@ -13,7 +13,7 @@
 
 ## Overview
 
-**The Punchline:** llame is a fully client-side chat app for running ONNX language and vision-language models in the browser. It uses [Transformers.js](https://huggingface.co/docs/transformers.js), WebGPU when available, and WASM as a fallback.
+**The Punchline:** llame is a fully client-side chat app for running ONNX language and vision-language models in the browser. It uses [Transformers.js](https://huggingface.co/docs/transformers.js) with WebGPU acceleration.
 
 **The Pain:** local LLM tools usually ask users to install Python, CUDA, model runners, or API keys before they can try a model privately.
 
@@ -26,7 +26,7 @@
 | Fact | Value |
 |------|-------|
 | Architecture | Static, fully client-side app |
-| Runtime | WebGPU fp16/q4f16 / WASM q4 |
+| Runtime | WebGPU fp16/q4f16 |
 | Curated presets | 5 browser-ready model presets |
 | Default model download | ~850MB |
 
@@ -35,7 +35,7 @@
 ## Features
 
 - **Private browser inference** - prompts and generations run locally in a dedicated Web Worker.
-- **WebGPU-first runtime** - uses accelerated browser GPU execution when available and switches to WASM when needed.
+- **WebGPU runtime** - uses accelerated browser GPU execution for local inference.
 - **Curated model presets** - ships with revision-pinned Qwen3.5, Gemma 4, and SmolLM3 ONNX presets.
 - **Hugging Face model browser** - searches browser-ready ONNX chat and vision models, then filters by compatibility signals.
 - **Streaming chat workspace** - streams tokens, tokens-per-second, stop reasons, and model loading progress.
@@ -106,16 +106,18 @@ llame ships with curated, revision-pinned presets from `src/lib/constants.ts`.
 
 Models in `src/config/verifiedModels.ts` are marked as verified after personal testing and can define model-specific sampling defaults. Search results from the model browser are best-effort and may still fail depending on browser support, repo packaging, and device limits.
 
+Curated presets are pinned to known Hugging Face revisions. Experimental models discovered through search are third-party artifacts loaded directly from Hugging Face into the browser; llame validates model IDs/revisions and keeps inference local, but it does not audit arbitrary model repositories.
+
 ## Requirements
 
-| Requirement | WebGPU path | WASM path |
+| Requirement | WebGPU path |
 |-------------|-------------|-----------|
 | Browser | Chrome 113+ or Edge 113+ | Modern browsers |
 | GPU memory | 2GB+ recommended | Not required |
 | System memory | 4GB+ recommended | 4GB+ recommended |
 | Precision policy | fp16 / q4f16 by model | q4 fallback |
 
-WebGPU support is detected on load. When unavailable, llame switches to WASM and prefers the smaller text-only fallback model.
+WebGPU support is detected on load. When unavailable, llame shows that local inference requires a WebGPU-capable browser.
 
 ## Architecture
 
@@ -152,10 +154,9 @@ Production hosting must keep the cross-origin isolation headers needed by ONNX R
 
 - `Cross-Origin-Embedder-Policy: credentialless`
 - `Cross-Origin-Opener-Policy: same-origin`
-- a CSP that allows same-origin workers/WASM plus Hugging Face model downloads
+- a CSP that allows same-origin workers plus Hugging Face model downloads
 - standard referrer, content type, and permissions policies
 
-ONNX Runtime WASM bootstrap files are served from `public/onnxruntime/`, so production does not depend on a third-party CDN for those runtime assets.
 
 ## Environment Variables
 
@@ -193,6 +194,8 @@ llame is designed so prompts, generated text, conversations, and image attachmen
 
 Optional analytics and error reporting are production-gated. Sentry is configured with `sendDefaultPii: false`, removes request bodies, and scrubs fields named like prompts, outputs, conversations, messages, images, and attachments before events are sent.
 
+Generated model output is rendered through React and Markdown with unsafe link protocols and inline Markdown images disabled. Uploaded vision inputs are limited to bounded raster images, compressed in-browser, and stored only in IndexedDB as part of local conversations.
+
 ## Custom ONNX Conversion
 
 The repo includes Qwen3.5 multimodal export tooling in `tools/onnx/` for building Transformers.js-style ONNX packages compatible with llame.
@@ -216,7 +219,7 @@ See `tools/onnx/README.md` for scope, optional flags, and packaging details.
 - [TypeScript](https://www.typescriptlang.org/) - typed worker protocol and app data model.
 - [Tailwind CSS 4](https://tailwindcss.com/) - dark interface styling and responsive layout.
 - [Transformers.js](https://huggingface.co/docs/transformers.js) - tokenizer, processor, and ONNX model loading in the browser.
-- [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) - WebGPU and WASM execution through Transformers.js.
+- [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) - WebGPU execution through Transformers.js.
 - [Vitest](https://vitest.dev/) and [Playwright](https://playwright.dev/) - unit, component, and browser-level checks.
 - [Sentry](https://sentry.io/) and [Vercel Analytics](https://vercel.com/docs/analytics) - optional production observability.
 

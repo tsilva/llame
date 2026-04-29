@@ -10,7 +10,7 @@ import {
   PreTrainedModel,
   RawImage,
 } from "@huggingface/transformers";
-import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason } from "@/types";
+import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason, InferenceDevice } from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 import { buildFallbackTextPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
@@ -19,43 +19,14 @@ import { ThinkingParser } from "@/lib/thinkingParser";
 import { GeneratedTextSanitizer } from "@/lib/generatedTextSanitizer";
 import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
-import { getOnnxWasmAssetBaseUrl } from "@/lib/workerBootstrap";
-
+import {
+  sanitizeGenerationParams,
+  sanitizeWorkerMessages,
+  validateModelSelection,
+} from "@/lib/workerRequestValidation";
+import { ACCEPTED_IMAGE_MIME_TYPES, MAX_COMPRESSED_IMAGE_BYTES } from "@/lib/imageUtils";
 env.allowLocalModels = false;
 env.logLevel = 40;
-
-type OnnxBackendEnvironment = {
-  wasm?: {
-    numThreads?: number;
-    wasmPaths?:
-      | string
-      | {
-          mjs: string;
-          wasm: string;
-        };
-  };
-};
-
-function configureOnnxWasmPaths() {
-  const onnxBackend = env.backends.onnx as OnnxBackendEnvironment | undefined;
-  if (!onnxBackend?.wasm) {
-    return;
-  }
-
-  const assetBaseUrl = getOnnxWasmAssetBaseUrl(self.location);
-  if (!assetBaseUrl) {
-    return;
-  }
-
-  // The worker bundle itself is loaded via a blob URL in production, which makes
-  // ORT/Transformers.js fall back to a blob-based module preload path. Forcing a
-  // same-origin prefix and single-threaded init avoids that bootstrap path.
-  env.useWasmCache = false;
-  onnxBackend.wasm.numThreads = 1;
-  onnxBackend.wasm.wasmPaths = assetBaseUrl;
-}
-
-configureOnnxWasmPaths();
 
 env.fetch = async (input, init) => {
   const requestLike = input as { url?: string; toString(): string };
@@ -96,7 +67,7 @@ let processor: any = null;
 let model: PreTrainedModel | null = null;
 let currentModelId: string | null = null;
 let currentRevision: string | null = null;
-let currentDevice: "webgpu" | "wasm" | null = null;
+let currentDevice: InferenceDevice | null = null;
 let currentPrecision: string | null = null;
 let currentSupportsImages = false;
 let shouldInterrupt = false;
@@ -157,12 +128,15 @@ function promptEndsWithThinkingTag(prompt: string) {
 }
 
 async function resolveImageInput(source: string) {
-  const dataUrlBlob = dataUrlToBlob(source);
+  const dataUrlBlob = dataUrlToBlob(source, {
+    allowedMimeTypes: ACCEPTED_IMAGE_MIME_TYPES,
+    maxBytes: MAX_COMPRESSED_IMAGE_BYTES,
+  });
   if (dataUrlBlob) {
     return RawImage.fromBlob(dataUrlBlob);
   }
 
-  return RawImage.fromURL(source);
+  throw new Error("Unsupported image payload");
 }
 
 async function dispose() {
@@ -191,7 +165,7 @@ async function loadConfig(modelId: string, revision: string | null) {
   return withRetry(() => AutoConfig.from_pretrained(modelId, revision ? { revision } : undefined), 3);
 }
 
-async function loadModel(modelId: string, revision: string | null, device: "webgpu" | "wasm") {
+async function loadModel(modelId: string, revision: string | null, device: InferenceDevice) {
   if (
     currentModelId === modelId &&
     currentDevice === device &&
@@ -268,7 +242,7 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
             vision_encoder: "fp16",
             decoder_model_merged: "q4f16",
           }
-        : pickDtypeForModel(modelId, device);
+        : pickDtypeForModel(modelId);
       currentPrecision = typeof dtype === "string" ? dtype : "q4f16+fp16";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {
@@ -282,7 +256,7 @@ async function loadModel(modelId: string, revision: string | null, device: "webg
 
       post({ status: "loading", message: "Loading model..." });
 
-      const dtype = pickDtypeForModel(modelId, device);
+      const dtype = pickDtypeForModel(modelId);
       currentPrecision = dtype;
 
       model = await AutoModelForCausalLM.from_pretrained(modelId, {
@@ -516,11 +490,37 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
   const data = event.data;
 
   switch (data.type) {
-    case "load":
-      await loadModel(data.modelId, data.revision ?? null, data.device);
+    case "load": {
+      try {
+        const selection = validateModelSelection(data.modelId, data.revision ?? null, data.device);
+        await loadModel(selection.id, selection.revision ?? null, selection.device);
+      } catch (error) {
+        post({
+          status: "error",
+          error: getErrorMessage(error),
+          code: "UNSUPPORTED_MODEL",
+          stage: "load",
+          modelId: typeof data.modelId === "string" ? data.modelId : null,
+          revision: typeof data.revision === "string" ? data.revision : null,
+          device: data.device === "webgpu" ? data.device : null,
+        });
+      }
       break;
+    }
     case "generate":
-      await generate(data.messages, data.params);
+      try {
+        await generate(sanitizeWorkerMessages(data.messages), sanitizeGenerationParams(data.params));
+      } catch (error) {
+        post({
+          status: "error",
+          error: getErrorMessage(error),
+          code: "GENERATION_ERROR",
+          stage: "generate",
+          modelId: currentModelId,
+          revision: currentRevision,
+          device: currentDevice,
+        });
+      }
       break;
     case "interrupt":
       shouldInterrupt = true;

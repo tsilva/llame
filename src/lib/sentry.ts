@@ -1,4 +1,4 @@
-import type { ErrorEvent } from "@sentry/nextjs";
+import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
 const DEV_ENABLE_FLAG = "NEXT_PUBLIC_SENTRY_ENABLED";
 const TRACE_SAMPLE_RATE_FLAG = "NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE";
@@ -9,6 +9,7 @@ const DEFAULT_ENVIRONMENT =
   "development";
 const DEFAULT_PRODUCTION_TRACES_SAMPLE_RATE = 0.1;
 const SENSITIVE_FIELD_PATTERN = /(prompt|output|image|attachment|conversation|messages?)/i;
+const NETWORK_BREADCRUMB_CATEGORIES = new Set(["fetch", "xhr"]);
 
 function getSentryDsn() {
   return process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -27,6 +28,33 @@ function scrubSensitiveFields(value: unknown, depth = 0) {
 
     scrubSensitiveFields(nestedValue, depth + 1);
   }
+}
+
+function stripUrlDetails(value: string) {
+  try {
+    const url = new URL(value, "https://llame.invalid");
+    return value.startsWith("/")
+      ? url.pathname
+      : `${url.origin}${url.pathname}`;
+  } catch {
+    return "[scrubbed-url]";
+  }
+}
+
+function scrubBreadcrumb(breadcrumb: Breadcrumb) {
+  if (!breadcrumb.data || !NETWORK_BREADCRUMB_CATEGORIES.has(breadcrumb.category ?? "")) {
+    return breadcrumb;
+  }
+
+  const nextData = { ...breadcrumb.data };
+  if (typeof nextData.url === "string") {
+    nextData.url = stripUrlDetails(nextData.url);
+  }
+
+  return {
+    ...breadcrumb,
+    data: nextData,
+  };
 }
 
 export function isSentryEnabled() {
@@ -67,6 +95,7 @@ export function getSentryBaseConfig() {
 
       return event;
     },
+    beforeBreadcrumb: scrubBreadcrumb,
   };
 }
 

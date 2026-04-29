@@ -102,7 +102,7 @@ export function useStorage() {
 
   const reportStorageError = useCallback((error: StorageErrorState, context: Record<string, string | number | boolean | null | undefined> = {}) => {
     setStorageError(error);
-    captureTelemetryError(error.message, {
+    captureTelemetryError("storage_error", {
       ...context,
       storage_code: error.code,
     });
@@ -124,9 +124,7 @@ export function useStorage() {
           : current
       ));
     } catch (error) {
-      reportStorageError(error as StorageErrorState, {
-        conversation_id: conversation.id,
-      });
+      reportStorageError(error as StorageErrorState);
     }
   }, [refreshStats, reportStorageError]);
 
@@ -228,7 +226,7 @@ export function useStorage() {
         setActiveConvState(conversation);
         storage.setPersistedActiveConversationId(id);
       } catch (error) {
-        reportStorageError(error as StorageErrorState, { conversation_id: id });
+        reportStorageError(error as StorageErrorState);
       }
     })();
   }, [flushPendingSave, reportStorageError]);
@@ -344,7 +342,7 @@ export function useStorage() {
       void refreshStats(nextIndexWithoutDrafts);
 
       void storage.deleteConversations([id, ...draftIdsToDelete]).catch((error) => {
-        reportStorageError(error as StorageErrorState, { conversation_id: id });
+        reportStorageError(error as StorageErrorState);
       });
       return;
     }
@@ -354,7 +352,7 @@ export function useStorage() {
     void refreshStats(nextIndex);
 
     void storage.deleteConversation(id).catch((error) => {
-      reportStorageError(error as StorageErrorState, { conversation_id: id });
+      reportStorageError(error as StorageErrorState);
     });
   }, [activeConversation, persistConversation, refreshStats, reportStorageError]);
 

@@ -1,3 +1,23 @@
+import { dataUrlToBlob } from "@/lib/dataUrl";
+
+export const ACCEPTED_IMAGE_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+export const MAX_IMAGE_FILE_BYTES = 8 * 1024 * 1024;
+export const MAX_COMPRESSED_IMAGE_BYTES = 512 * 1024;
+export const MAX_PENDING_IMAGES = 5;
+
+export function isAcceptedImageMimeType(type: string) {
+  return ACCEPTED_IMAGE_MIME_TYPES.includes(type.toLowerCase() as typeof ACCEPTED_IMAGE_MIME_TYPES[number]);
+}
+
+export function isAcceptedImageFile(file: File) {
+  return isAcceptedImageMimeType(file.type) && file.size > 0 && file.size <= MAX_IMAGE_FILE_BYTES;
+}
+
 export async function compressImage(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -23,19 +43,22 @@ export async function compressImage(dataUrl: string): Promise<string> {
 
       // Try JPEG at decreasing quality levels
       const qualities = [0.8, 0.7, 0.5, 0.3];
-      const maxBytes = 200 * 1024;
 
       for (const quality of qualities) {
         const result = canvas.toDataURL("image/jpeg", quality);
-        if (result.length < maxBytes || quality === qualities[qualities.length - 1]) {
+        const blob = dataUrlToBlob(result, {
+          allowedMimeTypes: ACCEPTED_IMAGE_MIME_TYPES,
+          maxBytes: MAX_COMPRESSED_IMAGE_BYTES,
+        });
+        if (blob) {
           resolve(result);
           return;
         }
       }
 
-      resolve(canvas.toDataURL("image/jpeg", 0.3));
+      resolve("");
     };
-    img.onerror = () => resolve(dataUrl); // fallback to original on error
+    img.onerror = () => resolve("");
     img.src = dataUrl;
   });
 }

@@ -18,6 +18,7 @@ export interface GenerationStats {
 }
 
 export type ModelSupportTier = "curated" | "experimental";
+export type InferenceDevice = "webgpu";
 
 export interface ModelSelection {
   id: string;

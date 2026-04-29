@@ -17,6 +17,25 @@ interface MarkdownRendererProps {
   muted?: boolean;
 }
 
+const SAFE_MARKDOWN_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
+
+export function sanitizeMarkdownUrl(url: string | null | undefined) {
+  if (!url) return null;
+
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return null;
+
+  try {
+    const parsedUrl = new URL(trimmedUrl, "https://llame.local");
+    if (!SAFE_MARKDOWN_PROTOCOLS.has(parsedUrl.protocol)) {
+      return null;
+    }
+    return trimmedUrl;
+  } catch {
+    return null;
+  }
+}
+
 function getTextContent(node: React.ReactNode): string {
   if (typeof node === "string" || typeof node === "number") {
     return String(node);
@@ -80,9 +99,14 @@ const components: Components = {
     </code>
   ),
   pre: ({ children }) => <PreBlock>{children}</PreBlock>,
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-  ),
+  a: ({ href, children }) => {
+    const safeHref = sanitizeMarkdownUrl(href);
+    if (!safeHref) {
+      return <span>{children}</span>;
+    }
+    return <a href={safeHref} target="_blank" rel="noopener noreferrer">{children}</a>;
+  },
+  img: () => null,
   table: ({ children }) => (
     <div className="overflow-x-auto my-4">
       <table className="min-w-full border-collapse border border-white/[0.08] rounded-lg">{children}</table>
@@ -97,6 +121,7 @@ export function MarkdownRenderer({ content, isStreaming, muted }: MarkdownRender
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={components}
+        urlTransform={(url) => sanitizeMarkdownUrl(url) ?? ""}
       >
         {content}
       </ReactMarkdown>

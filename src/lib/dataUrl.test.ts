@@ -22,4 +22,20 @@ describe("dataUrlToBlob", () => {
     expect(dataUrlToBlob("https://example.com/image.png")).toBeNull();
     expect(dataUrlToBlob("data:image/png;base64,%%%")).toBeNull();
   });
+
+  it("enforces allowed MIME types and decoded size limits when requested", () => {
+    expect(dataUrlToBlob("data:image/svg+xml;base64,PHN2Zz4=", {
+      allowedMimeTypes: ["image/png"],
+    })).toBeNull();
+
+    expect(dataUrlToBlob("data:image/png;base64,SGVsbG8=", {
+      allowedMimeTypes: ["image/png"],
+      maxBytes: 4,
+    })).toBeNull();
+
+    expect(dataUrlToBlob("data:image/png;base64,SGVsbG8=", {
+      allowedMimeTypes: ["image/png"],
+      maxBytes: 5,
+    })).not.toBeNull();
+  });
 });

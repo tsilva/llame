@@ -14,7 +14,11 @@ import { ChatMessage as ChatMessageType, GenerationStopReason, ProgressInfo, Tot
 import { getModelDisplayName } from "@/lib/constants";
 import { siteDescription } from "@/lib/siteMetadata";
 import { ModelLoadingCard } from "./ModelLoadingCard";
-import { compressImage } from "@/lib/imageUtils";
+import {
+  MAX_PENDING_IMAGES,
+  compressImage,
+  isAcceptedImageFile,
+} from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
 
 interface ChatInterfaceProps {
@@ -198,12 +202,16 @@ export function ChatInterface({
   };
 
   const processFile = async (file: File): Promise<PendingImage | null> => {
-    if (!file.type.startsWith("image/")) return null;
+    if (!isAcceptedImageFile(file)) return null;
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const rawDataUrl = e.target?.result as string;
         const dataUrl = await compressImage(rawDataUrl);
+        if (!dataUrl) {
+          resolve(null);
+          return;
+        }
         resolve({
           id: Math.random().toString(36).substring(7),
           dataUrl,
@@ -222,7 +230,7 @@ export function ChatInterface({
     const files = Array.from(e.target.files || []);
     const newImages = await Promise.all(files.map(processFile));
     setPendingImages((prev) =>
-      [...prev, ...(newImages.filter(Boolean) as PendingImage[])].slice(0, 5)
+      [...prev, ...(newImages.filter(Boolean) as PendingImage[])].slice(0, MAX_PENDING_IMAGES)
     );
     e.target.value = "";
   };
@@ -246,7 +254,7 @@ export function ChatInterface({
     const files = Array.from(e.dataTransfer.files);
     const newImages = await Promise.all(files.map(processFile));
     setPendingImages((prev) =>
-      [...prev, ...(newImages.filter(Boolean) as PendingImage[])].slice(0, 5)
+      [...prev, ...(newImages.filter(Boolean) as PendingImage[])].slice(0, MAX_PENDING_IMAGES)
     );
   };
 
@@ -424,7 +432,7 @@ export function ChatInterface({
             {allowImageInputs && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={needsLoad || activePendingImages.length >= 5 || isGenerating}
+                disabled={needsLoad || activePendingImages.length >= MAX_PENDING_IMAGES || isGenerating}
                 className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
                 title={needsLoad ? "Load model first to use images" : "Upload images"}
                 aria-label="Upload images"

@@ -99,6 +99,22 @@ export interface TotalProgressInfo {
   total: number;
 }
 
+export interface TokenizationRequestItem {
+  id: string;
+  text: string;
+}
+
+export interface TokenizedToken {
+  index: number;
+  id: number;
+  text: string;
+}
+
+export interface TokenizationResultItem {
+  id: string;
+  tokens: TokenizedToken[];
+}
+
 export interface AdapterInfo {
   vendor: string;
   architecture: string;
@@ -139,6 +155,8 @@ export type WorkerResponse =
   | { status: "processing"; message: string }
   | { status: "generating" }
   | { status: "prompt"; inputText: string }
+  | { status: "tokenized"; requestId: string; items: TokenizationResultItem[] }
+  | { status: "tokenization_error"; requestId: string; error: string }
   | { status: "raw_update"; token: string }
   | { status: "update"; token: string; tps: number; numTokens: number; inputTokens?: number; isThinking?: boolean }
   | { status: "thinking_complete"; thinking: string }
@@ -158,5 +176,6 @@ export type WorkerResponse =
 export type WorkerRequest =
   | { type: "load"; modelId: string; revision?: string | null; device: InferenceDevice }
   | { type: "generate"; messages: ChatMessage[]; params: GenerationParams }
+  | { type: "tokenize"; requestId: string; items: TokenizationRequestItem[] }
   | { type: "interrupt" }
   | { type: "reset" };

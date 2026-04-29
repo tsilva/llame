@@ -37,6 +37,7 @@ pnpm test     # run unit tests
 - Models are downloaded from Hugging Face into the browser.
 - Browser-tested model status lives in `src/config/verifiedModels.ts`; models that load and answer plausibly are marked verified, while known failing presets are marked broken with a reason.
 - WebGPU is the supported inference device.
+- Tokenization view can colorize the prompt input and visible chat messages after the selected model is loaded, using that model's tokenizer in the inference worker.
 - Conversations, including uploaded images, are stored in IndexedDB, with `llame-` localStorage keys for settings and migration state.
 - The Vercel deployment serves a static export with COOP/COEP and CSP headers for browser inference.
 

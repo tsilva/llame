@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSupportedImageDataUrl,
   sanitizeGenerationParams,
+  sanitizeTokenizationItems,
   sanitizeWorkerMessages,
   validateModelSelection,
 } from "@/lib/workerRequestValidation";
@@ -72,6 +73,19 @@ describe("sanitizeWorkerMessages", () => {
     expect(() => sanitizeWorkerMessages([{ role: "tool", content: "" }])).toThrow("Invalid message role.");
     expect(() => sanitizeWorkerMessages(new Array(101).fill({ role: "user", content: "x" }))).toThrow("Invalid message list.");
     expect(() => sanitizeWorkerMessages([{ role: "user", content: "", images: ["https://example.com/x.png"] }])).toThrow("Unsupported image payload.");
+  });
+});
+
+describe("sanitizeTokenizationItems", () => {
+  it("keeps tokenization ids and multiline text", () => {
+    expect(sanitizeTokenizationItems([{ id: "input", text: "hello\nworld", extra: true }])).toEqual([
+      { id: "input", text: "hello\nworld" },
+    ]);
+  });
+
+  it("rejects invalid tokenization items", () => {
+    expect(() => sanitizeTokenizationItems([{ id: "", text: "hello" }])).toThrow("Invalid tokenization item id.");
+    expect(() => sanitizeTokenizationItems([{ id: "input", text: 123 }])).toThrow("Invalid tokenization item text.");
   });
 });
 

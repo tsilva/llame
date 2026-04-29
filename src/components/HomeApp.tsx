@@ -30,7 +30,7 @@ import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Sidebar } from "@/components/Sidebar";
-import { PanelLeft, Github, X, Code2 } from "lucide-react";
+import { PanelLeft, Github, X, Code2, ScanText } from "lucide-react";
 
 const SettingsModal = dynamic(
   () => import("@/components/SettingsModal").then((mod) => mod.SettingsModal),
@@ -195,6 +195,7 @@ export default function HomeApp({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
   const [showRawConversation, setShowRawConversation] = useState(false);
+  const [showTokenization, setShowTokenization] = useState(false);
   const [thinkingComplete, setThinkingComplete] = useState(false);
 
   const streamingContentRef = useRef("");
@@ -256,6 +257,11 @@ export default function HomeApp({
     if (savedRawView !== null) {
       setShowRawConversation(savedRawView === "true");
     }
+
+    const savedTokenization = localStorage.getItem("llame-tokenization-enabled");
+    if (savedTokenization !== null) {
+      setShowTokenization(savedTokenization === "true");
+    }
   }, []);
 
   useEffect(() => {
@@ -265,6 +271,10 @@ export default function HomeApp({
   useEffect(() => {
     localStorage.setItem("llame-raw-conversation", showRawConversation.toString());
   }, [showRawConversation]);
+
+  useEffect(() => {
+    localStorage.setItem("llame-tokenization-enabled", showTokenization.toString());
+  }, [showTokenization]);
 
   useEffect(() => {
     activeConversationIdRef.current = storage.activeConversationId;
@@ -877,6 +887,7 @@ export default function HomeApp({
   const isProcessing = worker.status === "processing";
   const isGenerating = worker.status === "generating";
   const isModelLoaded = worker.status === "loaded" || worker.status === "generating";
+  const canRequestTokenization = worker.status === "loaded";
   const loadedActiveModel =
     worker.loadedModel === activeModel.id &&
     (worker.loadedRevision ?? null) === (activeModel.revision ?? null);
@@ -951,6 +962,23 @@ export default function HomeApp({
                 {worker.tps.toFixed(1)} t/s
               </span>
             )}
+            <button
+              onClick={() => setShowTokenization((current) => !current)}
+              disabled={!isModelLoaded}
+              className={`rounded-full p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                showTokenization
+                  ? "bg-[#2f2f2f] text-[#10a37f]"
+                  : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
+              }`}
+              aria-label={showTokenization ? "Disable tokenization view" : "Enable tokenization view"}
+              title={!isModelLoaded
+                ? "Load a model to show tokenization"
+                : showTokenization
+                  ? "Disable tokenization view"
+                  : "Enable tokenization view"}
+            >
+              <ScanText size={18} />
+            </button>
             <button
               onClick={() => setShowRawConversation((current) => !current)}
               className={`rounded-full p-2 transition-colors ${
@@ -1093,6 +1121,9 @@ export default function HomeApp({
           showThinkingToggle={showThinkingToggle}
           onToggleThinking={handleToggleThinking}
           showRawConversation={showRawConversation}
+          showTokenization={showTokenization && isModelLoaded}
+          canRequestTokenization={canRequestTokenization}
+          tokenize={worker.tokenize}
           onRegenerateLastAssistant={handleRegenerateLastAssistant}
           onDeleteLastMessage={handleDeleteLastMessage}
           onEditLastMessage={handleEditLastMessage}

@@ -5,9 +5,11 @@ import {
   ChatMessage as ChatMessageType,
   GenerationStats,
   GenerationStopReason,
+  TokenizedToken,
 } from "@/types";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { TokenizedText } from "./TokenizedText";
 import { Check, Pencil, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 
 const MESSAGE_ACTION_ICON_SIZE = 16;
@@ -22,6 +24,8 @@ interface ChatMessageProps {
   generationTime?: number;
   stopReason?: GenerationStopReason | null;
   showRaw?: boolean;
+  showTokenization?: boolean;
+  tokenizedTokens?: TokenizedToken[];
   showActions?: boolean;
   showEditAction?: boolean;
   onRegenerate?: () => void;
@@ -39,6 +43,8 @@ export function ChatMessage({
   generationTime,
   stopReason,
   showRaw,
+  showTokenization,
+  tokenizedTokens,
   showActions,
   showEditAction,
   onRegenerate,
@@ -143,7 +149,11 @@ export function ChatMessage({
               editForm
             ) : (
               <div className="rounded-3xl bg-[#2f2f2f] px-5 py-3 text-sm leading-relaxed text-[#ececec] whitespace-pre-wrap break-words">
-                {message.content}
+                {showTokenization ? (
+                  <TokenizedText text={message.content} tokens={tokenizedTokens} />
+                ) : (
+                  message.content
+                )}
               </div>
             )}
             {!isEditing && (showActions || canEditMessage) ? (
@@ -187,6 +197,10 @@ export function ChatMessage({
         {/* Content */}
         {isEditing ? (
           editForm
+        ) : showTokenization ? (
+          <div className="text-sm leading-relaxed text-[#ececec]">
+            <TokenizedText text={message.content} tokens={tokenizedTokens} />
+          </div>
         ) : (
           <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
         )}

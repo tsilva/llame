@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeApp from "@/components/HomeApp";
 import { useInferenceWorker } from "@/hooks/useInferenceWorker";
@@ -178,8 +178,68 @@ describe("HomeApp", () => {
       onCompleteRef: { current: null },
       loadModel: vi.fn(),
       generate: vi.fn(),
+      tokenize: vi.fn(),
       interrupt: vi.fn(),
       reset: vi.fn(),
+    });
+  });
+
+  it("persists the tokenization view toggle", async () => {
+    const conversation = buildConversation();
+
+    mockedUseInferenceWorker.mockReturnValue({
+      status: "loaded",
+      error: null,
+      loadedModel: conversation.modelId,
+      loadedRevision: conversation.modelRevision ?? null,
+      loadedDevice: "webgpu",
+      loadedPrecision: "fp16",
+      loadedSupportsImages: false,
+      loadedInteractionMode: "chat",
+      progress: null,
+      totalProgress: null,
+      loadingMessage: "",
+      processingMessage: "",
+      tps: 0,
+      numTokens: 0,
+      onPromptRef: { current: null },
+      onRawTokenRef: { current: null },
+      onTokenRef: { current: null },
+      onThinkingCompleteRef: { current: null },
+      onCompleteRef: { current: null },
+      loadModel: vi.fn(),
+      generate: vi.fn(),
+      tokenize: vi.fn(),
+      interrupt: vi.fn(),
+      reset: vi.fn(),
+    });
+    mockedUseStorage.mockReturnValue({
+      index: [buildConversationMeta(conversation)],
+      activeConversation: conversation,
+      activeConversationId: conversation.id,
+      setActiveConversation: vi.fn(),
+      createConversation: vi.fn(),
+      updateConversation: vi.fn(),
+      deleteConversation: vi.fn(),
+      clearOldChats: vi.fn(),
+      clearAllChats: vi.fn(),
+      dismissStorageError: vi.fn(),
+      storageStats: {
+        usedBytes: 0,
+        quotaBytes: 1024,
+        conversationCount: 1,
+      },
+      storageError: null,
+      ready: true,
+      flushPendingSave: vi.fn(),
+    });
+
+    render(<HomeApp />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable tokenization view" }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("llame-tokenization-enabled")).toBe("true");
     });
   });
 
@@ -428,6 +488,7 @@ describe("HomeApp", () => {
       onCompleteRef: { current: null },
       loadModel: vi.fn(),
       generate,
+      tokenize: vi.fn(),
       interrupt: vi.fn(),
       reset: vi.fn(),
     });
@@ -642,6 +703,7 @@ describe("HomeApp", () => {
       onCompleteRef: { current: null },
       loadModel: vi.fn(),
       generate,
+      tokenize: vi.fn(),
       interrupt: vi.fn(),
       reset: vi.fn(),
     });
@@ -877,6 +939,7 @@ describe("HomeApp", () => {
       onCompleteRef,
       loadModel: vi.fn(),
       generate: vi.fn(),
+      tokenize: vi.fn(),
       interrupt: vi.fn(),
       reset: vi.fn(),
     });

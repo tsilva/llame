@@ -6,11 +6,21 @@ import {
   useEffect,
   useLayoutEffect,
   useState,
+  useMemo,
   KeyboardEvent,
   DragEvent,
   ChangeEvent,
 } from "react";
-import { ChatMessage as ChatMessageType, GenerationStopReason, ModelInteractionMode, ProgressInfo, TotalProgressInfo } from "@/types";
+import {
+  ChatMessage as ChatMessageType,
+  GenerationStopReason,
+  ModelInteractionMode,
+  ProgressInfo,
+  TokenizationRequestItem,
+  TokenizationResultItem,
+  TokenizedToken,
+  TotalProgressInfo,
+} from "@/types";
 import { getModelDisplayName } from "@/lib/constants";
 import { siteDescription, siteTagline } from "@/lib/siteMetadata";
 import { ModelLoadingCard } from "./ModelLoadingCard";
@@ -20,6 +30,7 @@ import {
   isAcceptedImageFile,
 } from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
+import { TokenizedTextarea } from "./TokenizedTextarea";
 
 interface ChatInterfaceProps {
   conversationId: string | null;
@@ -48,6 +59,13 @@ interface ChatInterfaceProps {
   showThinkingToggle: boolean;
   onToggleThinking: () => void;
   showRawConversation: boolean;
+  showTokenization: boolean;
+  canRequestTokenization: boolean;
+  tokenize: (
+    items: TokenizationRequestItem[],
+    onTokenized: (items: TokenizationResultItem[]) => void,
+    onError?: (error: string) => void,
+  ) => boolean;
   onRegenerateLastAssistant: () => void;
   onDeleteLastMessage: () => void;
   onEditLastMessage: (content: string) => void;
@@ -89,6 +107,8 @@ const COMPLETION_SUGGESTIONS: Suggestion[] = [
   { text: "In a world where" },
 ];
 
+const INPUT_TOKENIZATION_ID = "__input__";
+
 export function ChatInterface({
   conversationId,
   messages,
@@ -116,6 +136,9 @@ export function ChatInterface({
   showThinkingToggle,
   onToggleThinking,
   showRawConversation,
+  showTokenization,
+  canRequestTokenization,
+  tokenize,
   onRegenerateLastAssistant,
   onDeleteLastMessage,
   onEditLastMessage,
@@ -125,6 +148,10 @@ export function ChatInterface({
   const previousMessageCountRef = useRef(messages.length);
   const previousConversationIdRef = useRef<string | null>(conversationId);
   const [input, setInput] = useState("");
+  const [tokenizedById, setTokenizedById] = useState<Record<string, {
+    text: string;
+    tokens: TokenizedToken[];
+  }>>({});
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [imageSuggestions, setImageSuggestions] = useState<Suggestion[]>(STATIC_SUGGESTIONS);
@@ -156,6 +183,41 @@ export function ChatInterface({
       textareaRef.current.focus();
     }
   }, [isGenerating]);
+
+  const tokenizationItems = useMemo<TokenizationRequestItem[]>(() => {
+    if (!showTokenization) return [];
+
+    return [
+      ...(input.length > 0 ? [{ id: INPUT_TOKENIZATION_ID, text: input }] : []),
+      ...messages
+        .filter((message) => message.content.length > 0)
+        .map((message) => ({ id: message.id, text: message.content })),
+    ];
+  }, [input, messages, showTokenization]);
+
+  useEffect(() => {
+    if (!showTokenization) {
+      return;
+    }
+
+    if (!canRequestTokenization || tokenizationItems.length === 0) return;
+
+    const requestedTextById = new Map(tokenizationItems.map((item) => [item.id, item.text]));
+    const timeoutId = window.setTimeout(() => {
+      tokenize(tokenizationItems, (items) => {
+        setTokenizedById(() => {
+          const next: Record<string, { text: string; tokens: TokenizedToken[] }> = {};
+          for (const item of items) {
+            const text = requestedTextById.get(item.id);
+            if (text !== undefined) next[item.id] = { text, tokens: item.tokens };
+          }
+          return next;
+        });
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [canRequestTokenization, showTokenization, tokenize, tokenizationItems]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -291,6 +353,12 @@ export function ChatInterface({
     ? imageSuggestions
     : imageSuggestions.filter((suggestion) => !suggestion.image);
   const inputLabel = isCompletionMode ? "Prompt" : "Message";
+  const inputTokenization = tokenizedById[INPUT_TOKENIZATION_ID];
+  const inputTokens = inputTokenization?.text === input ? inputTokenization.tokens : undefined;
+  const getMessageTokens = (message: ChatMessageType) => {
+    const tokenized = tokenizedById[message.id];
+    return tokenized?.text === message.content ? tokenized.tokens : undefined;
+  };
 
   return (
     <div
@@ -367,6 +435,8 @@ export function ChatInterface({
                   generationTime={isLastAssistant ? generationTime : undefined}
                   stopReason={isLastAssistant ? stopReason : undefined}
                   showRaw={showRawConversation}
+                  showTokenization={showTokenization && !showRawConversation}
+                  tokenizedTokens={getMessageTokens(msg)}
                   showActions={canActOnLastMessage}
                   showEditAction={canActOnLastMessage}
                   onRegenerate={onRegenerateLastAssistant}
@@ -468,18 +538,18 @@ export function ChatInterface({
               </button>
             )}
 
-            <textarea
-              ref={textareaRef}
+            <TokenizedTextarea
+              textareaRef={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={setInput}
               onKeyDown={handleKeyDown}
               placeholder={
                 needsLoad
                   ? `${inputLabel} (will load ${modelName}...)...`
                   : `${inputLabel}...`
               }
-              rows={1}
-              className="max-h-[200px] flex-1 resize-none self-center bg-transparent text-sm text-[#ececec] placeholder-[#8e8e8e] outline-none"
+              enabled={showTokenization}
+              tokens={inputTokens}
             />
 
             {isGenerating ? (

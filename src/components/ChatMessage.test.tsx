@@ -88,6 +88,26 @@ describe("ChatMessage", () => {
     expect(screen.queryByRole("button", { name: "Delete message" })).not.toBeInTheDocument();
   });
 
+  it("renders plain tokenized assistant text instead of markdown when tokenization is enabled", () => {
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "**Bold** answer",
+        }}
+        showTokenization
+        tokenizedTokens={[
+          { index: 0, id: 1, text: "**Bold**" },
+          { index: 1, id: 2, text: " answer" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("**Bold** answer")).toBeInTheDocument();
+    expect(screen.queryByText("Bold")).not.toBeInTheDocument();
+  });
+
   it("shows generation time and stop reason in assistant stats", () => {
     render(
       <ChatMessage

@@ -12,7 +12,17 @@ import {
   RawImage,
   DataType,
 } from "@huggingface/transformers";
-import { WorkerRequest, WorkerResponse, ChatMessage, GenerationParams, GenerationStopReason, InferenceDevice } from "@/types";
+import {
+  WorkerRequest,
+  WorkerResponse,
+  ChatMessage,
+  GenerationParams,
+  GenerationStopReason,
+  InferenceDevice,
+  TokenizationRequestItem,
+  TokenizationResultItem,
+  TokenizedToken,
+} from "@/types";
 import { getEffectiveThinkingEnabled, getModelThinkingMode, isVlmModel } from "@/lib/constants";
 import { buildChatTemplateMessages, buildTextOnlyModelPrompt, hasTokenizerChatTemplate } from "@/lib/chatPrompt";
 import { dataUrlToBlob } from "@/lib/dataUrl";
@@ -30,6 +40,7 @@ import { withRetry } from "@/lib/network";
 import { classifyWorkerGenerationError, classifyWorkerLoadError } from "@/lib/workerErrors";
 import {
   sanitizeGenerationParams,
+  sanitizeTokenizationItems,
   sanitizeWorkerMessages,
   validateModelSelection,
 } from "@/lib/workerRequestValidation";
@@ -141,6 +152,79 @@ function getErrorMessage(error: unknown): string {
 
 function promptEndsWithThinkingTag(prompt: string) {
   return /(?:<think>|<\|think\|>)\s*$/u.test(prompt);
+}
+
+function tokenIdToNumber(value: unknown): number {
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value);
+  return NaN;
+}
+
+function getTokenizerEncodingOffsets(activeTokenizer: PreTrainedTokenizer, text: string, tokenCount: number) {
+  const tokenizerWithInternals = activeTokenizer as unknown as {
+    _tokenizer?: {
+      encode?: (input: string, options?: { add_special_tokens?: boolean }) => {
+        offsets?: Array<[number, number]>;
+      };
+    };
+  };
+  const offsets = tokenizerWithInternals._tokenizer?.encode?.(text, { add_special_tokens: false }).offsets;
+  if (!Array.isArray(offsets) || offsets.length !== tokenCount) return null;
+  if (!offsets.every((offset) => Array.isArray(offset) && offset.length === 2)) return null;
+  return offsets;
+}
+
+function decodeTokenPieces(activeTokenizer: PreTrainedTokenizer, tokenIds: number[]) {
+  let previous = "";
+  const pieces: string[] = [];
+
+  for (let index = 0; index < tokenIds.length; index += 1) {
+    const decoded = activeTokenizer.decode(tokenIds.slice(0, index + 1), {
+      skip_special_tokens: false,
+      clean_up_tokenization_spaces: false,
+    });
+    pieces.push(decoded.slice(previous.length));
+    previous = decoded;
+  }
+
+  return pieces;
+}
+
+function tokenizeTextForDisplay(activeTokenizer: PreTrainedTokenizer, text: string): TokenizedToken[] {
+  if (!text) return [];
+
+  const encoded = activeTokenizer(text, {
+    return_tensor: false,
+    add_special_tokens: false,
+  });
+  const tokenIds = encoded.input_ids.map(tokenIdToNumber).filter(Number.isFinite);
+  const offsets = getTokenizerEncodingOffsets(activeTokenizer, text, tokenIds.length);
+  const decodedPieces = offsets
+    ? null
+    : decodeTokenPieces(activeTokenizer, tokenIds);
+
+  return tokenIds.map((id, index) => ({
+    index,
+    id,
+    text: offsets
+      ? text.slice(offsets[index][0], offsets[index][1])
+      : decodedPieces?.[index] ?? "",
+  }));
+}
+
+function tokenizeItems(requestId: string, items: TokenizationRequestItem[]) {
+  if (!tokenizer) {
+    post({ status: "tokenization_error", requestId, error: "Tokenizer is not loaded." });
+    return;
+  }
+
+  const tokenizedItems: TokenizationResultItem[] = items.map((item) => ({
+    id: item.id,
+    tokens: tokenizeTextForDisplay(tokenizer!, item.text),
+  }));
+
+  post({ status: "tokenized", requestId, items: tokenizedItems });
 }
 
 async function resolveImageInput(source: string) {
@@ -590,6 +674,17 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
           modelId: currentModelId,
           revision: currentRevision,
           device: currentDevice,
+        });
+      }
+      break;
+    case "tokenize":
+      try {
+        tokenizeItems(data.requestId, sanitizeTokenizationItems(data.items));
+      } catch (error) {
+        post({
+          status: "tokenization_error",
+          requestId: typeof data.requestId === "string" ? data.requestId : "invalid",
+          error: getErrorMessage(error),
         });
       }
       break;

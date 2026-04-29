@@ -1,4 +1,4 @@
-import { ChatMessage, GenerationParams, InferenceDevice, ModelSelection } from "@/types";
+import { ChatMessage, GenerationParams, InferenceDevice, ModelSelection, TokenizationRequestItem } from "@/types";
 import { PARAM_RANGES } from "@/lib/constants";
 import {
   ACCEPTED_IMAGE_MIME_TYPES,
@@ -9,6 +9,7 @@ import { dataUrlToBlob } from "@/lib/dataUrl";
 
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_CONTENT_CHARS = 200_000;
+const MAX_TOKENIZATION_ITEMS = 200;
 const MODEL_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const REVISION_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/u;
 const VALID_ROLES = new Set(["user", "assistant", "system"]);
@@ -127,6 +128,32 @@ export function sanitizeWorkerMessages(value: unknown): ChatMessage[] {
       role: candidate.role as ChatMessage["role"],
       content: candidate.content,
       ...(images && images.length > 0 ? { images } : {}),
+    };
+  });
+}
+
+export function sanitizeTokenizationItems(value: unknown): TokenizationRequestItem[] {
+  if (!Array.isArray(value) || value.length > MAX_TOKENIZATION_ITEMS) {
+    throw new Error("Invalid tokenization item list.");
+  }
+
+  return value.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new Error("Invalid tokenization item.");
+    }
+
+    const candidate = item as Partial<TokenizationRequestItem>;
+    if (typeof candidate.id !== "string" || candidate.id.length === 0) {
+      throw new Error("Invalid tokenization item id.");
+    }
+
+    if (typeof candidate.text !== "string" || candidate.text.length > MAX_MESSAGE_CONTENT_CHARS) {
+      throw new Error("Invalid tokenization item text.");
+    }
+
+    return {
+      id: candidate.id,
+      text: candidate.text,
     };
   });
 }

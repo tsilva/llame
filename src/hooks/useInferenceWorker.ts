@@ -15,6 +15,8 @@ import {
   WorkerErrorStage,
   InferenceDevice,
   ModelInteractionMode,
+  TokenizationRequestItem,
+  TokenizationResultItem,
 } from "@/types";
 import { CONTEXT_WINDOWS } from "@/lib/constants";
 
@@ -70,6 +72,11 @@ interface InferenceState {
 interface UseInferenceWorkerReturn extends InferenceState {
   loadModel: (model: ModelSelection, device: InferenceDevice) => void;
   generate: (messages: ChatMessage[], params: GenerationParams) => void;
+  tokenize: (
+    items: TokenizationRequestItem[],
+    onTokenized: (items: TokenizationResultItem[]) => void,
+    onError?: (error: string) => void,
+  ) => boolean;
   interrupt: () => void;
   reset: () => void;
   onPromptRef: React.MutableRefObject<((inputText: string) => void) | null>;
@@ -110,6 +117,9 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
   const onThinkingCompleteRef = useRef<((thinking: string) => void) | null>(null);
   const onCompleteRef = useRef<((stats: GenerationStats) => void) | null>(null);
   const interruptedRef = useRef(false);
+  const latestTokenizationRequestRef = useRef<string | null>(null);
+  const onTokenizationResultRef = useRef<((items: TokenizationResultItem[]) => void) | null>(null);
+  const onTokenizationErrorRef = useRef<((error: string) => void) | null>(null);
 
   const [state, setState] = useState<InferenceState>(INITIAL_STATE);
 
@@ -170,6 +180,14 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
         }));
       } else if (response.status === "prompt") {
         if (!interruptedRef.current) onPromptRef.current?.(response.inputText);
+      } else if (response.status === "tokenized") {
+        if (latestTokenizationRequestRef.current === response.requestId) {
+          onTokenizationResultRef.current?.(response.items);
+        }
+      } else if (response.status === "tokenization_error") {
+        if (latestTokenizationRequestRef.current === response.requestId) {
+          onTokenizationErrorRef.current?.(response.error);
+        }
       } else if (response.status === "raw_update") {
         if (!interruptedRef.current) onRawTokenRef.current?.(response.token);
       } else if (response.status === "update") {
@@ -305,6 +323,24 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     postMessage({ type: "generate", messages, params });
   }, [postMessage]);
 
+  const tokenize = useCallback((
+    items: TokenizationRequestItem[],
+    onTokenized: (items: TokenizationResultItem[]) => void,
+    onError?: (error: string) => void,
+  ) => {
+    const current = stateRef.current;
+    if (current.status !== "loaded" || current.loadedModel === null || items.length === 0) {
+      return false;
+    }
+
+    const requestId = crypto.randomUUID();
+    latestTokenizationRequestRef.current = requestId;
+    onTokenizationResultRef.current = onTokenized;
+    onTokenizationErrorRef.current = onError ?? null;
+    postMessage({ type: "tokenize", requestId, items });
+    return true;
+  }, [postMessage]);
+
   const interrupt = useCallback(() => {
     interruptedRef.current = true;
     postMessage({ type: "interrupt" });
@@ -338,6 +374,7 @@ export function useInferenceWorker(): UseInferenceWorkerReturn {
     contextWindow,
     loadModel,
     generate,
+    tokenize,
     interrupt,
     reset,
     onPromptRef,

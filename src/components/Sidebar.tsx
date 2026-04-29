@@ -119,18 +119,20 @@ export function Sidebar({
                   {formatDate(conv.updatedAt)}
                 </span>
                 <div className="flex w-6 flex-shrink-0 justify-end">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteConversation(conv.id);
-                    }}
-                    disabled={isGenerating}
-                    className="cursor-pointer rounded p-1 text-[#8e8e8e] opacity-25 transition-all hover:opacity-100 hover:text-red-400 focus-visible:opacity-100 focus-visible:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 md:opacity-20 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                    title="Delete conversation"
-                    aria-label={`Delete conversation ${conv.title}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {conv.messageCount > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteConversation(conv.id);
+                      }}
+                      disabled={isGenerating}
+                      className="cursor-pointer rounded p-1 text-[#8e8e8e] opacity-25 transition-all hover:opacity-100 hover:text-red-400 focus-visible:opacity-100 focus-visible:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 md:opacity-20 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                      title="Delete conversation"
+                      aria-label={`Delete conversation ${conv.title}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))

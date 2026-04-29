@@ -41,10 +41,10 @@ function renderSidebar(conversations: ConversationMeta[], overrides: Partial<Com
 }
 
 describe("Sidebar", () => {
-  it("shows a delete button for an empty draft conversation", () => {
+  it("hides the delete button for an empty draft conversation", () => {
     renderSidebar([buildConversation()]);
 
-    expect(screen.getAllByLabelText("Delete conversation New chat")).not.toHaveLength(0);
+    expect(screen.queryAllByLabelText("Delete conversation New chat")).toHaveLength(0);
   });
 
   it("calls the new chat callback without leaking the click event", () => {

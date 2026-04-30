@@ -5,6 +5,7 @@ import { metadata as chatMetadata } from "@/app/chat/layout";
 import { generateMetadata as generateModelChatMetadata } from "@/app/chat/[...modelSlug]/page";
 import { metadata as homeMetadata } from "@/app/page";
 import sitemap from "@/app/sitemap";
+import { VERIFIED_MODELS } from "@/config/verifiedModels";
 import { MODEL_PRESETS } from "@/lib/constants";
 import { getModelChatPath } from "@/lib/modelRoutes";
 import {
@@ -71,9 +72,7 @@ describe("SEO metadata", () => {
     });
 
     expect(modelMetadata.title).toBe("Chat with Qwen3.5 0.8B locally | llame");
-    expect(modelMetadata.description).toBe(
-      "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
-    );
+    expect(modelMetadata.description).toBe("Chat w/ Qwen3.5 0.8B privately in your browser.");
     expect(modelMetadata.alternates?.canonical).toBe("/chat/onnx-community/Qwen3.5-0.8B-ONNX");
     expect(modelMetadata.robots).toMatchObject({
       index: true,
@@ -81,8 +80,7 @@ describe("SEO metadata", () => {
     });
     expect(modelMetadata.openGraph).toMatchObject({
       title: "Chat with Qwen3.5 0.8B locally | llame",
-      description:
-        "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
+      description: "Chat w/ Qwen3.5 0.8B privately in your browser.",
       url: "/chat/onnx-community/Qwen3.5-0.8B-ONNX",
       images: [
         expect.objectContaining({
@@ -93,8 +91,7 @@ describe("SEO metadata", () => {
     });
     expect(modelMetadata.twitter).toMatchObject({
       title: "Chat with Qwen3.5 0.8B locally | llame",
-      description:
-        "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
+      description: "Chat w/ Qwen3.5 0.8B privately in your browser.",
       images: [socialImage.url],
     });
     expect(modelMetadata.title).not.toBe(chatMetadata.title);
@@ -141,8 +138,12 @@ describe("SEO metadata", () => {
 });
 
 describe("sitemap", () => {
-  it("lists the homepage and every dropdown model route", () => {
+  it("lists the homepage, every dropdown model route, and every verified model route", () => {
     const entries = sitemap();
+    const sitemapModelIds = Array.from(new Set([
+      ...MODEL_PRESETS.map((preset) => preset.id),
+      ...VERIFIED_MODELS.map((model) => model.id),
+    ]));
 
     expect(entries).toEqual([
       {
@@ -151,13 +152,25 @@ describe("sitemap", () => {
         changeFrequency: "weekly",
         priority: 1,
       },
-      ...MODEL_PRESETS.map((preset) => ({
-        url: new URL(getModelChatPath(preset.id), siteUrl).toString(),
+      ...sitemapModelIds.map((modelId) => ({
+        url: new URL(getModelChatPath(modelId), siteUrl).toString(),
         lastModified: expect.any(Date),
         changeFrequency: "weekly",
         priority: 0.8,
       })),
     ]);
-    expect(entries).toHaveLength(MODEL_PRESETS.length + 1);
+    expect(entries).toHaveLength(sitemapModelIds.length + 1);
+  });
+
+  it("keeps every verified model present in the sitemap", () => {
+    const sitemapUrls = new Set(sitemap().map((entry) => entry.url));
+    const missingVerifiedModelRoutes = VERIFIED_MODELS
+      .map((model) => ({
+        id: model.id,
+        url: new URL(getModelChatPath(model.id), siteUrl).toString(),
+      }))
+      .filter((model) => !sitemapUrls.has(model.url));
+
+    expect(missingVerifiedModelRoutes).toEqual([]);
   });
 });

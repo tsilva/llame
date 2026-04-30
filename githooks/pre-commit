@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pnpm run check:verified-model-sitemap

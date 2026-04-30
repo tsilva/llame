@@ -29,11 +29,13 @@ pnpm dev      # start local dev server
 pnpm build    # build static export
 pnpm lint     # run ESLint
 pnpm test     # run unit tests
+pnpm run check:verified-model-sitemap
 ```
 
 ## Notes
 
 - This repo enforces pnpm for installs.
+- `pnpm install` configures the repo-managed pre-commit hook in `githooks/`.
 - Models are downloaded from Hugging Face into the browser.
 - Browser-tested model status lives in `src/config/verifiedModels.ts`; models that load and answer plausibly are marked verified, while known failing presets are marked broken with a reason.
 - WebGPU is the supported inference device.

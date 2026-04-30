@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { BadgeCheck, BadgeX, ChevronDown, Check } from "lucide-react";
-import { getBrokenModel, getVerifiedModel } from "@/config/verifiedModels";
+import { BadgeX, ChevronDown, Check } from "lucide-react";
+import { getBrokenModel } from "@/config/verifiedModels";
 import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS, ModelPreset } from "@/lib/constants";
 import { getModelInteractionLabel } from "@/lib/modelInteraction";
 import { InferenceDevice, ModelInteractionMode, ModelSelection } from "@/types";
@@ -153,7 +153,6 @@ function PresetMenuItem({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const verifiedModel = getVerifiedModel(preset.id);
   const brokenModel = getBrokenModel(preset.id);
 
   return (
@@ -167,15 +166,6 @@ function PresetMenuItem({
       <span className="min-w-0">
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="truncate">{preset.label}</span>
-          {verifiedModel && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-[#10a37f]/30 bg-[#10a37f]/12 px-1.5 py-0.5 text-[10px] font-medium text-[#7ee7c7]"
-              title={verifiedModel.testedUrl ? `Personally tested at ${verifiedModel.testedUrl}` : "Personally tested"}
-            >
-              <BadgeCheck size={10} className="shrink-0" />
-              Verified
-            </span>
-          )}
           {brokenModel && (
             <span
               className="inline-flex items-center gap-1 rounded-full border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-200"

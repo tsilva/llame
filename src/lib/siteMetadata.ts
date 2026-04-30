@@ -77,7 +77,7 @@ export const siteDescription = generatedMetadata.description ?? FALLBACK_SITE_DE
 export const siteTagline = "Private AI chats in your browser";
 export const chatPageTitle = `llame | ${siteTagline}`;
 export const chatPageDescription =
-  `Open llame for ${siteTagline} with local models on your device.`;
+  `${siteTagline} with local models on your device.`;
 
 function normalizeMetadataUrl(value: string | URL): string {
   return value instanceof URL ? value.toString() : value;

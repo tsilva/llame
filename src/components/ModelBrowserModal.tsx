@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BadgeCheck, BadgeX, ExternalLink, Loader2, Search, X } from "lucide-react";
+import { BadgeCheck, BadgeX, ChevronDown, ExternalLink, Loader2, Search, X } from "lucide-react";
 import { getBrokenModel, getVerifiedModel } from "@/config/verifiedModels";
 import { formatDownloadSizeLabel, getModelQuantizationLabel } from "@/lib/constants";
 import { getModelInteractionLabel } from "@/lib/modelInteraction";
@@ -151,17 +151,24 @@ function SelectControl<T extends string>({
       <span className="block text-[11px] font-medium uppercase tracking-[0.16em] text-[#6f6f6f]">
         {label}
       </span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value as T)}
-        className="w-full rounded-xl border border-white/[0.08] bg-[#212121] px-3 py-2.5 text-sm text-[#ececec] outline-none transition-colors focus:border-[#10a37f]/40"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <span className="relative block">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value as T)}
+          className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#212121] py-2.5 pl-3 pr-10 text-sm text-[#ececec] outline-none transition-colors focus:border-[#10a37f]/40"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#c7c7c7]"
+        />
+      </span>
     </label>
   );
 }
@@ -449,7 +456,11 @@ export function ModelBrowserModal({
             return (
               <div
                 key={model.id}
-                className="rounded-xl border border-white/[0.08] bg-[#212121] px-3 py-2.5"
+                className={`rounded-xl border px-3 py-2.5 ${
+                  verifiedModel
+                    ? "border-[#10a37f]/35 bg-[#1d2824]"
+                    : "border-white/[0.08] bg-[#212121]"
+                }`}
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-3">
@@ -464,22 +475,6 @@ export function ModelBrowserModal({
                           <span className="truncate">{model.name}</span>
                           <ExternalLink size={12} className="shrink-0" />
                         </a>
-                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
-                          {quantizationLabel}
-                        </span>
-                        {parameterCountLabel && (
-                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
-                            {parameterCountLabel}
-                          </span>
-                        )}
-                        {downloadSizeLabel && (
-                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
-                            {downloadSizeLabel}
-                          </span>
-                        )}
-                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
-                          {interactionLabel}
-                        </span>
                         {verifiedModel && (
                           <span
                             className="inline-flex items-center gap-1 rounded-full border border-[#10a37f]/30 bg-[#10a37f]/12 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]"
@@ -503,6 +498,22 @@ export function ModelBrowserModal({
                         </span>
                         <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
                           Experimental
+                        </span>
+                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                          {quantizationLabel}
+                        </span>
+                        {parameterCountLabel && (
+                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                            {parameterCountLabel}
+                          </span>
+                        )}
+                        {downloadSizeLabel && (
+                          <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                            {downloadSizeLabel}
+                          </span>
+                        )}
+                        <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#d0d0d0]">
+                          {interactionLabel}
                         </span>
                         {active && (
                           <span className="rounded-full border border-[#10a37f]/25 bg-[#10a37f]/10 px-2 py-0.5 text-[10px] font-medium text-[#7ee7c7]">
@@ -536,9 +547,6 @@ export function ModelBrowserModal({
                     <div className="flex flex-wrap gap-1 text-[10px] text-[#8e8e8e]">
                       <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
                         {model.isVisionModel ? "Vision" : "Text"}
-                      </span>
-                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">
-                        {interactionLabel}
                       </span>
                       {model.pipelineTag && (
                         <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5">

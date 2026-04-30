@@ -251,12 +251,12 @@ export function createModelChatPageMetadata(modelId?: string | null): Metadata {
   }
 
   const modelDisplayName = getModelDisplayName(normalizedModelId);
-  const title = `${modelDisplayName} | ${siteTagline}`;
+  const title = `Chat with ${modelDisplayName} locally | llame`;
   const description =
-    `Start ${siteTagline} with ${modelDisplayName} on llame. Run the model on your device with no installs or API keys.`;
+    `Use llame to chat privately with ${modelDisplayName} in your browser. The model runs fully locally on your device.`;
   const modelSocialImage = {
     ...socialImage,
-    alt: `${modelDisplayName} chat card for ${siteTagline} on llame`,
+    alt: `llame card for private local ${modelDisplayName} chats`,
   };
 
   return createPageMetadata({

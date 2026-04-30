@@ -70,9 +70,9 @@ describe("SEO metadata", () => {
       }),
     });
 
-    expect(modelMetadata.title).toBe(`Qwen3.5 0.8B | ${siteTagline}`);
+    expect(modelMetadata.title).toBe("Chat with Qwen3.5 0.8B locally | llame");
     expect(modelMetadata.description).toBe(
-      `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+      "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
     );
     expect(modelMetadata.alternates?.canonical).toBe("/chat/onnx-community/Qwen3.5-0.8B-ONNX");
     expect(modelMetadata.robots).toMatchObject({
@@ -80,21 +80,21 @@ describe("SEO metadata", () => {
       follow: true,
     });
     expect(modelMetadata.openGraph).toMatchObject({
-      title: `Qwen3.5 0.8B | ${siteTagline}`,
+      title: "Chat with Qwen3.5 0.8B locally | llame",
       description:
-        `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+        "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
       url: "/chat/onnx-community/Qwen3.5-0.8B-ONNX",
       images: [
         expect.objectContaining({
           url: socialImage.url,
-          alt: `Qwen3.5 0.8B chat card for ${siteTagline} on llame`,
+          alt: "llame card for private local Qwen3.5 0.8B chats",
         }),
       ],
     });
     expect(modelMetadata.twitter).toMatchObject({
-      title: `Qwen3.5 0.8B | ${siteTagline}`,
+      title: "Chat with Qwen3.5 0.8B locally | llame",
       description:
-        `Start ${siteTagline} with Qwen3.5 0.8B on llame. Run the model on your device with no installs or API keys.`,
+        "Use llame to chat privately with Qwen3.5 0.8B in your browser. The model runs fully locally on your device.",
       images: [socialImage.url],
     });
     expect(modelMetadata.title).not.toBe(chatMetadata.title);

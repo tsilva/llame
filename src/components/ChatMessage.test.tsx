@@ -108,6 +108,38 @@ describe("ChatMessage", () => {
     expect(screen.queryByText("Bold")).not.toBeInTheDocument();
   });
 
+  it("renders tokenized source-mode assistant debug sections", () => {
+    render(
+      <ChatMessage
+        message={{
+          id: "assistant-1",
+          role: "assistant",
+          content: "Rendered answer",
+          debug: {
+            modelInput: "<s>User prompt",
+            rawOutput: "**Raw** answer",
+          },
+        }}
+        showRaw
+        showTokenization
+        rawTokenizedTokens={{
+          modelInput: [
+            { index: 0, id: 1, text: "<s>" },
+            { index: 1, id: 2, text: "User prompt" },
+          ],
+          rawOutput: [
+            { index: 0, id: 3, text: "**Raw**" },
+            { index: 1, id: 4, text: " answer" },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText("<s>User prompt")).toBeInTheDocument();
+    expect(screen.getByLabelText("**Raw** answer")).toBeInTheDocument();
+    expect(screen.queryByText("Raw")).not.toBeInTheDocument();
+  });
+
   it("shows generation time and stop reason in assistant stats", () => {
     render(
       <ChatMessage

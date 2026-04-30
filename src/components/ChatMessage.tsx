@@ -26,11 +26,17 @@ interface ChatMessageProps {
   showRaw?: boolean;
   showTokenization?: boolean;
   tokenizedTokens?: TokenizedToken[];
+  rawTokenizedTokens?: RawTokenizedTokens;
   showActions?: boolean;
   showEditAction?: boolean;
   onRegenerate?: () => void;
   onDelete?: () => void;
   onEdit?: (content: string) => void;
+}
+
+export interface RawTokenizedTokens {
+  modelInput?: TokenizedToken[];
+  rawOutput?: TokenizedToken[];
 }
 
 export function ChatMessage({
@@ -45,6 +51,7 @@ export function ChatMessage({
   showRaw,
   showTokenization,
   tokenizedTokens,
+  rawTokenizedTokens,
   showActions,
   showEditAction,
   onRegenerate,
@@ -108,7 +115,15 @@ export function ChatMessage({
         {isEditing ? (
           editForm
         ) : (
-          <RawChatMessage message={message} isComplete={isComplete} isGenerating={isGenerating} stats={stats} />
+          <RawChatMessage
+            message={message}
+            isComplete={isComplete}
+            isGenerating={isGenerating}
+            stats={stats}
+            showTokenization={showTokenization}
+            tokenizedTokens={tokenizedTokens}
+            rawTokenizedTokens={rawTokenizedTokens}
+          />
         )}
         {!isEditing && (showActions || canEditMessage) && (
           <MessageActions
@@ -337,11 +352,17 @@ function RawChatMessage({
   isComplete,
   isGenerating,
   stats,
+  showTokenization,
+  tokenizedTokens,
+  rawTokenizedTokens,
 }: {
   message: ChatMessageType;
   isComplete?: boolean;
   isGenerating?: boolean;
   stats: GenerationStats | null;
+  showTokenization?: boolean;
+  tokenizedTokens?: TokenizedToken[];
+  rawTokenizedTokens?: RawTokenizedTokens;
 }) {
   const isUser = message.role === "user";
   const rawOutputAvailable = typeof message.debug?.rawOutput === "string";
@@ -356,7 +377,11 @@ function RawChatMessage({
 
         {isUser ? (
           <>
-            <RawSection label="message" content={message.content || "(empty)"} />
+            <RawSection
+              label="message"
+              content={message.content || "(empty)"}
+              tokens={showTokenization ? tokenizedTokens : undefined}
+            />
             {message.images && message.images.length > 0 && (
               <details className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
                 <summary className="cursor-pointer text-[11px] font-medium uppercase tracking-[0.18em] text-[#8e8e8e]">
@@ -380,6 +405,7 @@ function RawChatMessage({
                   : "Prompt sent to model is unavailable for this older message."
               }
               muted={!modelInputAvailable}
+              tokens={showTokenization ? rawTokenizedTokens?.modelInput : undefined}
             />
             <div className="mt-3">
               <RawSection
@@ -390,6 +416,7 @@ function RawChatMessage({
                     : "Raw generated output is unavailable for this older message."
                 }
                 muted={!rawOutputAvailable}
+                tokens={showTokenization ? rawTokenizedTokens?.rawOutput : undefined}
               />
             </div>
             {isComplete && !isGenerating && stats && <GenerationStatsRow stats={stats} raw />}
@@ -459,10 +486,12 @@ function RawSection({
   label,
   content,
   muted,
+  tokens,
 }: {
   label: string;
   content: string;
   muted?: boolean;
+  tokens?: TokenizedToken[];
 }) {
   return (
     <div>
@@ -474,7 +503,7 @@ function RawSection({
           muted ? "bg-black/10 text-[#7c7c7c]" : "bg-black/20 text-[#d6d6d6]"
         }`}
       >
-        {content}
+        <TokenizedText text={content} tokens={tokens} />
       </pre>
     </div>
   );

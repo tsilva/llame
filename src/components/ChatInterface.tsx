@@ -31,6 +31,7 @@ import {
 } from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
 import { TokenizedTextarea } from "./TokenizedTextarea";
+import type { RawTokenizedTokens } from "./ChatMessage";
 
 interface ChatInterfaceProps {
   conversationId: string | null;
@@ -108,6 +109,10 @@ const COMPLETION_SUGGESTIONS: Suggestion[] = [
 ];
 
 const INPUT_TOKENIZATION_ID = "__input__";
+const rawTokenizationId = (
+  messageId: string,
+  section: keyof Pick<RawTokenizedTokens, "modelInput" | "rawOutput">,
+) => `${messageId}::raw::${section}`;
 
 export function ChatInterface({
   conversationId,
@@ -189,11 +194,36 @@ export function ChatInterface({
 
     return [
       ...(input.length > 0 ? [{ id: INPUT_TOKENIZATION_ID, text: input }] : []),
-      ...messages
-        .filter((message) => message.content.length > 0)
-        .map((message) => ({ id: message.id, text: message.content })),
+      ...messages.flatMap((message) => {
+        if (!showRawConversation) {
+          return message.content.length > 0
+            ? [{ id: message.id, text: message.content }]
+            : [];
+        }
+
+        if (message.role === "user") {
+          return message.content.length > 0
+            ? [{ id: message.id, text: message.content }]
+            : [];
+        }
+
+        const items: TokenizationRequestItem[] = [];
+        if (message.debug?.modelInput) {
+          items.push({
+            id: rawTokenizationId(message.id, "modelInput"),
+            text: message.debug.modelInput,
+          });
+        }
+        if (message.debug?.rawOutput) {
+          items.push({
+            id: rawTokenizationId(message.id, "rawOutput"),
+            text: message.debug.rawOutput,
+          });
+        }
+        return items;
+      }),
     ];
-  }, [input, messages, showTokenization]);
+  }, [input, messages, showRawConversation, showTokenization]);
 
   useEffect(() => {
     if (!showTokenization) {
@@ -355,9 +385,27 @@ export function ChatInterface({
   const inputLabel = isCompletionMode ? "Prompt" : "Message";
   const inputTokenization = tokenizedById[INPUT_TOKENIZATION_ID];
   const inputTokens = inputTokenization?.text === input ? inputTokenization.tokens : undefined;
+  const getTokensForText = (id: string, text?: string) => {
+    if (text === undefined) return undefined;
+    const tokenized = tokenizedById[id];
+    return tokenized?.text === text ? tokenized.tokens : undefined;
+  };
   const getMessageTokens = (message: ChatMessageType) => {
-    const tokenized = tokenizedById[message.id];
-    return tokenized?.text === message.content ? tokenized.tokens : undefined;
+    return getTokensForText(message.id, message.content);
+  };
+  const getRawMessageTokens = (message: ChatMessageType): RawTokenizedTokens | undefined => {
+    if (!showRawConversation || message.role !== "assistant") return undefined;
+
+    return {
+      modelInput: getTokensForText(
+        rawTokenizationId(message.id, "modelInput"),
+        message.debug?.modelInput,
+      ),
+      rawOutput: getTokensForText(
+        rawTokenizationId(message.id, "rawOutput"),
+        message.debug?.rawOutput,
+      ),
+    };
   };
 
   return (
@@ -435,8 +483,9 @@ export function ChatInterface({
                   generationTime={isLastAssistant ? generationTime : undefined}
                   stopReason={isLastAssistant ? stopReason : undefined}
                   showRaw={showRawConversation}
-                  showTokenization={showTokenization && !showRawConversation}
+                  showTokenization={showTokenization}
                   tokenizedTokens={getMessageTokens(msg)}
+                  rawTokenizedTokens={getRawMessageTokens(msg)}
                   showActions={canActOnLastMessage}
                   showEditAction={canActOnLastMessage}
                   onRegenerate={onRegenerateLastAssistant}

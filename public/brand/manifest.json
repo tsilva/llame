@@ -6,8 +6,9 @@
     "web-seo"
   ],
   "sources": [
-    "built_in_defaults",
-    "cli_args"
+    "public/brand/sources/logo-source.png",
+    "public/brand/sources/icon-source.png",
+    "public/brand/sources/social-source.png"
   ],
   "metadata": {
     "title": "Private AI chats in your browser | llame",
@@ -33,7 +34,7 @@
       "key": "logo",
       "kind": "logo",
       "target": "shared",
-      "strategy": "generated",
+      "strategy": "derived_from_logo_source",
       "path": "logo/logo-1024.png",
       "size": [
         1024,
@@ -44,7 +45,7 @@
       "key": "icon",
       "kind": "icon",
       "target": "shared",
-      "strategy": "generated_from_logo_reference",
+      "strategy": "derived_from_icon_source",
       "path": "icon/icon-1024.png",
       "size": [
         1024,
@@ -128,7 +129,7 @@
       "key": "web-seo-og-image",
       "kind": "social-card",
       "target": "web-seo",
-      "strategy": "generated_from_logo_reference",
+      "strategy": "derived_from_social_source",
       "path": "web-seo/og-image-1200x630.png",
       "size": [
         1200,

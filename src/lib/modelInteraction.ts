@@ -1,4 +1,4 @@
-import { ModelInteractionMode } from "@/types";
+import { ModelChatFormatType, ModelInteractionMode } from "@/types";
 
 interface ModelInteractionInput {
   modelId?: string | null;
@@ -103,4 +103,16 @@ export function getModelInteractionMode(input: ModelInteractionInput): ModelInte
 
 export function getModelInteractionLabel(mode?: ModelInteractionMode | null) {
   return mode === "completion" ? "Completion" : "Chat";
+}
+
+export function getModelChatFormatType(input: ModelInteractionInput): ModelChatFormatType {
+  const interactionMode = getModelInteractionMode(input);
+  if (interactionMode === "completion") return "completion";
+  return input.hasChatTemplate ? "chat-template" : "fallback-chat";
+}
+
+export function getModelChatFormatLabel(format?: ModelChatFormatType | null) {
+  if (format === "completion") return "Completion prompt";
+  if (format === "fallback-chat") return "Fallback chat";
+  return "Chat template";
 }

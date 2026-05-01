@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getModelInteractionMode } from "@/lib/modelInteraction";
+import { getModelChatFormatType, getModelInteractionMode } from "@/lib/modelInteraction";
 
 describe("getModelInteractionMode", () => {
   it("classifies GPT-2-like base text-generation models as completion", () => {
@@ -47,5 +47,30 @@ describe("getModelInteractionMode", () => {
       pipelineTag: "image-text-to-text",
       modelType: "qwen3_5",
     })).toBe("chat");
+  });
+});
+
+describe("getModelChatFormatType", () => {
+  it("classifies base completion models as completion prompts", () => {
+    expect(getModelChatFormatType({
+      modelId: "openai-community/gpt2",
+      pipelineTag: "text-generation",
+      modelType: "gpt2",
+    })).toBe("completion");
+  });
+
+  it("classifies templated chat models separately from fallback chat prompts", () => {
+    expect(getModelChatFormatType({
+      modelId: "owner/base-llama",
+      pipelineTag: "text-generation",
+      modelType: "llama",
+      hasChatTemplate: true,
+    })).toBe("chat-template");
+
+    expect(getModelChatFormatType({
+      modelId: "owner/example-chat-model",
+      pipelineTag: "text-generation",
+      modelType: "llama",
+    })).toBe("fallback-chat");
   });
 });

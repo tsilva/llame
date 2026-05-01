@@ -123,6 +123,7 @@ function buildConversationMeta(conversation: Conversation) {
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
     modelInteractionMode: conversation.modelInteractionMode ?? null,
+    modelChatFormat: conversation.modelChatFormat ?? null,
     messageCount: conversation.messages.length,
     sizeBytes: 0,
   };

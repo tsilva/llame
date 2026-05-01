@@ -98,6 +98,7 @@ function buildModelSelectionFromConversation(conversation: Conversation | null):
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
     interactionMode: conversation.modelInteractionMode ?? null,
+    chatFormat: conversation.modelChatFormat ?? null,
   });
 }
 
@@ -123,6 +124,7 @@ function loadLastSelectedModel(): ModelSelection | null {
       recommendedDevice: parsed.recommendedDevice,
       supportTier: parsed.supportTier,
       interactionMode: parsed.interactionMode ?? null,
+      chatFormat: parsed.chatFormat ?? null,
     });
   } catch {
     return null;
@@ -139,6 +141,7 @@ function persistLastSelectedModel(selection: ModelSelection) {
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
     interactionMode: selection.interactionMode ?? null,
+    chatFormat: selection.chatFormat ?? null,
   }));
 }
 
@@ -629,6 +632,7 @@ export default function HomeApp({
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
       modelInteractionMode: activeModel.interactionMode ?? null,
+      modelChatFormat: activeModel.chatFormat ?? null,
     };
     updateActiveConversation(updatedConversation);
     setDismissedWorkerErrorKey(null);
@@ -707,6 +711,7 @@ export default function HomeApp({
       recommendedDevice: activeModel.recommendedDevice,
       supportTier: activeModel.supportTier,
       modelInteractionMode: activeModel.interactionMode ?? null,
+      modelChatFormat: activeModel.chatFormat ?? null,
     };
     updateActiveConversation(updatedConversation);
 
@@ -814,6 +819,7 @@ export default function HomeApp({
         recommendedDevice: selection.recommendedDevice,
         supportTier: selection.supportTier,
         modelInteractionMode: selection.interactionMode ?? null,
+        modelChatFormat: selection.chatFormat ?? null,
       });
     }
 

@@ -36,6 +36,7 @@ describe("constants", () => {
       id: modelId,
       revision: "2c07371c2e84776cad597f3d813b7d306d292aea",
       interactionMode: "chat",
+      chatFormat: "chat-template",
     });
     expect(CONTEXT_WINDOWS[modelId]).toBe(32768);
   });
@@ -66,6 +67,7 @@ describe("constants", () => {
     const selection = getModelSelection("openai-community/gpt2");
 
     expect(selection.interactionMode).toBe("completion");
+    expect(selection.chatFormat).toBe("completion");
     expect(CONTEXT_WINDOWS[selection.id]).toBe(1024);
   });
 
@@ -79,6 +81,7 @@ describe("constants", () => {
       id: "Xenova/bloom-560m",
       revision: null,
       interactionMode: "completion",
+      chatFormat: "completion",
     });
 
     expect(getModelSelection("Xenova/bloom-560m")).toMatchObject({

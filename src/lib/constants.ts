@@ -1,5 +1,5 @@
 import { GenerationParams, ModelSelection } from "@/types";
-import { getModelInteractionMode } from "@/lib/modelInteraction";
+import { getModelChatFormatType, getModelInteractionMode } from "@/lib/modelInteraction";
 
 export const DEFAULT_MODEL = "onnx-community/Qwen3.5-0.8B-ONNX";
 export const DEFAULT_MODEL_REVISION = "1c0849d8d3084bc7d6f8d00789d3f3cec0a6fda6";
@@ -44,6 +44,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: false,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
@@ -56,6 +58,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: true,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
   {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
@@ -68,6 +72,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: true,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
   {
     id: "onnx-community/Qwen3.5-2B-ONNX",
@@ -80,6 +86,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: true,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
   {
     id: "onnx-community/gemma-4-E2B-it-ONNX",
@@ -92,6 +100,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: true,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
   {
     id: "HuggingFaceTB/SmolLM3-3B-ONNX",
@@ -104,6 +114,8 @@ export const MODEL_PRESETS: ModelPreset[] = [
     supportsImages: false,
     recommendedDevice: "webgpu",
     supportTier: "curated",
+    interactionMode: "chat",
+    chatFormat: "chat-template",
   },
 ];
 
@@ -164,6 +176,10 @@ export function getModelSelection(modelId?: string | null, overrides?: Partial<M
     recommendedDevice: overrides?.recommendedDevice ?? preset?.recommendedDevice ?? "webgpu",
     supportTier: overrides?.supportTier ?? preset?.supportTier ?? "experimental",
     interactionMode: overrides?.interactionMode ?? preset?.interactionMode ?? getModelInteractionMode({
+      modelId: normalizedModelId,
+      supportsImages,
+    }),
+    chatFormat: overrides?.chatFormat ?? preset?.chatFormat ?? getModelChatFormatType({
       modelId: normalizedModelId,
       supportsImages,
     }),

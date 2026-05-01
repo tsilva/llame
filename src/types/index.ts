@@ -20,6 +20,7 @@ export interface GenerationStats {
 export type ModelSupportTier = "curated" | "experimental";
 export type InferenceDevice = "webgpu";
 export type ModelInteractionMode = "chat" | "completion";
+export type ModelChatFormatType = "chat-template" | "fallback-chat" | "completion";
 
 export interface ModelSelection {
   id: string;
@@ -28,6 +29,7 @@ export interface ModelSelection {
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
   interactionMode?: ModelInteractionMode | null;
+  chatFormat?: ModelChatFormatType | null;
 }
 
 export interface ChatMessage {
@@ -52,6 +54,7 @@ export interface Conversation {
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
   modelInteractionMode?: ModelInteractionMode | null;
+  modelChatFormat?: ModelChatFormatType | null;
 }
 
 export interface ConversationMeta {
@@ -65,6 +68,7 @@ export interface ConversationMeta {
   recommendedDevice?: InferenceDevice;
   supportTier?: ModelSupportTier;
   modelInteractionMode?: ModelInteractionMode | null;
+  modelChatFormat?: ModelChatFormatType | null;
   messageCount: number;
   sizeBytes: number;
 }

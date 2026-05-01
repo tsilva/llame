@@ -378,7 +378,7 @@ function RawChatMessage({
     <div>
       <div className="rounded-2xl border border-white/[0.08] bg-[#171717] p-4">
         <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[#6f6f6f]">
-          {isUser ? "User" : "Assistant generation"}
+          {isUser ? "User" : "Assistant"}
         </div>
 
         {isUser ? (
@@ -404,22 +404,22 @@ function RawChatMessage({
         ) : (
           <>
             <RawSection
-              label="prompt sent to model"
+              label="prompt"
               content={
                 modelInputAvailable
                   ? message.debug?.modelInput ?? ""
-                  : "Prompt sent to model is unavailable for this older message."
+                  : "Prompt is unavailable for this older message."
               }
               muted={!modelInputAvailable}
               tokens={showTokenization ? rawTokenizedTokens?.modelInput : undefined}
             />
             <div className="mt-3">
               <RawSection
-                label="raw generated output"
+                label="output"
                 content={
                   rawOutputAvailable
                     ? message.debug?.rawOutput ?? ""
-                    : "Raw generated output is unavailable for this older message."
+                    : "Output is unavailable for this older message."
                 }
                 muted={!rawOutputAvailable}
                 tokens={showTokenization ? rawTokenizedTokens?.rawOutput : undefined}

@@ -41,6 +41,7 @@ export function buildMeta(conv: Conversation): ConversationMeta {
     recommendedDevice: conv.recommendedDevice,
     supportTier: conv.supportTier,
     modelInteractionMode: conv.modelInteractionMode ?? null,
+    modelChatFormat: conv.modelChatFormat ?? null,
     messageCount: conv.messages.length,
     sizeBytes: new Blob([serialized]).size,
   };

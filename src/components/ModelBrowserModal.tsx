@@ -539,6 +539,7 @@ export function ModelBrowserModal({
                           recommendedDevice: device,
                           supportTier: "experimental",
                           interactionMode: model.interactionMode,
+                          chatFormat: model.chatFormat,
                         })}
                         disabled={disabled || active}
                         title={active ? "Current model" : `Use ${model.name}`}

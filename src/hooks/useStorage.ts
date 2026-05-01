@@ -25,6 +25,7 @@ function createConversationRecord(model?: string | ModelSelection): Conversation
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
     modelInteractionMode: selection.interactionMode ?? null,
+    modelChatFormat: selection.chatFormat ?? null,
   };
 }
 
@@ -39,6 +40,7 @@ function getConversationSelection(conversation: Conversation | null): ModelSelec
     recommendedDevice: conversation.recommendedDevice,
     supportTier: conversation.supportTier,
     interactionMode: conversation.modelInteractionMode ?? null,
+    chatFormat: conversation.modelChatFormat ?? null,
   });
 }
 
@@ -71,6 +73,7 @@ function applyModelSelection(
     recommendedDevice: selection.recommendedDevice,
     supportTier: selection.supportTier,
     modelInteractionMode: selection.interactionMode ?? null,
+    modelChatFormat: selection.chatFormat ?? null,
   };
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { getCompatibilityScoreAdjustment, isModelExcludedFromBrowser } from "@/lib/modelPolicies";
-import { getModelInteractionMode } from "@/lib/modelInteraction";
-import { InferenceDevice, ModelInteractionMode } from "@/types";
+import { getModelChatFormatType, getModelInteractionMode } from "@/lib/modelInteraction";
+import { InferenceDevice, ModelChatFormatType, ModelInteractionMode } from "@/types";
 
 export interface HubModelApiEntry {
   id: string;
@@ -39,6 +39,7 @@ export interface DiscoveredModel {
   estimatedDownloadGb: number | null;
   isVisionModel: boolean;
   interactionMode: ModelInteractionMode;
+  chatFormat: ModelChatFormatType;
 }
 
 export interface ModelSearchPage {
@@ -298,6 +299,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
   const isVision = isVisionModel(entry.id, tags, pipelineTag, modelType);
+  const hasTemplate = hasChatTemplate(entry);
 
   return {
     id: entry.id,
@@ -317,7 +319,15 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
       tags,
       pipelineTag,
       modelType,
-      hasChatTemplate: hasChatTemplate(entry),
+      hasChatTemplate: hasTemplate,
+    }),
+    chatFormat: getModelChatFormatType({
+      modelId: entry.id,
+      isVisionModel: isVision,
+      tags,
+      pipelineTag,
+      modelType,
+      hasChatTemplate: hasTemplate,
     }),
   };
 }

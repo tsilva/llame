@@ -74,6 +74,7 @@ export function ModelLoadingCard({
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 aria-expanded={showDetails}
+                title={showDetails ? "Hide download details" : "Show download details"}
                 className="flex items-center gap-1 text-xs text-[#8e8e8e] hover:text-[#ececec] transition-colors mb-2"
               >
                 {showDetails ? (

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { GenerationParams, StorageStats } from "@/types";
 import { PARAM_RANGES, SLIDER_CONFIGS } from "@/lib/constants";
 import { X, Cpu, RotateCcw, HardDrive } from "lucide-react";
+import { Tooltip } from "./Tooltip";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -121,13 +122,15 @@ export function SettingsModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
           <h2 id="settings-title" className="text-lg font-medium text-[#ececec]">Settings</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 text-[#8e8e8e] hover:bg-[#424242] hover:text-[#ececec] transition-colors duration-150"
-            aria-label="Close settings"
-          >
-            <X size={20} />
-          </button>
+          <Tooltip label="Close settings" align="end">
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1 text-[#8e8e8e] hover:bg-[#424242] hover:text-[#ececec] transition-colors duration-150"
+              aria-label="Close settings"
+            >
+              <X size={20} />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="space-y-6 overflow-y-auto flex-1 scrollbar-thin px-5 py-4">
@@ -148,6 +151,8 @@ export function SettingsModal({
               <button
                 onClick={() => update("do_sample", !params.do_sample)}
                 disabled={isGenerating}
+                title={params.do_sample ? "Disable sampling" : "Enable sampling"}
+                aria-label={params.do_sample ? "Disable sampling" : "Enable sampling"}
                 className={`relative h-6 w-11 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   params.do_sample ? "bg-[#10a37f]" : "bg-[#424242]"
                 }`}
@@ -236,6 +241,7 @@ export function SettingsModal({
             <button
               onClick={() => onChange(defaultParams)}
               disabled={isGenerating}
+              title="Reset defaults"
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-[#8e8e8e] hover:text-[#b4b4b4] hover:border-white/[0.15] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RotateCcw size={13} />

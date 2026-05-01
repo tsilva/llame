@@ -30,6 +30,7 @@ import { removeEmptyTrailingAssistantMessage } from "@/lib/conversation";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Sidebar } from "@/components/Sidebar";
+import { Tooltip } from "@/components/Tooltip";
 import { PanelLeft, Github, X, Code2, ScanText } from "lucide-react";
 
 const SettingsModal = dynamic(
@@ -935,14 +936,16 @@ export default function HomeApp({
       <main className="relative flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2">
           {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              disabled={isGenerating}
-              className="rounded-lg p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f] disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Open sidebar"
-            >
-              <PanelLeft size={20} />
-            </button>
+            <Tooltip label="Open sidebar" side="bottom" align="start">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                disabled={isGenerating}
+                className="rounded-lg p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f] disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Open sidebar"
+              >
+                <PanelLeft size={20} />
+              </button>
+            </Tooltip>
           )}
           <ModelSelector
             loadedModel={worker.loadedModel}
@@ -962,44 +965,54 @@ export default function HomeApp({
                 {worker.tps.toFixed(1)} t/s
               </span>
             )}
-            <button
-              onClick={() => setShowTokenization((current) => !current)}
-              disabled={!isModelLoaded}
-              className={`rounded-full p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                showTokenization
-                  ? "bg-[#2f2f2f] text-[#10a37f]"
-                  : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
-              }`}
-              aria-label={showTokenization ? "Disable tokenization view" : "Enable tokenization view"}
-              title={!isModelLoaded
+            <Tooltip
+              label={!isModelLoaded
                 ? "Load a model to show tokenization"
                 : showTokenization
                   ? "Disable tokenization view"
                   : "Enable tokenization view"}
+              side="bottom"
             >
-              <ScanText size={18} />
-            </button>
-            <button
-              onClick={() => setShowRawConversation((current) => !current)}
-              className={`rounded-full p-2 transition-colors ${
-                showRawConversation
-                  ? "bg-[#2f2f2f] text-[#b4b4b4]"
-                  : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
-              }`}
-              aria-label={showRawConversation ? "Show formatted conversation" : "Show raw conversation"}
-              title={showRawConversation ? "Show formatted conversation" : "Show raw conversation"}
+              <button
+                onClick={() => setShowTokenization((current) => !current)}
+                disabled={!isModelLoaded}
+                className={`rounded-full p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                  showTokenization
+                    ? "bg-[#2f2f2f] text-[#10a37f]"
+                    : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
+                }`}
+                aria-label={showTokenization ? "Disable tokenization view" : "Enable tokenization view"}
+              >
+                <ScanText size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip
+              label={showRawConversation ? "Show formatted conversation" : "Show raw source conversation"}
+              side="bottom"
             >
-              <Code2 size={18} />
-            </button>
-            <a
-              href="https://github.com/tsilva/llame"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f]"
-              aria-label="GitHub repository"
-            >
-              <Github size={20} />
-            </a>
+              <button
+                onClick={() => setShowRawConversation((current) => !current)}
+                className={`rounded-full p-2 transition-colors ${
+                  showRawConversation
+                    ? "bg-[#2f2f2f] text-[#b4b4b4]"
+                    : "text-[#6f6f6f] hover:bg-[#2f2f2f] hover:text-[#9a9a9a]"
+                }`}
+                aria-label={showRawConversation ? "Show formatted conversation" : "Show raw conversation"}
+              >
+                <Code2 size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip label="GitHub repository" side="bottom" align="end">
+              <a
+                href="https://github.com/tsilva/llame"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full p-2 text-[#b4b4b4] transition-colors hover:bg-[#2f2f2f]"
+                aria-label="GitHub repository"
+              >
+                <Github size={20} />
+              </a>
+            </Tooltip>
           </div>
         </div>
 
@@ -1019,12 +1032,14 @@ export default function HomeApp({
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => void storage.clearOldChats()}
+                  title="Clear older chats"
                   className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
                 >
                   Clear older chats
                 </button>
                 <button
                   onClick={storage.dismissStorageError}
+                  title="Dismiss storage error"
                   className="rounded-lg px-3 py-1.5 text-sm text-red-100/80 transition-colors hover:bg-red-500/10 hover:text-red-50"
                 >
                   Dismiss
@@ -1083,13 +1098,15 @@ export default function HomeApp({
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setDismissedWorkerErrorKey(currentWorkerErrorKey)}
-              className="text-red-400 transition-colors hover:text-red-300"
-              aria-label="Dismiss error"
-            >
-              <X size={16} />
-            </button>
+            <Tooltip label="Dismiss error">
+              <button
+                onClick={() => setDismissedWorkerErrorKey(currentWorkerErrorKey)}
+                className="text-red-400 transition-colors hover:text-red-300"
+                aria-label="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </Tooltip>
           </div>
         )}
 

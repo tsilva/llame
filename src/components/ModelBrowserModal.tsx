@@ -13,6 +13,7 @@ import {
   ModelBrowserSort,
   searchBrowserReadyModels,
 } from "@/lib/modelBrowser";
+import { Tooltip } from "./Tooltip";
 
 interface ModelBrowserModalProps {
   isOpen: boolean;
@@ -359,13 +360,15 @@ export function ModelBrowserModal({
             <h2 id="model-browser-title" className="text-lg font-medium text-[#ececec]">Browse Browser-Ready ONNX LLMs and VLMs</h2>
             <BrowserProfileLine device={device} webgpuSupported={webgpuSupported} profile={profile} />
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 text-[#8e8e8e] transition-colors duration-150 hover:bg-[#424242] hover:text-[#ececec]"
-            aria-label="Close model browser"
-          >
-            <X size={20} />
-          </button>
+          <Tooltip label="Close model browser" align="end">
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1 text-[#8e8e8e] transition-colors duration-150 hover:bg-[#424242] hover:text-[#ececec]"
+              aria-label="Close model browser"
+            >
+              <X size={20} />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="border-b border-white/[0.08] px-5 py-4">
@@ -402,6 +405,7 @@ export function ModelBrowserModal({
                 <button
                   type="button"
                   onClick={clearFilters}
+                  title="Clear filters"
                   className="rounded-lg px-2 py-1 text-[#b4b4b4] transition-colors hover:bg-[#3a3a3a] hover:text-[#ececec]"
                 >
                   Clear filters
@@ -426,6 +430,7 @@ export function ModelBrowserModal({
                 <button
                   type="button"
                   onClick={() => void fetchModels(debouncedQuery, null, false, sortBy)}
+                  title="Retry search"
                   className="rounded-lg bg-red-500/15 px-3 py-1.5 text-sm text-red-100 transition-colors hover:bg-red-500/25"
                 >
                   Retry search
@@ -536,6 +541,7 @@ export function ModelBrowserModal({
                           interactionMode: model.interactionMode,
                         })}
                         disabled={disabled || active}
+                        title={active ? "Current model" : `Use ${model.name}`}
                         className="rounded-lg bg-[#10a37f] px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-[#14b38c] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {active ? "Selected" : "Use model"}

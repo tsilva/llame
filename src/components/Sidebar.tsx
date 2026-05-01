@@ -2,6 +2,7 @@
 
 import { ConversationMeta } from "@/types";
 import { PanelLeft, SquarePen, Settings, Trash2, MessageSquare } from "lucide-react";
+import { Tooltip } from "./Tooltip";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -52,24 +53,26 @@ export function Sidebar({
     <div className="flex h-full w-[280px] max-w-[85vw] flex-col md:w-[260px]">
       {/* Top row */}
       <div className="flex items-center justify-between p-3">
-        <button
-          onClick={onToggle}
-          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Close sidebar"
-          aria-label="Close sidebar"
-          disabled={isGenerating}
-        >
-          <PanelLeft size={20} />
-        </button>
-        <button
-          onClick={() => onNewChat()}
-          className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="New chat"
-          aria-label="Start a new chat"
-          disabled={isGenerating}
-        >
-          <SquarePen size={20} />
-        </button>
+        <Tooltip label="Close sidebar" side="bottom" align="start">
+          <button
+            onClick={onToggle}
+            className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Close sidebar"
+            disabled={isGenerating}
+          >
+            <PanelLeft size={20} />
+          </button>
+        </Tooltip>
+        <Tooltip label="New chat" side="bottom" align="end">
+          <button
+            onClick={() => onNewChat()}
+            className="rounded-lg p-2 text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Start a new chat"
+            disabled={isGenerating}
+          >
+            <SquarePen size={20} />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Conversations list */}
@@ -145,6 +148,7 @@ export function Sidebar({
         <button
           onClick={onOpenSettings}
           disabled={isGenerating}
+          title="Settings"
           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#b4b4b4] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Settings size={16} />

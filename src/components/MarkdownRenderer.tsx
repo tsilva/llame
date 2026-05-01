@@ -7,6 +7,7 @@ import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import { Copy, Check } from "lucide-react";
+import { Tooltip } from "./Tooltip";
 
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
@@ -74,16 +75,19 @@ const PreBlock: React.FC<{
         <span className="text-xs text-[#8e8e8e] font-mono">
           {language}
         </span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#8e8e8e] hover:text-white hover:bg-white/10 transition-colors"
-        >
-          {copied ? (
-            <><Check size={12} /><span>Copied!</span></>
-          ) : (
-            <><Copy size={12} /><span>Copy</span></>
-          )}
-        </button>
+        <Tooltip label={copied ? "Copied code" : "Copy code"}>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#8e8e8e] hover:text-white hover:bg-white/10 transition-colors"
+            aria-label={copied ? "Copied code" : "Copy code"}
+          >
+            {copied ? (
+              <><Check size={12} /><span>Copied!</span></>
+            ) : (
+              <><Copy size={12} /><span>Copy</span></>
+            )}
+          </button>
+        </Tooltip>
       </div>
       <pre className="p-3 sm:p-4 overflow-x-auto">
         {children}

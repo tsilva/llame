@@ -6,6 +6,7 @@ import { getBrokenModel } from "@/config/verifiedModels";
 import { getModelCardMeta, getModelDisplayName, MODEL_PRESETS, ModelPreset } from "@/lib/constants";
 import { getModelInteractionLabel } from "@/lib/modelInteraction";
 import { InferenceDevice, ModelInteractionMode, ModelSelection } from "@/types";
+import { Tooltip } from "./Tooltip";
 
 interface ModelSelectorProps {
   isLoading: boolean;
@@ -78,40 +79,42 @@ export function ModelSelector({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => !disabled && setOpen(!open)}
-        disabled={disabled}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[#ececec] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span
-          className={`inline-block h-2 w-2 rounded-full ${
-            isLoading
-              ? "bg-amber-400 animate-pulse"
-              : isModelReady
-                ? "bg-[#10a37f]"
-                : "bg-[#8e8e8e]"
-          }`}
-        />
-        <span className="max-w-[140px] sm:max-w-[200px] truncate">
-          {displayModel}
-        </span>
-        {loadedPrecision && !isLoading && (
-          <span className="text-xs text-[#8e8e8e] ml-1">
-            · {loadedPrecision}
+      <Tooltip label="Select model" side="bottom" align="start">
+        <button
+          onClick={() => !disabled && setOpen(!open)}
+          disabled={disabled}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[#ececec] hover:bg-[#2f2f2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${
+              isLoading
+                ? "bg-amber-400 animate-pulse"
+                : isModelReady
+                  ? "bg-[#10a37f]"
+                  : "bg-[#8e8e8e]"
+            }`}
+          />
+          <span className="max-w-[140px] sm:max-w-[200px] truncate">
+            {displayModel}
           </span>
-        )}
-        {interactionMode === "completion" && !isLoading && (
+          {loadedPrecision && !isLoading && (
+            <span className="text-xs text-[#8e8e8e] ml-1">
+              · {loadedPrecision}
+            </span>
+          )}
+          {interactionMode === "completion" && !isLoading && (
+            <span className="text-xs text-[#8e8e8e] ml-1">
+              · {interactionLabel}
+            </span>
+          )}
           <span className="text-xs text-[#8e8e8e] ml-1">
-            · {interactionLabel}
+            · {runtimeLabel}
           </span>
-        )}
-        <span className="text-xs text-[#8e8e8e] ml-1">
-          · {runtimeLabel}
-        </span>
-        <ChevronDown size={14} className={`text-[#8e8e8e] ml-0.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
-      </button>
+          <ChevronDown size={14} className={`text-[#8e8e8e] ml-0.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </Tooltip>
 
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] rounded-xl border border-white/[0.08] bg-[#2f2f2f] py-1 shadow-2xl shadow-black/40 animate-fade-in" role="menu">
@@ -133,6 +136,7 @@ export function ModelSelector({
               onOpenModelBrowser();
             }}
             role="menuitem"
+            title="Browse more models"
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
           >
             <span className="w-[14px]" />
@@ -160,6 +164,7 @@ function PresetMenuItem({
       onClick={onSelect}
       role="menuitemradio"
       aria-checked={selected}
+      title={`Use ${preset.label}`}
       className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm text-[#ececec] hover:bg-[#424242] transition-colors"
     >
       <Check size={14} className={`mt-0.5 shrink-0 ${selected ? "text-[#10a37f]" : "invisible"}`} />

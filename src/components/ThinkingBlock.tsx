@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { Tooltip } from "./Tooltip";
 
 interface ThinkingBlockProps {
   thinking: string;
@@ -122,22 +123,24 @@ export function ThinkingBlock({ thinking, isGenerating, isComplete, isStreaming 
 
   return (
     <div className="mb-3">
-      <button
-        onClick={() => !isThinkingInProgress && dispatch({ type: "set-user-expanded", value: !isExpanded })}
-        aria-expanded={isExpanded}
-        className={`flex items-center gap-2 py-1 text-sm transition-colors ${
-          isThinkingInProgress ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
-        } ${isThinkingInProgress ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}
-      >
-        {isThinkingInProgress ? <Spinner /> : null}
-        <span>{label}</span>
-        {!isThinkingInProgress && (
-          <ChevronDown
-            size={14}
-            className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
-          />
-        )}
-      </button>
+      <Tooltip label={isExpanded ? "Collapse reasoning" : "Expand reasoning"} align="start">
+        <button
+          onClick={() => !isThinkingInProgress && dispatch({ type: "set-user-expanded", value: !isExpanded })}
+          aria-expanded={isExpanded}
+          className={`flex items-center gap-2 py-1 text-sm transition-colors ${
+            isThinkingInProgress ? "cursor-default" : "cursor-pointer hover:text-[#ececec]"
+          } ${isThinkingInProgress ? "text-[#b4b4b4]" : "text-[#8e8e8e]"}`}
+        >
+          {isThinkingInProgress ? <Spinner /> : null}
+          <span>{label}</span>
+          {!isThinkingInProgress && (
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            />
+          )}
+        </button>
+      </Tooltip>
 
       {isExpanded && thinking && (
         <div

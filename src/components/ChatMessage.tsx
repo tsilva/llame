@@ -10,6 +10,7 @@ import {
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TokenizedText } from "./TokenizedText";
+import { Tooltip } from "./Tooltip";
 import { Check, Pencil, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 
 const MESSAGE_ACTION_ICON_SIZE = 16;
@@ -249,37 +250,40 @@ function MessageActions({
   return (
     <div className={`mt-3 flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
       {onRegenerate && (
-        <button
-          type="button"
-          onClick={onRegenerate}
-          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-          aria-label="Regenerate answer"
-          title="Regenerate answer"
-        >
-          <RefreshCw size={MESSAGE_ACTION_ICON_SIZE} />
-        </button>
+        <Tooltip label="Regenerate answer">
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+            aria-label="Regenerate answer"
+          >
+            <RefreshCw size={MESSAGE_ACTION_ICON_SIZE} />
+          </button>
+        </Tooltip>
       )}
       {onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-          aria-label="Edit message"
-          title="Edit message"
-        >
-          <Pencil size={MESSAGE_ACTION_ICON_SIZE} />
-        </button>
+        <Tooltip label="Edit message">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+            aria-label="Edit message"
+          >
+            <Pencil size={MESSAGE_ACTION_ICON_SIZE} />
+          </button>
+        </Tooltip>
       )}
       {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
-          className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
-          aria-label="Delete message"
-          title="Delete message"
-        >
-          <Trash2 size={MESSAGE_ACTION_ICON_SIZE} />
-        </button>
+        <Tooltip label="Delete message">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-lg p-2 text-[#8e8e8e] transition-colors hover:bg-[#2f2f2f] hover:text-[#ececec]"
+            aria-label="Delete message"
+          >
+            <Trash2 size={MESSAGE_ACTION_ICON_SIZE} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );
@@ -323,25 +327,27 @@ function MessageEditForm({
         aria-label="Edit message content"
       />
       <div className={`mt-2 flex items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={!canSave}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#212121] transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
-          aria-label="Save edited message"
-          title="Save"
-        >
-          <Check size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#424242] text-[#ececec] transition-colors hover:bg-[#4a4a4a]"
-          aria-label="Cancel editing message"
-          title="Cancel"
-        >
-          <X size={16} />
-        </button>
+        <Tooltip label="Save edited message">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#212121] transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
+            aria-label="Save edited message"
+          >
+            <Check size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip label="Cancel editing">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#424242] text-[#ececec] transition-colors hover:bg-[#4a4a4a]"
+            aria-label="Cancel editing message"
+          >
+            <X size={16} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );
@@ -525,7 +531,7 @@ function ImageLightboxInline({ src, onClose }: { src: string; onClose: () => voi
       aria-label="Image preview"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <button onClick={onClose} aria-label="Close image preview" className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#2f2f2f] text-white transition-colors hover:bg-[#3f3f3f]">
+      <button onClick={onClose} aria-label="Close image preview" title="Close image preview" className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#2f2f2f] text-white transition-colors hover:bg-[#3f3f3f]">
         <X size={20} />
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}

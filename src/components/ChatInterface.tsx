@@ -31,6 +31,7 @@ import {
 } from "@/lib/imageUtils";
 import { Sparkles, ArrowUp, Square, ImagePlus, X, Brain } from "lucide-react";
 import { TokenizedTextarea } from "./TokenizedTextarea";
+import { Tooltip } from "./Tooltip";
 import type { RawTokenizedTokens } from "./ChatMessage";
 
 interface ChatInterfaceProps {
@@ -541,6 +542,7 @@ export function ChatInterface({
                   <button
                     onClick={() => removeImage(img.id)}
                     aria-label="Remove image"
+                    title="Remove image"
                     className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#424242] text-white opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X size={12} />
@@ -562,29 +564,31 @@ export function ChatInterface({
             />
 
             {allowImageInputs && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={needsLoad || activePendingImages.length >= MAX_PENDING_IMAGES || isGenerating}
-                className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
-                title={needsLoad ? "Load model first to use images" : "Upload images"}
-                aria-label="Upload images"
-              >
-                <ImagePlus size={20} />
-              </button>
+              <Tooltip label={needsLoad ? "Load model first to use images" : "Upload images"}>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={needsLoad || activePendingImages.length >= MAX_PENDING_IMAGES || isGenerating}
+                  className="mb-0.5 rounded-lg p-1.5 text-[#8e8e8e] hover:text-[#ececec] transition-colors disabled:opacity-40"
+                  aria-label="Upload images"
+                >
+                  <ImagePlus size={20} />
+                </button>
+              </Tooltip>
             )}
 
             {showThinkingToggle && (
-              <button
-                onClick={onToggleThinking}
-                disabled={isGenerating}
-                className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
-                }`}
-                title={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}
-                aria-label={thinkingEnabled ? "Disable thinking mode" : "Enable thinking mode"}
-              >
-                <Brain size={20} />
-              </button>
+              <Tooltip label={thinkingEnabled ? "Thinking mode on" : "Thinking mode off"}>
+                <button
+                  onClick={onToggleThinking}
+                  disabled={isGenerating}
+                  className={`mb-0.5 rounded-lg p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    thinkingEnabled ? "text-[#10a37f] hover:text-[#10a37f]" : "text-[#8e8e8e] hover:text-[#ececec]"
+                  }`}
+                  aria-label={thinkingEnabled ? "Disable thinking mode" : "Enable thinking mode"}
+                >
+                  <Brain size={20} />
+                </button>
+              </Tooltip>
             )}
 
             <TokenizedTextarea
@@ -602,22 +606,26 @@ export function ChatInterface({
             />
 
             {isGenerating ? (
-              <button
-                onClick={onStop}
-                aria-label="Stop generation"
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200"
-              >
-                <Square size={14} className="text-[#212121]" fill="#212121" />
-              </button>
+              <Tooltip label="Stop generation">
+                <button
+                  onClick={onStop}
+                  aria-label="Stop generation"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200"
+                >
+                  <Square size={14} className="text-[#212121]" fill="#212121" />
+                </button>
+              </Tooltip>
             ) : (
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() && activePendingImages.length === 0}
-                aria-label="Send message"
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
-              >
-                <ArrowUp size={18} className="text-[#212121]" />
-              </button>
+              <Tooltip label="Send message">
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() && activePendingImages.length === 0}
+                  aria-label="Send message"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white transition-colors hover:bg-gray-200 disabled:bg-[#424242] disabled:text-[#8e8e8e]"
+                >
+                  <ArrowUp size={18} className="text-[#212121]" />
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>

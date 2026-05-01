@@ -206,6 +206,12 @@ function hasChatTemplate(entry: HubModelApiEntry) {
   );
 }
 
+function getChatTemplate(entry: HubModelApiEntry) {
+  return entry.config?.tokenizer_config?.chat_template ??
+    entry.config?.tokenizer_config?.chat_template_jinja ??
+    null;
+}
+
 function hasUsableOnnxArtifacts(entry: HubModelApiEntry) {
   const filenames = entry.siblings
     ?.map((sibling) => sibling.rfilename)
@@ -299,7 +305,8 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
   const pipelineTag = entry.pipeline_tag ?? null;
   const modelType = getModelType(entry);
   const isVision = isVisionModel(entry.id, tags, pipelineTag, modelType);
-  const hasTemplate = hasChatTemplate(entry);
+  const chatTemplate = getChatTemplate(entry);
+  const hasTemplate = Boolean(chatTemplate);
 
   return {
     id: entry.id,
@@ -320,6 +327,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
       pipelineTag,
       modelType,
       hasChatTemplate: hasTemplate,
+      chatTemplate,
     }),
     chatFormat: getModelChatFormatType({
       modelId: entry.id,
@@ -328,6 +336,7 @@ function normalizeModel(entry: HubModelApiEntry): DiscoveredModel {
       pipelineTag,
       modelType,
       hasChatTemplate: hasTemplate,
+      chatTemplate,
     }),
   };
 }

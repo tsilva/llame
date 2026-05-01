@@ -36,7 +36,7 @@ describe("constants", () => {
       id: modelId,
       revision: "2c07371c2e84776cad597f3d813b7d306d292aea",
       interactionMode: "chat",
-      chatFormat: "chat-template",
+      chatFormat: "chatml",
     });
     expect(CONTEXT_WINDOWS[modelId]).toBe(32768);
   });

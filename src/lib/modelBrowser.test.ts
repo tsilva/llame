@@ -44,6 +44,7 @@ describe("model browser search", () => {
     expect(page.models[0]).toMatchObject({
       id: "onnx-community/Qwen3.5-0.8B-ONNX",
       isVisionModel: true,
+      chatFormat: "chatml",
     });
   });
 
@@ -118,6 +119,7 @@ describe("model browser search", () => {
       id: "openai-community/gpt2",
       isVisionModel: false,
       interactionMode: "completion",
+      chatFormat: "completion",
     });
   });
 
@@ -468,6 +470,7 @@ describe("model browser search", () => {
       isVisionModel: true,
       pipelineTag: "any-to-any",
       parameterCountB: 2,
+      chatFormat: "gemma",
     });
   });
 
@@ -486,6 +489,7 @@ describe("model browser search", () => {
         estimatedDownloadGb: 1.4,
         isVisionModel: false,
         interactionMode: "chat",
+        chatFormat: "chatml",
       },
       {
         device: "webgpu",

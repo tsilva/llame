@@ -20,7 +20,17 @@ export interface GenerationStats {
 export type ModelSupportTier = "curated" | "experimental";
 export type InferenceDevice = "webgpu";
 export type ModelInteractionMode = "chat" | "completion";
-export type ModelChatFormatType = "chat-template" | "fallback-chat" | "completion";
+export type ModelChatFormatType =
+  | "chatml"
+  | "gemma"
+  | "llama-3"
+  | "llama-2"
+  | "mistral-instruct"
+  | "phi"
+  | "smollm"
+  | "role-labels"
+  | "custom-template"
+  | "completion";
 
 export interface ModelSelection {
   id: string;

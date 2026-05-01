@@ -8,6 +8,7 @@ interface ModelInteractionInput {
   pipelineTag?: string | null;
   modelType?: string | null;
   hasChatTemplate?: boolean | null;
+  chatTemplate?: string | null;
 }
 
 const CHAT_ID_PATTERN = /(?:^|[/_.-])(?:chat|instruct|instruction|it)(?:$|[/_.-])/i;
@@ -106,13 +107,42 @@ export function getModelInteractionLabel(mode?: ModelInteractionMode | null) {
 }
 
 export function getModelChatFormatType(input: ModelInteractionInput): ModelChatFormatType {
+  const modelId = input.modelId?.trim() ?? "";
+  const modelType = input.modelType?.trim() ?? "";
+  const chatTemplate = input.chatTemplate ?? "";
   const interactionMode = getModelInteractionMode(input);
+
   if (interactionMode === "completion") return "completion";
-  return input.hasChatTemplate ? "chat-template" : "fallback-chat";
+
+  if (chatTemplate.includes("<|im_start|>") || chatTemplate.includes("<|im_end|>")) return "chatml";
+  if (chatTemplate.includes("<start_of_turn>") || chatTemplate.includes("<end_of_turn>")) return "gemma";
+  if (chatTemplate.includes("<|start_header_id|>") || chatTemplate.includes("<|end_header_id|>")) return "llama-3";
+  if (chatTemplate.includes("[INST]") || chatTemplate.includes("[/INST]")) return "mistral-instruct";
+  if (chatTemplate.includes("<<SYS>>") || chatTemplate.includes("<</SYS>>")) return "llama-2";
+  if (chatTemplate.includes("<|user|>") || chatTemplate.includes("<|assistant|>")) return "phi";
+  if (chatTemplate.includes("<|start_of_role|>") || chatTemplate.includes("<|end_of_role|>")) return "smollm";
+
+  if (/qwen|lfm2/i.test(`${modelId} ${modelType}`)) return "chatml";
+  if (/gemma/i.test(`${modelId} ${modelType}`)) return "gemma";
+  if (/smollm/i.test(`${modelId} ${modelType}`)) return "smollm";
+  if (/llama-?3|llama3|llama4/i.test(`${modelId} ${modelType}`)) return "llama-3";
+  if (/mistral|ministral/i.test(`${modelId} ${modelType}`)) return "mistral-instruct";
+  if (/\bphi/i.test(`${modelId} ${modelType}`)) return "phi";
+  if (/llama/i.test(`${modelId} ${modelType}`)) return "llama-2";
+
+  if (input.hasChatTemplate) return "custom-template";
+  return "role-labels";
 }
 
 export function getModelChatFormatLabel(format?: ModelChatFormatType | null) {
-  if (format === "completion") return "Completion prompt";
-  if (format === "fallback-chat") return "Fallback chat";
-  return "Chat template";
+  if (format === "chatml") return "ChatML";
+  if (format === "gemma") return "Gemma";
+  if (format === "llama-3") return "Llama 3";
+  if (format === "llama-2") return "Llama 2";
+  if (format === "mistral-instruct") return "Mistral Instruct";
+  if (format === "phi") return "Phi";
+  if (format === "smollm") return "SmolLM";
+  if (format === "completion") return "Completion";
+  if (format === "custom-template") return "Custom template";
+  return "Role labels";
 }

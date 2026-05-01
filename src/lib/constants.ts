@@ -45,7 +45,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "chatml",
   },
   {
     id: "onnx-community/Qwen3.5-0.8B-ONNX",
@@ -59,7 +59,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "chatml",
   },
   {
     id: "tsilva/unsloth_Qwen3.5-0.8B_uncensored",
@@ -73,7 +73,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "chatml",
   },
   {
     id: "onnx-community/Qwen3.5-2B-ONNX",
@@ -87,7 +87,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "chatml",
   },
   {
     id: "onnx-community/gemma-4-E2B-it-ONNX",
@@ -101,7 +101,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "gemma",
   },
   {
     id: "HuggingFaceTB/SmolLM3-3B-ONNX",
@@ -115,7 +115,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     recommendedDevice: "webgpu",
     supportTier: "curated",
     interactionMode: "chat",
-    chatFormat: "chat-template",
+    chatFormat: "smollm",
   },
 ];
 

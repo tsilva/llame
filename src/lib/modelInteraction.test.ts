@@ -59,18 +59,43 @@ describe("getModelChatFormatType", () => {
     })).toBe("completion");
   });
 
-  it("classifies templated chat models separately from fallback chat prompts", () => {
+  it("classifies common chat template delimiter families", () => {
+    expect(getModelChatFormatType({
+      modelId: "owner/qwen",
+      chatTemplate: "{% for message in messages %}<|im_start|>{{ message.role }}\n{{ message.content }}<|im_end|>{% endfor %}",
+      hasChatTemplate: true,
+    })).toBe("chatml");
+
+    expect(getModelChatFormatType({
+      modelId: "owner/gemma",
+      chatTemplate: "{% for message in messages %}<start_of_turn>{{ message.role }}\n{{ message.content }}<end_of_turn>{% endfor %}",
+      hasChatTemplate: true,
+    })).toBe("gemma");
+
     expect(getModelChatFormatType({
       modelId: "owner/base-llama",
-      pipelineTag: "text-generation",
-      modelType: "llama",
+      chatTemplate: "<|start_header_id|>user<|end_header_id|>\n{{ message.content }}",
       hasChatTemplate: true,
-    })).toBe("chat-template");
+    })).toBe("llama-3");
+  });
+
+  it("falls back to model family or role-label prompts when no known delimiters are present", () => {
+    expect(getModelChatFormatType({
+      modelId: "HuggingFaceTB/SmolLM3-3B-ONNX",
+      pipelineTag: "text-generation",
+      modelType: "smollm3",
+      hasChatTemplate: true,
+      chatTemplate: "{%- for message in messages -%}{%- endfor -%}",
+    })).toBe("smollm");
 
     expect(getModelChatFormatType({
       modelId: "owner/example-chat-model",
       pipelineTag: "text-generation",
       modelType: "llama",
-    })).toBe("fallback-chat");
+    })).toBe("llama-2");
+
+    expect(getModelChatFormatType({
+      modelId: "owner/example-chat-model",
+    })).toBe("role-labels");
   });
 });

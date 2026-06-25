@@ -31,6 +31,8 @@ import { pickDtypeForModel } from "@/lib/modelDtype";
 import {
   AvailableCausalLmArtifact,
   CAUSAL_LM_MODEL_FILE_CANDIDATES,
+  inferAvailableCausalLmArtifactsFromSiblingPaths,
+  selectOnnxDtypeForBaseName,
   selectCausalLmLoadArtifact,
 } from "@/lib/modelArtifacts";
 import { ThinkingParser } from "@/lib/thinkingParser";
@@ -282,6 +284,30 @@ async function getAvailableCausalLmArtifactDtypes(
   );
 }
 
+function getModelApiUrl(modelId: string, revision: string | null) {
+  const modelPath = modelId.split("/").map(encodeURIComponent).join("/");
+  if (revision) {
+    return `https://huggingface.co/api/models/${modelPath}/revision/${encodeURIComponent(revision)}?expand=siblings`;
+  }
+
+  return `https://huggingface.co/api/models/${modelPath}?expand=siblings`;
+}
+
+async function getHubSiblingPaths(modelId: string, revision: string | null) {
+  const response = await withRetry(() => fetch(getModelApiUrl(modelId, revision)), 2);
+  if (!response.ok) {
+    throw new Error(`Failed to inspect model files (${response.status})`);
+  }
+
+  const data = await response.json() as {
+    siblings?: Array<{ rfilename?: unknown }>;
+  };
+
+  return data.siblings
+    ?.map((sibling) => sibling.rfilename)
+    .filter((path): path is string => typeof path === "string") ?? [];
+}
+
 async function resolveCausalLmLoadArtifact(
   modelId: string,
   revision: string | null,
@@ -294,7 +320,13 @@ async function resolveCausalLmLoadArtifact(
       dtypes: await getAvailableCausalLmArtifactDtypes(modelId, revision, config, modelFileName),
     })),
   );
-  const artifact = selectCausalLmLoadArtifact(modelId, device, artifacts);
+  let artifact = selectCausalLmLoadArtifact(modelId, device, artifacts);
+
+  if (!artifact) {
+    const siblingPaths = await getHubSiblingPaths(modelId, revision);
+    const inferredArtifacts = inferAvailableCausalLmArtifactsFromSiblingPaths(siblingPaths);
+    artifact = selectCausalLmLoadArtifact(modelId, device, inferredArtifacts);
+  }
 
   if (!artifact) {
     throw new Error(
@@ -304,6 +336,38 @@ async function resolveCausalLmLoadArtifact(
   }
 
   return artifact;
+}
+
+async function resolveImageTextToTextDtype(
+  modelId: string,
+  revision: string | null,
+  modelType: string,
+  device: InferenceDevice,
+) {
+  const isQwen35 = modelType === "qwen3_5" || modelType === "qwen3_5_moe" || modelId.includes("Qwen3.5");
+  const qwen35PreferredDtype = {
+    embed_tokens: "fp16",
+    vision_encoder: "fp16",
+    decoder_model_merged: "q4f16",
+  } as const;
+
+  if (!isQwen35) {
+    return pickDtypeForModel(modelId, device);
+  }
+
+  try {
+    const siblingPaths = await getHubSiblingPaths(modelId, revision);
+    const dtype = Object.fromEntries(
+      Object.entries(qwen35PreferredDtype).map(([baseName, preferredDtype]) => [
+        baseName,
+        selectOnnxDtypeForBaseName(siblingPaths, baseName, preferredDtype) ?? preferredDtype,
+      ]),
+    ) as Record<keyof typeof qwen35PreferredDtype, DataType>;
+
+    return dtype;
+  } catch {
+    return qwen35PreferredDtype;
+  }
 }
 
 async function loadModel(modelId: string, revision: string | null, device: InferenceDevice) {
@@ -365,7 +429,6 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
 
     const supportsImages = supportsModelType(AutoModelForImageTextToText, modelType);
     const supportsCausalLM = supportsModelType(AutoModelForCausalLM, modelType);
-    const isQwen35 = modelType === "qwen3_5" || modelType === "qwen3_5_moe" || modelId.includes("Qwen3.5");
     const commonOptions = {
       progress_callback: progressCallback,
       ...(revision ? { revision } : {}),
@@ -384,13 +447,7 @@ async function loadModel(modelId: string, revision: string | null, device: Infer
 
       post({ status: "loading", message: "Loading model..." });
 
-      const dtype = isQwen35
-        ? {
-            embed_tokens: "fp16",
-            vision_encoder: "fp16",
-            decoder_model_merged: "q4f16",
-          }
-        : pickDtypeForModel(modelId, device);
+      const dtype = await resolveImageTextToTextDtype(modelId, revision, modelType, device);
       currentPrecision = typeof dtype === "string" ? dtype : "q4f16+fp16";
 
       model = await AutoModelForImageTextToText.from_pretrained(modelId, {

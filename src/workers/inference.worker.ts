@@ -60,7 +60,7 @@ env.fetch = async (input, init) => {
   const requestLike = input as { url?: string; toString(): string };
   const url = typeof input === "string" ? input : (requestLike.url ?? requestLike.toString());
   const isHuggingFaceAsset =
-    /^https:\/\/(?:[^/]+\.)?(?:huggingface\.co|hf\.co|xethub\.hf\.co)\//.test(url);
+    /^https:\/\/(?:[a-z0-9-]+\.)*(?:huggingface\.co|hf\.co)\//iu.test(url);
 
   const requestInit: RequestInit = isHuggingFaceAsset
     ? {

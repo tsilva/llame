@@ -28,6 +28,7 @@ export function TokenizedTextarea({
   enabled,
 }: TokenizedTextareaProps) {
   const showOverlay = enabled && value.length > 0;
+  const isEmpty = value.length === 0;
 
   const handleScroll = (event: UIEvent<HTMLTextAreaElement>) => {
     const overlay = event.currentTarget.previousElementSibling;
@@ -41,7 +42,7 @@ export function TokenizedTextarea({
     <div className="relative flex-1 self-center">
       {showOverlay && (
         <div
-          className="pointer-events-none absolute inset-0 max-h-[200px] overflow-hidden text-sm leading-normal text-[#ececec]"
+          className="pointer-events-none absolute inset-0 max-h-[200px] overflow-hidden text-sm leading-6 text-[#ececec]"
           aria-hidden="true"
         >
           <TokenizedText text={value} tokens={tokens} />
@@ -55,7 +56,9 @@ export function TokenizedTextarea({
         onScroll={handleScroll}
         placeholder={placeholder}
         rows={1}
-        className={`max-h-[200px] w-full resize-none bg-transparent text-sm outline-none placeholder-[#8e8e8e] ${
+        className={`max-h-[200px] w-full resize-none bg-transparent text-sm leading-6 outline-none placeholder-[#8e8e8e] ${
+          isEmpty ? "text-center" : "text-left"
+        } ${
           showOverlay ? "text-transparent caret-[#ececec]" : "text-[#ececec]"
         }`}
       />

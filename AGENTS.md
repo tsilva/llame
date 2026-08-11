@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - `npm run dev` — start dev server (http://localhost:3000)
-- `npm run build` — production build (static export via `next build --webpack`)
+- `npm run build` — production build (static export via Turbopack)
 - `npm run lint` — ESLint (flat config with core-web-vitals + TypeScript rules)
 - `npm start` — serve production build
 
@@ -34,7 +34,7 @@ Single-page app with one route (`src/app/page.tsx`). The `Home` component orches
 
 ### Static export & COOP/COEP
 
-The app is configured as `output: "export"` in `next.config.ts`. `vercel.json` sets `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` headers required for `SharedArrayBuffer` (needed by ONNX runtime). The webpack config aliases `sharp` and `onnxruntime-node` to `false` to prevent server-side imports.
+The app is configured as `output: "export"` in `next.config.ts`. `vercel.json` sets `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` headers required for `SharedArrayBuffer` (needed by ONNX runtime). Turbopack aliases browser imports of `sharp` and `onnxruntime-node` to an empty module to prevent server-side native modules from entering the browser bundle.
 
 ### Path aliases
 

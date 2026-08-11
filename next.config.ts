@@ -56,18 +56,19 @@ loadIgnoredEnvFile(".env.sentry-build-plugin");
 
 const nextConfig: NextConfig = {
   output: "export",
-  turbopack: {},
+  turbopack: {
+    resolveAlias: {
+      sharp: {
+        browser: "./src/lib/empty-browser-module.ts",
+      },
+      "onnxruntime-node": {
+        browser: "./src/lib/empty-browser-module.ts",
+      },
+    },
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   env: {
     GIT_COMMIT_HASH: getGitHash(),
-  },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      sharp$: false,
-      "onnxruntime-node$": false,
-    };
-    return config;
   },
 };
 

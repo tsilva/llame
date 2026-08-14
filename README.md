@@ -43,6 +43,14 @@ pnpm run check:verified-model-sitemap
 - Conversations, including uploaded images, are stored in IndexedDB, with `llame-` localStorage keys for settings and migration state.
 - The Vercel deployment serves a static export with COOP/COEP and CSP headers for browser inference.
 
+## Local credentials
+
+Private local values declared in `.keyenv.toml` live in macOS Keychain. Run
+`keyenv doctor` to verify them and launch credential-dependent commands with
+`keyenv run -- <command>`. Python, Node, and their child processes receive the
+values through their normal environment APIs. Keep only public or non-secret
+configuration in dotenv files.
+
 ## Architecture
 
 ![llame architecture diagram](./architecture.png)

@@ -26,7 +26,7 @@
     "highlight.js": "^11.11.1",
     "katex": "^0.16.35",
     "lucide-react": "^0.577.0",
-    "next": "16.3.0",
+    "next": "16.3.3",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-markdown": "^10.1.0",
@@ -53,7 +53,7 @@
     "tinyexec": "^1.0.4",
     "typescript": "^5",
     "vite": "8.0.16",
-    "vitest": "^4.1.0"
+    "vitest": "^5.0.1"
   },
   "pnpm": {
     "overrides": {

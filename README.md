@@ -17,7 +17,8 @@ Chat-tuned models use their tokenizer chat template when available. Base causal 
 git clone https://github.com/tsilva/llame.git
 cd llame
 pnpm install
-pnpm dev
+infisical login
+pnpm dev --port auto
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -45,11 +46,23 @@ pnpm run check:verified-model-sitemap
 
 ## Local credentials
 
-Private local values declared in `.keyenv.toml` live in macOS Keychain. Run
-`keyenv doctor` to verify them and launch credential-dependent commands with
-`keyenv run -- <command>`. Python, Node, and their child processes receive the
-values through their normal environment APIs. Keep only public or non-secret
-configuration in dotenv files.
+Local private credentials are fetched from Infisical `llame`, Development `/`.
+Run `infisical login`, then `pnpm dev --port auto` and open its printed URL.
+`pnpm build:secrets` injects the local Sentry upload token in memory. Manager
+credentials are stripped and absent secrets cannot fall back to local token files.
+Public DSN/analytics settings can remain in dotenv files.
+
+Production credentials are isolated in `llame-production`, Production `/`.
+To stay within Infisical Free's native sync limit, this build-only site uses
+`pnpm secrets:sync:production` to copy its Sentry build token to Vercel Production,
+using the existing Infisical and Vercel CLI logins. The command is pinned to this
+project, sends values through stdin, performs no deletions, and reports names only.
+Run it after token changes, then redeploy; it does not run automatically or deploy.
+Public production settings remain managed by Vercel.
+
+`pnpm secrets:migrate` is a one-time Keychain import with exact readback. Originals
+remain for recovery until provider rotation is verified. Inference runs entirely
+in the browser and needs no cloud inference API key.
 
 ## Architecture
 

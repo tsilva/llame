@@ -46,7 +46,7 @@ const loadIgnoredEnvFile = (filename: string) => {
     const rawValue = trimmed.slice(separatorIndex + 1).trim();
     const unquotedValue = rawValue.replace(/^['"]|['"]$/g, "");
 
-    if (!process.env[key]) {
+    if (process.env[key] === undefined) {
       process.env[key] = unquotedValue;
     }
   }

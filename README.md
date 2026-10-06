@@ -71,3 +71,5 @@ in the browser and needs no cloud inference API key.
 ## License
 
 [MIT](LICENSE)
+
+Production delivery runs on pushes to `main` and supports manual secret rotations. See [production delivery](docs/production-delivery.md) for destinations, access boundaries and failure behavior.

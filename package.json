@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.27.0",
   "scripts": {
     "preinstall": "node -e \"const ua = process.env.npm_config_user_agent || ''; if (!ua.startsWith('pnpm/')) { console.error('Use pnpm for this repo.'); process.exit(1); }\"",
-    "dev": "node scripts/dev-server.mjs next dev",
+    "dev": "python3 scripts/infisical/run.py dev",
     "build": "next build",
     "start": "node scripts/dev-server.mjs next start",
     "lint": "eslint",
@@ -17,7 +17,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "smoke": "node scripts/smoke-check.mjs"
+    "smoke": "node scripts/smoke-check.mjs",
+    "dev:app": "node scripts/dev-server.mjs next dev",
+    "build:secrets": "python3 scripts/infisical/run.py build",
+    "secrets:check": "python3 scripts/infisical/run.py check",
+    "secrets:migrate": "python3 scripts/infisical/migrate_keyenv.py",
+    "secrets:sync:production": "python3 scripts/infisical/sync_production.py",
+    "test:secrets": "python3 -m unittest discover -s scripts/infisical -p test_secrets.py"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
@@ -26,7 +32,7 @@
     "highlight.js": "^11.11.1",
     "katex": "^0.16.35",
     "lucide-react": "^0.577.0",
-    "next": "16.3.0",
+    "next": "16.3.6",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-markdown": "^10.1.0",
@@ -70,7 +76,8 @@
       "minimatch@3.1.5>brace-expansion": "1.1.18",
       "minimatch@10.2.5>brace-expansion": "5.0.9",
       "undici": "7.29.0",
-      "vite": "8.0.16"
+      "vite": "8.0.16",
+      "eslint-plugin-react-hooks": "7.0.1"
     }
   }
 }

@@ -47,3 +47,17 @@ The app is configured as `output: "export"` in `next.config.ts`. `vercel.json` s
 - Icons from `lucide-react`
 - Markdown rendering uses `react-markdown` + `remark-gfm` + `remark-math` + `rehype-katex` + `rehype-highlight`
 - localStorage keys prefixed with `llame-`
+
+## Secrets
+
+Default dev uses Infisical `llame` Development `/` through scripts/infisical/run.py; build:secrets supplies the local Sentry upload token. Production uses isolated `llame-production` Production `/`. Its manual secrets:sync:production command copies only the Sentry build token to the fixed Vercel Production project, performs no deletions, and requires redeployment after changes. Never print tokens or upload local dotenv credential files; retain originals until verified rotation.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

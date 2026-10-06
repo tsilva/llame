@@ -17,7 +17,7 @@ Chat-tuned models use their tokenizer chat template when available. Base causal 
 git clone https://github.com/tsilva/llame.git
 cd llame
 pnpm install
-pnpm dev
+pnpm dev --port auto
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -42,14 +42,6 @@ pnpm run check:verified-model-sitemap
 - Tokenization view can colorize the prompt input and visible chat messages after the selected model is loaded, using that model's tokenizer in the inference worker.
 - Conversations, including uploaded images, are stored in IndexedDB, with `llame-` localStorage keys for settings and migration state.
 - The Vercel deployment serves a static export with COOP/COEP and CSP headers for browser inference.
-
-## Local credentials
-
-Private local values declared in `.keyenv.toml` live in macOS Keychain. Run
-`keyenv doctor` to verify them and launch credential-dependent commands with
-`keyenv run -- <command>`. Python, Node, and their child processes receive the
-values through their normal environment APIs. Keep only public or non-secret
-configuration in dotenv files.
 
 ## Architecture
 

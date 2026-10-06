@@ -50,3 +50,5 @@ pnpm run check:verified-model-sitemap
 ## License
 
 [MIT](LICENSE)
+
+Production delivery runs on pushes to `main` and supports manual secret rotations. See [production delivery](docs/production-delivery.md) for destinations, access boundaries and failure behavior.

@@ -1,0 +1,11 @@
+{
+  "repository": "tsilva/llame",
+  "githubRepositoryId": 1174573273,
+  "identityId": "672c01c3-c025-40f9-b89b-5abcc03e8261",
+  "infisicalProjectId": "490f971e-8be3-4aec-b1f6-0851ada9661e",
+  "secretName": "SENTRY_AUTH_TOKEN",
+  "destination": "vercel",
+  "vercelProjectId": "prj_SnsRSVzZt8kjVFQ33AqbwsHKdZPp",
+  "vercelProjectName": "llame",
+  "vercelTeamId": "team_eE2Iv7IMqPOx8ZVN2xNfR2f0"
+}

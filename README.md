@@ -35,6 +35,7 @@ pnpm run check:verified-model-sitemap
 ## Notes
 
 - This repo enforces pnpm for installs.
+- The browser-only inference dependency graph excludes `onnxruntime-node`. Next lint keeps its rules and uses a compatible `tinyglobby` registry alias for project-directory discovery; `pnpm test:dependency-security` verifies both boundaries.
 - `pnpm install` configures the repo-managed pre-commit hook in `githooks/`.
 - Models are downloaded from Hugging Face into the browser.
 - Browser-tested model status lives in `src/config/verifiedModels.ts`; models that load and answer plausibly are marked verified, while known failing presets are marked broken with a reason.

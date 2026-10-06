@@ -1,2 +1,6 @@
 minimumReleaseAge: 10080
 blockExoticSubdeps: true
+
+# Exact security-patch exception approved for the source-map-js advisory.
+minimumReleaseAgeExclude:
+  - source-map-js@1.2.2

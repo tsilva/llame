@@ -24,6 +24,8 @@ overrides:
   '@huggingface/transformers>onnxruntime-node': '-'
   '@next/eslint-plugin-next>fast-glob': npm:tinyglobby@0.2.15
 
+packageExtensionsChecksum: sha256-eWqx+k/J9AOWoN2Qmdu1vKmZMLWuf+H20gL/vpi5BIA=
+
 importers:
 
   .:
@@ -4054,6 +4056,7 @@ snapshots:
     dependencies:
       '@huggingface/jinja': 0.5.6
       '@huggingface/tokenizers': 0.1.3
+      onnxruntime-common: 1.24.0-dev.20251116-b39e144322
       onnxruntime-web: 1.26.0-dev.20260416-b7804b056c
       sharp: 0.35.5(@types/node@20.19.39)
     transitivePeerDependencies:

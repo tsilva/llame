@@ -4,3 +4,10 @@ blockExoticSubdeps: true
 # Exact security-patch exception approved for the source-map-js advisory.
 minimumReleaseAgeExclude:
   - source-map-js@1.2.2
+
+# Transformers imports the shared Tensor API without declaring it. Match its
+# existing ONNX Web runtime exactly; do not restore the unused Node backend.
+packageExtensions:
+  "@huggingface/transformers@4.2.0":
+    dependencies:
+      onnxruntime-common: 1.24.0-dev.20251116-b39e144322

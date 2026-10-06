@@ -59,3 +59,9 @@ test("Next internal-link lint still discovers pages through a configured project
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("Transformers resolves the same shared Tensor runtime as its browser backend", () => {
+  const transformersRequire = createRequire(require.resolve("@huggingface/transformers"));
+  const webRequire = createRequire(transformersRequire.resolve("onnxruntime-web"));
+  assert.equal(transformersRequire.resolve("onnxruntime-common"), webRequire.resolve("onnxruntime-common"));
+});

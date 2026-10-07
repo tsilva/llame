@@ -1,10 +1,14 @@
-<div align="center">
+<p align="center">
   <img src="./public/brand/logo/logo-1024.png" alt="llame" width="420" />
+  <br />
+  <!-- repo-tagline:start -->
+  <strong>💬 Private AI chats in your browser 🔒</strong>
+  <!-- repo-tagline:end -->
+</p>
 
-  **Private AI chats in your browser**
+**Private AI chats in your browser**
 
   [Live Demo](https://llame.tsilva.eu)
-</div>
 
 llame is a fully client-side chat app for running ONNX language and vision models with WebGPU. No backend, no API key, and no hosted inference.
 

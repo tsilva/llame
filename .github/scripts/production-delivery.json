@@ -14,5 +14,12 @@
   "destination": "vercel",
   "vercelProjectId": "prj_SnsRSVzZt8kjVFQ33AqbwsHKdZPp",
   "vercelProjectName": "llame",
-  "vercelTeamId": "team_eE2Iv7IMqPOx8ZVN2xNfR2f0"
+  "vercelTeamId": "team_eE2Iv7IMqPOx8ZVN2xNfR2f0",
+  "configNames": [
+    "NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS",
+    "NEXT_PUBLIC_GA_MEASUREMENT_ID",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT"
+  ]
 }

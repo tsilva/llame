@@ -54,7 +54,7 @@
     "@webgpu/types": "^0.1.69",
     "eslint": "^9",
     "eslint-config-next": "16.4.1",
-    "fake-indexeddb": "^6.2.5",
+    "fake-indexeddb": "^6.2.6",
     "jsdom": "^28.1.0",
     "tailwindcss": "^4",
     "tinyexec": "^1.0.4",

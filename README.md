@@ -58,4 +58,8 @@ pnpm run check:verified-model-sitemap
 
 Production delivery runs on pushes to `main` and supports manual secret rotations. See [production delivery](docs/production-delivery.md) for destinations, access boundaries and failure behavior.
 
+Production secrets are delivered through the pinned shared GitHub Actions workflow. The standalone signed Infisical relay triggers synchronization and deployment; see [production delivery](docs/production-delivery.md) for scope and recovery.
+
 Production delivery keeps Vercel secret isolation enabled and distinguishes public configuration from private credentials; see [production delivery](docs/production-delivery.md).
+
+Dependency security checks pin the fixed matcher and traversal packages. The seven-day package hold remains enabled with exact approved exceptions for `minimatch@11.0.1`, `@isaacs/nonrecursive-glob-match@1.0.1`, `glob@14.0.2`, and `path-scurry@3.0.0`. The patches in [`patches/`](patches/) preserve legacy ESLint imports and migrate its internal-module rule to the safe matcher API. The existing test command includes compatibility, adversarial-pattern, cancellation, and Next/Sentry file-selection regressions; these run locally without service credentials or source-map uploads.

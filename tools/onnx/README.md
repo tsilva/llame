@@ -56,3 +56,7 @@ This toolchain is intentionally narrow for now:
 - It is optimized for the latest Transformers.js WebGPU path, not ONNX Runtime GenAI packaging.
 - It assumes the custom checkpoint is architecture-compatible with the Qwen3.5 0.8B ONNX reference graphs.
 - It does not yet emit the full matrix of `fp32/fp16/q4/q4f16/q8` variants that some public ONNX repos publish.
+
+## License
+
+[MIT License](../../LICENSE).

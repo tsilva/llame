@@ -71,3 +71,5 @@ tmp/playwright-*/
 .env*.local
 !.env.example
 !.env.*.example
+/INBOX.md
+/.local/repo-inbox/

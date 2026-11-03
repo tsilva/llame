@@ -1,0 +1,8 @@
+version: 1
+websites:
+  llame.tsilva.eu:
+    url: https://llame.tsilva.eu/
+    availability: reachable
+    ga4: source-detected
+    sentry: source-detected
+    checked-on: 2026-11-03

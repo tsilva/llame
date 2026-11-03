@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { metadata as chatMetadata } from "@/app/chat/layout";
-import { generateMetadata as generateModelChatMetadata } from "@/app/chat/[...modelSlug]/page";
+import { generateMetadata as generateModelChatMetadata, generateStaticParams } from "@/app/chat/[...modelSlug]/page";
 import { metadata as homeMetadata } from "@/app/page";
 import sitemap from "@/app/sitemap";
 import { VERIFIED_MODELS } from "@/config/verifiedModels";
 import { MODEL_PRESETS } from "@/lib/constants";
-import { getModelChatPath } from "@/lib/modelRoutes";
+import { getModelChatPath, getModelRouteSlug } from "@/lib/modelRoutes";
 import {
   chatPageDescription,
   homePageJsonLd,
@@ -145,6 +145,7 @@ describe("sitemap", () => {
       ...VERIFIED_MODELS.map((model) => model.id),
     ]));
 
+    expect(generateStaticParams()).toEqual(sitemapModelIds.map((id) => ({ modelSlug: getModelRouteSlug(id) })));
     expect(entries).toEqual([
       {
         url: siteUrl,

@@ -38,6 +38,8 @@ pnpm run check:verified-model-sitemap
 
 ## Notes
 
+The sitemap lists the homepage and model chat pages. Preset and verified model pages use the same route list for the static build and the sitemap.
+
 - Local builds skip Sentry source-map uploads. Hosted Vercel builds handle uploads.
 - This repo enforces pnpm for installs.
 - The browser-only inference dependency graph excludes `onnxruntime-node`. Next lint keeps its rules and uses a compatible `tinyglobby` registry alias for project-directory discovery; `pnpm test:dependency-security` verifies both boundaries.

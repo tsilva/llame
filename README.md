@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/brand/logo/logo-1024.png" alt="llame" width="420" />
+  <img src="./logo.png" alt="llame logo" width="300" />
   <br />
   <!-- repo-tagline:start -->
   <strong>💬 Private AI chats in your browser 🔒</strong>

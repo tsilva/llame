@@ -156,6 +156,17 @@
       "target": "web-seo",
       "strategy": "written_metadata",
       "path": "web-seo-metadata.ts"
+    },
+    {
+      "key": "root-logo",
+      "kind": "logo",
+      "target": "shared",
+      "strategy": "cropped_from_logo_source",
+      "path": "../../logo.png",
+      "size": [
+        932,
+        1111
+      ]
     }
   ]
 }

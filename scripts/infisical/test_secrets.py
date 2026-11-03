@@ -104,14 +104,21 @@ class SecretTests(unittest.TestCase):
             client.assert_not_called()
             execute.assert_not_called()
 
-    def test_failed_infisical_fetch_never_launches_the_application(self):
-        with patch("run.sys.argv", ["run.py", "dev", "--port", "auto"]), \
+    def test_failed_infisical_fetch_never_launches_the_presence_check(self):
+        with patch("run.sys.argv", ["run.py", "check"]), \
                 patch("run.Infisical") as client, patch("run.os.execvpe") as execute:
             client.return_value.read.side_effect = SecretError("Fetch failed.")
             with self.assertRaises(SecretError):
                 launcher.main()
             execute.assert_not_called()
 
+    def test_local_dev_starts_without_fetching_the_sentry_token(self):
+        with patch("run.sys.argv", ["run.py", "dev", "--port", "auto"]), \
+                patch("run.Infisical") as client, patch("run.os.execvpe") as execute, \
+                patch("run.os.chdir"):
+            launcher.main()
+            client.assert_not_called()
+            self.assertEqual(execute.call_args.args[2]["SENTRY_AUTH_TOKEN"], "")
 
     def test_custom_sentry_loader_does_not_restore_a_missing_token(self):
         (self.root / ".env.sentry-build-plugin").write_text("SENTRY_AUTH_TOKEN=dummy-stale-token\n")

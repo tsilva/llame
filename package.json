@@ -19,7 +19,6 @@
     "test:e2e": "playwright test",
     "smoke": "node scripts/smoke-check.mjs",
     "dev:app": "node scripts/dev-server.mjs next dev",
-    "build:secrets": "python3 scripts/infisical/run.py build",
     "secrets:check": "python3 scripts/infisical/run.py check",
     "secrets:sync:production": "python3 scripts/infisical/sync_production.py",
     "test:secrets": "python3 -m unittest discover -s scripts/infisical -p test_secrets.py",

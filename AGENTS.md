@@ -50,7 +50,7 @@ The app is configured as `output: "export"` in `next.config.ts`. `vercel.json` s
 
 ## Secrets
 
-Default dev uses Infisical `llame` Development `/` through scripts/infisical/run.py; build:secrets supplies the local Sentry upload token. Production uses isolated `llame-production` Production `/`. Its manual secrets:sync:production command copies only the Sentry build token to the fixed Vercel Production project, performs no deletions, and requires redeployment after changes. Never print tokens or upload local dotenv credential files; retain originals until verified rotation.
+Local development and builds skip Sentry source-map uploads. Hosted Vercel builds handle uploads. Production uses isolated `llame-production` Production `/`. Its manual secrets:sync:production command copies only the Sentry build token to the fixed Vercel Production project, performs no deletions, and requires redeployment after changes. Never print tokens or upload local dotenv credential files; retain originals until verified rotation.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

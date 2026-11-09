@@ -4,6 +4,11 @@ blockExoticSubdeps: true
 # Exact security-patch exception approved for the source-map-js advisory.
 minimumReleaseAgeExclude:
   - source-map-js@1.2.2
+  # Exact security patches approved for the October 2026 advisories.
+  - "minimatch@11.0.1"
+  - "@isaacs/nonrecursive-glob-match@1.0.1"
+  - "glob@14.0.2"
+  - "path-scurry@3.0.0"
 
 # Transformers imports the shared Tensor API without declaring it. Match its
 # existing ONNX Web runtime exactly; do not restore the unused Node backend.
@@ -11,3 +16,8 @@ packageExtensions:
   "@huggingface/transformers@4.2.0":
     dependencies:
       onnxruntime-common: 1.24.0-dev.20251116-b39e144322
+
+# Preserve the existing ESLint APIs while using the fixed matcher.
+patchedDependencies:
+  minimatch@11.0.1: patches/minimatch@11.0.1.patch
+  eslint-plugin-import@2.32.0: patches/eslint-plugin-import@2.32.0.patch

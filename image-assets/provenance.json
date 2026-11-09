@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "profiles": [
+    "web"
+  ],
+  "sources": [
+    {
+      "path": "public/brand/sources/logo-source.png",
+      "sha256": "c8765cf260406bc8ca06abaccaf1ac5f1729aedb17509db30712f9aec2480844",
+      "evidence": "Native Codex ImageGen generated the llama speech-bubble logo from the selected Option 1 comparison concept."
+    },
+    {
+      "path": "public/brand/sources/icon-source.png",
+      "sha256": "fd335494b73b38e84fb05e2b71331167053410020a6ddf953b80141468cbfa80",
+      "evidence": "Native Codex ImageGen created a text-free llama speech-bubble icon from the approved logo."
+    },
+    {
+      "path": "public/brand/sources/social-source.png",
+      "sha256": "c6a41a336892754ed88c51c1472becbc9d81fb11286a2984d12208a871463567",
+      "evidence": "Native Codex ImageGen composed the llame Open Graph card using the approved logo and browser-privacy tagline."
+    }
+  ],
+  "exports": [
+    {
+      "role": "readme-logo",
+      "path": "logo.png",
+      "sha256": "2d23f1329b873da0d06cbdd6b2e62dc2c847a3e83b294eff944e3a9f7efc46e8",
+      "source": "public/brand/sources/logo-source.png"
+    },
+    {
+      "role": "favicon",
+      "path": "public/brand/web-seo/favicon/favicon.ico",
+      "sha256": "0ce538de2ca9c5dd724e55a704a6f5dfc7e1f89bcf7de77ed41a3258359c6714",
+      "source": "public/brand/sources/icon-source.png"
+    },
+    {
+      "role": "social-preview",
+      "path": "public/brand/web-seo/og-image-1200x630.png",
+      "sha256": "76f7cd52e84283d0df99049fc267cee5f2d5f66ab4fb448563f04f16c967629e",
+      "source": "public/brand/sources/social-source.png"
+    }
+  ]
+}

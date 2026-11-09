@@ -7,14 +7,13 @@ from common import Infisical, ROOT, SecretError, application_environment
 
 COMMANDS = {
     "dev": ["pnpm", "run", "dev:app", "--port", "auto"],
-    "build": ["pnpm", "run", "build"],
     "check": ["node", "scripts/check-infisical-secrets.mjs"],
 }
 
 
 def selected_command(arguments):
     if not arguments or arguments[0] not in COMMANDS:
-        raise SecretError("Usage: python3 scripts/infisical/run.py <dev|build|check>")
+        raise SecretError("Usage: python3 scripts/infisical/run.py <dev|check>")
     if arguments[1:] and not (arguments[0] == "dev"
                               and arguments[1:] in (["--port", "auto"], ["--port=auto"])):
         raise SecretError("Only --port auto is supported for development; project and environment overrides are rejected.")
@@ -23,7 +22,8 @@ def selected_command(arguments):
 
 def main():
     command = selected_command(sys.argv[1:])
-    environment = application_environment(Infisical().read())
+    values = Infisical().read() if sys.argv[1] == "check" else {}
+    environment = application_environment(values)
     os.chdir(ROOT)
     os.execvpe(command[0], command, environment)
 

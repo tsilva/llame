@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import HomeApp from "@/components/HomeApp";
-import { MODEL_PRESETS } from "@/lib/constants";
+import { getIndexableModelIds } from "@/lib/indexableModelIds";
 import { getModelIdFromRouteSlug, getModelRouteSlug } from "@/lib/modelRoutes";
 import { createModelChatPageMetadata } from "@/lib/siteMetadata";
 
@@ -13,8 +13,8 @@ interface ModelChatPageProps {
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return MODEL_PRESETS.map((preset) => ({
-    modelSlug: getModelRouteSlug(preset.id),
+  return getIndexableModelIds().map((modelId) => ({
+    modelSlug: getModelRouteSlug(modelId),
   }));
 }
 

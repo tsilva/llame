@@ -1,0 +1,25 @@
+diff --git a/lib/rules/no-internal-modules.js b/lib/rules/no-internal-modules.js
+--- a/lib/rules/no-internal-modules.js
++++ b/lib/rules/no-internal-modules.js
+@@ -49,6 +49,6 @@
+   create: function () {function noReachingInside(context) {
+       var options = context.options[0] || {};
+-      var allowRegexps = (options.allow || []).map(function (p) {return _minimatch2['default'].makeRe(p);});
+-      var forbidRegexps = (options.forbid || []).map(function (p) {return _minimatch2['default'].makeRe(p);});
++      var allowMatchers = (options.allow || []).map(function (p) {return new _minimatch2['default'].Minimatch(p);});
++      var forbidMatchers = (options.forbid || []).map(function (p) {return new _minimatch2['default'].Minimatch(p);});
+ 
+       // minimatch patterns are expected to use / path separators, like import
+@@ -72,10 +72,10 @@
+       // test if reaching to this destination is allowed
+       function reachingAllowed(importPath) {
+-        return allowRegexps.some(function (re) {return re.test(importPath);});
++        return allowMatchers.some(function (matcher) {return matcher.match(importPath);});
+       }
+ 
+       // test if reaching to this destination is forbidden
+       function reachingForbidden(importPath) {
+-        return forbidRegexps.some(function (re) {return re.test(importPath);});
++        return forbidMatchers.some(function (matcher) {return matcher.match(importPath);});
+       }
+ 

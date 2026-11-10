@@ -3,6 +3,19 @@ blockExoticSubdeps: true
 
 # Exact security-patch exception approved for the source-map-js advisory.
 minimumReleaseAgeExclude:
+  # Audited November 2026 Next.js security release. Remove after normal eligibility.
+  - '@next/env@16.4.5'
+  - '@next/eslint-plugin-next@16.4.5'
+  - '@next/swc-darwin-arm64@16.4.5'
+  - '@next/swc-darwin-x64@16.4.5'
+  - '@next/swc-linux-arm64-gnu@16.4.5'
+  - '@next/swc-linux-arm64-musl@16.4.5'
+  - '@next/swc-linux-x64-gnu@16.4.5'
+  - '@next/swc-linux-x64-musl@16.4.5'
+  - '@next/swc-win32-arm64-msvc@16.4.5'
+  - '@next/swc-win32-x64-msvc@16.4.5'
+  - 'eslint-config-next@16.4.5'
+  - 'next@16.4.5'
   - source-map-js@1.2.2
   # Exact security patches approved for the October 2026 advisories.
   - "minimatch@11.0.1"

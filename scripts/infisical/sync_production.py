@@ -8,8 +8,7 @@ KEY = "SENTRY_AUTH_TOKEN"
 
 class Production(Infisical):
     def __init__(self):
-        super().__init__(ROOT)
-        self.project = PROJECT
+        super().__init__(ROOT, project=PROJECT, domain="https://app.infisical.com")
         if self.domain != "https://app.infisical.com":
             raise SecretError("This production destination is pinned to the US cloud.")
     def command(self, args, value=None):
@@ -47,7 +46,7 @@ def sync(client=None):
     if len(matches) > 1 or any(item["target"] != ["production"] for item in matches):
         raise SecretError("Combined or duplicate destination targets require review; no writes.")
     response = vercel("POST", {"key": KEY, "value": value, "type": "sensitive", "target": ["production"],
-                              "comment": "Managed from Infisical llame-production by secrets:sync:production"})
+                              "comment": "Managed from Infisical llame-production by trusted production sync"})
     created = response.get("created")
     if response.get("failed") or not isinstance(created, dict) or created.get("key") != KEY or created.get("target") != ["production"]:
         raise SecretError("Vercel did not confirm the production write; details suppressed.")

@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const DEFAULT_SENTRY_ORG = "tsilva";
 const DEFAULT_SENTRY_PROJECT = path.basename(process.cwd());
 const DEFAULT_SENTRY_BASE_URL = "https://sentry.io";
-const HELP_TEXT = `Usage: pnpm sentry:issues [--days 7] [--limit 10] [--status unresolved]
+const HELP_TEXT = `Usage: node scripts/sentry-issues.mjs [--days 7] [--limit 10] [--status unresolved]
 
 List recent Sentry issues for the configured project.
 
@@ -16,34 +15,6 @@ Options:
   --status <v>    unresolved, resolved, ignored, or all. Default: unresolved
   --help          Show this help output
 `;
-
-function loadEnvFile(filename) {
-  const filePath = path.join(process.cwd(), filename);
-  if (!existsSync(filePath)) {
-    return;
-  }
-
-  const fileContents = readFileSync(filePath, "utf8");
-  for (const line of fileContents.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, separatorIndex).trim();
-    const rawValue = trimmed.slice(separatorIndex + 1).trim();
-    const unquotedValue = rawValue.replace(/^['"]|['"]$/g, "");
-
-    if (!process.env[key]) {
-      process.env[key] = unquotedValue;
-    }
-  }
-}
 
 function getOption(flag, fallback) {
   const index = process.argv.indexOf(flag);
@@ -59,8 +30,6 @@ function exitWithError(message) {
   process.exit(1);
 }
 
-loadEnvFile(".env.sentry-mcp");
-
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   console.log(HELP_TEXT.trim());
   process.exit(0);
@@ -71,9 +40,11 @@ const org = process.env.SENTRY_ORG ?? DEFAULT_SENTRY_ORG;
 const project = process.env.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT;
 const baseUrl = process.env.SENTRY_BASE_URL ?? DEFAULT_SENTRY_BASE_URL;
 
-if (!authToken) {
+if (process.env.SENTRY_VAULT_TRANSPORT !== undefined
+      ? process.env.SENTRY_VAULT_TRANSPORT !== "agent-vault" || authToken !== "sentry_read_public_placeholder"
+      : !authToken || authToken === "sentry_read_public_placeholder") {
   exitWithError(
-    "Missing Sentry credentials. Populate .env.sentry-mcp with SENTRY_AUTH_TOKEN.",
+    "Set SENTRY_AUTH_TOKEN in the server environment; configured proxy sessions require their reviewed placeholder.",
   );
 }
 
@@ -106,8 +77,8 @@ const projectResponse = await fetch(projectLookupUrl, {
 });
 
 if (!projectResponse.ok) {
-  const body = await projectResponse.text();
-  exitWithError(`Sentry project lookup failed (${projectResponse.status} ${projectResponse.statusText}). ${body}`);
+  await projectResponse.body?.cancel();
+  exitWithError(`Sentry project lookup failed (${projectResponse.status}); provider details withheld.`);
 }
 
 const projectDetails = await projectResponse.json();
@@ -136,8 +107,8 @@ const response = await fetch(issuesUrl, {
 });
 
 if (!response.ok) {
-  const body = await response.text();
-  exitWithError(`Sentry API request failed (${response.status} ${response.statusText}). ${body}`);
+  await response.body?.cancel();
+  exitWithError(`Sentry API request failed (${response.status}); provider details withheld.`);
 }
 
 const issues = await response.json();

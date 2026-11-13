@@ -73,3 +73,5 @@ tmp/playwright-*/
 !.env.*.example
 /INBOX.md
 /.local/repo-inbox/
+/.internal/
+/.runbox.yaml

@@ -8,8 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from common import Infisical, SecretError, application_environment, KEYS
-import run as launcher
+from common import Infisical, SecretError
 
 PROJECT = "7f771476-0638-4f74-8400-b7628ec63df4"
 VALUE = "dummy-only '$HOME' \"quoted\"\\backslash\nsecond line\n"
@@ -20,13 +19,12 @@ def row(value=VALUE, **overrides):
             "secretPath": "/", "type": "shared", **overrides}
 
 
-class SecretTests(unittest.TestCase):
+class ProductionTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        (self.root / ".infisical.json").write_text(json.dumps({"workspaceId": PROJECT}))
-        self.client = Infisical(self.root)
+        self.client = Infisical(self.root, project=PROJECT, domain="https://app.infisical.com")
 
     def test_transport_is_stdin_only_and_exact(self):
         calls = []
@@ -44,11 +42,13 @@ class SecretTests(unittest.TestCase):
         self.assertIn("--expand=false", calls[0][0])
         self.assertIn("--secret-overriding=false", calls[0][0])
 
+
     def test_identical_existing_value_causes_no_write(self):
         with patch.object(self.client, "read", return_value={"SENTRY_AUTH_TOKEN": VALUE}), \
                 patch.object(self.client, "command") as command:
             self.assertIn("already present", self.client.create_and_verify("SENTRY_AUTH_TOKEN", VALUE))
             command.assert_not_called()
+
 
     def test_changed_readback_fails(self):
         with patch.object(self.client, "read", side_effect=[{}, {"SENTRY_AUTH_TOKEN": "different"}]), \
@@ -64,6 +64,7 @@ class SecretTests(unittest.TestCase):
                 with self.assertRaises(SecretError):
                     self.client.read()
 
+
     def test_provider_error_details_never_escape(self):
         response = subprocess.CompletedProcess([], 1, VALUE, VALUE)
         with patch("common.subprocess.run", return_value=response):
@@ -71,62 +72,28 @@ class SecretTests(unittest.TestCase):
                 self.client.read()
         self.assertNotIn(VALUE, str(error.exception))
 
-    def test_app_environment_strips_tokens_stale_keys_and_untrusted_overrides(self):
-        original = {"PATH": "/safe/bin", "BWS_ACCESS_TOKEN": "dummy-token",
-                    "INFISICAL_TOKEN": "dummy-token", "INFISICAL_CLIENT_SECRET": "dummy-token",
-                    "OPENROUTER_API_KEY": "stale", "SENTRY_ORG": "tsilva"}
-        with patch.dict(os.environ, original, clear=True):
-            actual = application_environment({"SENTRY_AUTH_TOKEN": VALUE, "PATH": "/evil", "NODE_OPTIONS": "evil"})
-        self.assertEqual(actual["SENTRY_AUTH_TOKEN"], VALUE)
-        self.assertEqual(actual["PATH"], "/safe/bin")
-        self.assertEqual(actual["SENTRY_ORG"], "tsilva")
 
-        for key in KEYS:
-            if key != "SENTRY_AUTH_TOKEN": self.assertEqual(actual[key], "")
-        for key in ("BWS_ACCESS_TOKEN", "INFISICAL_TOKEN", "INFISICAL_CLIENT_SECRET", "NODE_OPTIONS"):
-            self.assertNotIn(key, actual)
+    def test_proxy_reader_rejects_raw_tokens_without_reading_dotenv(self):
+        root = Path(__file__).resolve().parents[2]
+        code = """
+          import fs from 'node:fs';
+          const read = fs.readFileSync;
+          fs.readFileSync = (path, ...args) => {
+            if (String(path).includes('.env')) throw new Error('Unexpected dotenv read');
+            return read(path, ...args);
+          };
+          globalThis.fetch = () => { throw new Error('Unexpected provider request'); };
+          await import(process.argv[1]);
+        """
+        result = subprocess.run(
+            ["node", "--input-type=module", "-e", code, str(root / "scripts/sentry-issues.mjs")],
+            env={"PATH": os.environ["PATH"], "SENTRY_AUTH_TOKEN": VALUE, "SENTRY_VAULT_TRANSPORT": "agent-vault"}, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("reviewed placeholder", result.stderr)
+        self.assertNotIn("Unexpected", result.stderr)
+        self.assertNotIn(VALUE, result.stdout + result.stderr)
 
-    def test_missing_infisical_key_cannot_fall_back_to_next_dotenv(self):
-        (self.root / ".env").write_text("SENTRY_AUTH_TOKEN=dummy-stale-dotenv-key\n")
-        code = ("const {createRequire} = await import('node:module'); const req=createRequire(import.meta.url); const nextEnv=req(req.resolve('@next/env', {paths:[req.resolve('next/package.json', {paths:[process.cwd()]})]})); "
-                "nextEnv.loadEnvConfig(process.argv[1], true, {info(){},error(){}}); "
-                "process.stdout.write('\\nRESULT='+JSON.stringify({hasKey:Boolean(process.env.SENTRY_AUTH_TOKEN)}));")
-        environment = application_environment({})
-        result = subprocess.run(["node", "--input-type=module", "-e", code, str(self.root)],
-                                env=environment, capture_output=True, text=True, check=True)
-        self.assertFalse(json.loads(result.stdout.split("RESULT=",1)[-1])["hasKey"])
-
-    def test_launcher_rejects_environment_overrides_before_fetching(self):
-        with patch("run.sys.argv", ["run.py", "dev", "--env", "prod"]), \
-                patch("run.Infisical") as client, patch("run.os.execvpe") as execute:
-            with self.assertRaises(SecretError):
-                launcher.main()
-            client.assert_not_called()
-            execute.assert_not_called()
-
-    def test_failed_infisical_fetch_never_launches_the_presence_check(self):
-        with patch("run.sys.argv", ["run.py", "check"]), \
-                patch("run.Infisical") as client, patch("run.os.execvpe") as execute:
-            client.return_value.read.side_effect = SecretError("Fetch failed.")
-            with self.assertRaises(SecretError):
-                launcher.main()
-            execute.assert_not_called()
-
-    def test_local_dev_starts_without_fetching_the_sentry_token(self):
-        with patch("run.sys.argv", ["run.py", "dev", "--port", "auto"]), \
-                patch("run.Infisical") as client, patch("run.os.execvpe") as execute, \
-                patch("run.os.chdir"):
-            launcher.main()
-            client.assert_not_called()
-            self.assertEqual(execute.call_args.args[2]["SENTRY_AUTH_TOKEN"], "")
-
-    def test_custom_sentry_loader_does_not_restore_a_missing_token(self):
-        (self.root / ".env.sentry-build-plugin").write_text("SENTRY_AUTH_TOKEN=dummy-stale-token\n")
-        config = Path(__file__).resolve().parents[2] / "next.config.ts"
-        code = "await import(" + json.dumps(config.as_uri()) + "); process.stdout.write('\\nRESULT='+JSON.stringify({hasKey:Boolean(process.env.SENTRY_AUTH_TOKEN)}));"
-        result = subprocess.run(["node", "--input-type=module", "-e", code], cwd=self.root,
-                                env=application_environment({}), capture_output=True, text=True, check=True)
-        self.assertFalse(json.loads(result.stdout.split("RESULT=",1)[1])["hasKey"])
 
     def test_manual_sync_refuses_a_combined_destination_before_writing(self):
         import sync_production as syncer
@@ -135,6 +102,7 @@ class SecretTests(unittest.TestCase):
             with self.assertRaisesRegex(SecretError,"no writes"):
                 syncer.sync(self.client)
             self.assertEqual(api.call_count,1)
+
 
     def test_manual_sync_payload_is_stdin_only_and_error_body_is_suppressed(self):
         import sync_production as syncer
@@ -147,6 +115,7 @@ class SecretTests(unittest.TestCase):
         self.assertEqual(json.loads(kwargs["input"])["value"],VALUE)
         self.assertIn("--input",args[0])
         self.assertNotIn(VALUE,str(caught.exception))
+
 
     def test_manual_sync_cannot_retarget_using_arguments(self):
         import sync_production as syncer

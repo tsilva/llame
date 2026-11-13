@@ -3,6 +3,7 @@
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 from uuid import UUID
@@ -17,18 +18,6 @@ class SecretError(Exception):
     """Only fixed, credential-free messages cross the CLI boundary."""
 
 
-def configuration(root=ROOT):
-    try:
-        settings = json.loads((root / ".infisical.json").read_text())
-        project = str(UUID(settings["workspaceId"]))
-        domain = settings.get("domain", "https://app.infisical.com")
-        if domain not in ("https://app.infisical.com", "https://eu.infisical.com"):
-            raise ValueError()
-        return project, domain
-    except Exception:
-        raise SecretError("Run infisical init in this repository and set its US/EU domain in .infisical.json.") from None
-
-
 def cli_environment():
     # This workflow deliberately uses the human login saved by infisical login.
     return {key: value for key, value in os.environ.items()
@@ -36,9 +25,12 @@ def cli_environment():
 
 
 class Infisical:
-    def __init__(self, root=ROOT):
+    def __init__(self, root, *, project, domain):
         self.root = root
-        self.project, self.domain = configuration(root)
+        self.project = str(UUID(project))
+        if domain != "https://app.infisical.com":
+            raise SecretError("The trusted production instance is pinned to the US cloud.")
+        self.domain = domain
 
     def command(self, args, value=None):
         command = ["infisical", *args, "--projectId", self.project,
@@ -90,15 +82,3 @@ class Infisical:
 
 def matches(left, right):
     return hmac.compare_digest(left.encode(), right.encode())
-
-
-def application_environment(values):
-    environment = cli_environment()
-    for key in KEYS:
-        value = values.get(key, "")
-        if "\0" in value:
-            raise SecretError("An application secret contains an invalid null byte.")
-        # Next.js preserves existing process.env entries, including empty ones.
-        # An absent Infisical key must not fall back to an old dotenv credential.
-        environment[key] = value
-    return environment

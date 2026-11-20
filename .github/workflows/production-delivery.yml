@@ -75,7 +75,7 @@ jobs:
     with:
       project_id: prj_SnsRSVzZt8kjVFQ33AqbwsHKdZPp
       project_name: llame
-      production_domains: '["llame.tsilva.eu","llame.vercel.app"]'
+      production_domains: '["llame.tsilva.eu"]'
       public_environment: '["NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS","NEXT_PUBLIC_GA_MEASUREMENT_ID","NEXT_PUBLIC_SENTRY_DSN","SENTRY_ORG","SENTRY_PROJECT"]'
       source_maps: true
       promote: ${{ !inputs.stage_prebuilt }}

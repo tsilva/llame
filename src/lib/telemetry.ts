@@ -6,19 +6,8 @@ export { installSentryTestHook, SENTRY_TEST_EXCEPTION_MESSAGE } from "@/lib/sent
 
 type TelemetryContext = Record<string, string | number | boolean | null | undefined>;
 
-let vercelAnalyticsPromise: Promise<typeof import("@vercel/analytics")> | null = null;
-
-function isVercelInsightsEnabled() {
-  return process.env.NEXT_PUBLIC_ENABLE_VERCEL_INSIGHTS === "true";
-}
-
 function isProductionTelemetryEnabled() {
   return process.env.NODE_ENV === "production";
-}
-
-function loadVercelAnalytics() {
-  vercelAnalyticsPromise ??= import("@vercel/analytics");
-  return vercelAnalyticsPromise;
 }
 
 export async function initTelemetry() {
@@ -58,16 +47,6 @@ declare global {
 
 export function trackProductEvent(name: string, payload: TelemetryContext = {}) {
   if (!isProductionTelemetryEnabled()) return;
-
-  if (isVercelInsightsEnabled()) {
-    void loadVercelAnalytics()
-      .then(({ track }) => {
-        track(name, payload);
-      })
-      .catch(() => {
-        // Ignore analytics transport failures.
-      });
-  }
 
   if (typeof window !== "undefined" && typeof window.gtag === "function") {
     window.gtag("event", name, payload);

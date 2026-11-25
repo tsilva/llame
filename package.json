@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "@sentry/nextjs": "10.75.3",
+    "@sentry/nextjs": "11.14.0",
     "highlight.js": "^11.11.1",
     "katex": "0.18.2",
     "lucide-react": "^0.577.0",
